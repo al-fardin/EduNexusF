@@ -18,6 +18,7 @@ import threading
 import time
 import tkinter as tk
 from tkinter import ttk
+from local_bridge import DesktopPairingBridge
 from urllib import error as urlerror
 from urllib import request as urlrequest
 from urllib.parse import urlsplit
@@ -282,6 +283,14 @@ class ClientApp:
         self.agreed = tk.BooleanVar(value=False)
         self.status = tk.StringVar(value="Not connected")
         self.render()
+        self.status.set("Ready · Open your EduNexus exam and click Connect Desktop Client")
+        # Local-only pairing bridge: never exposed on a LAN interface.
+        self.bridge = None
+        try:
+            self.bridge = DesktopPairingBridge(self.receive_pairing)
+            self.bridge.start()
+        except OSError as exc:
+            self.updates.put("LOCAL PAIRING UNAVAILABLE · " + str(exc)[:120])
         self.window.protocol("WM_DELETE_WINDOW", self.close)
         self.window.after(200, self.poll_updates)
 
@@ -289,18 +298,15 @@ class ClientApp:
         body = tk.Frame(self.window, bg="#F3F1EA", padx=24, pady=22)
         body.pack(fill="both", expand=True)
         tk.Label(body, text="EduNexus Secure Exam", bg="#F3F1EA", fg="#2B342C", font=("Arial", 19, "bold")).pack(anchor="w")
-        tk.Label(body, text="Desktop activity companion · Phase 14C", bg="#F3F1EA", fg="#62735D").pack(anchor="w", pady=(3,16))
-        tk.Label(body, text="Server API URL", bg="#F3F1EA", anchor="w").pack(fill="x")
-        ttk.Entry(body, textvariable=self.url).pack(fill="x", pady=(3,10))
-        tk.Label(body, text="One-time pairing code (copy from your active exam)", bg="#F3F1EA", anchor="w").pack(fill="x")
-        self.input = ttk.Entry(body, textvariable=self.code)
-        self.input.pack(fill="x", pady=(3,12))
+        tk.Label(body, text="Desktop activity companion · Phase 14D", bg="#F3F1EA", fg="#62735D").pack(anchor="w", pady=(3,16))
+        tk.Label(body, text="1. Keep this app open.  2. On the exam website, choose Connect Desktop Client.\n3. Approve the request here and continue your exam.",
+                 justify="left", bg="#F3F1EA", fg="#52684D", wraplength=480).pack(anchor="w", pady=(2,14))
         tk.Label(body, text="During your exam: active app names and, on Windows, which app\nwas active when clipboard changed. No clipboard text, chats or passwords.",
                  justify="left", bg="#F3F1EA", fg="#2B342C", wraplength=480).pack(anchor="w", pady=(0,9))
         ttk.Checkbutton(body, text="I agree to exam-time app and clipboard metadata monitoring", variable=self.agreed).pack(anchor="w", pady=(0,12))
         buttons=tk.Frame(body, bg="#F3F1EA")
         buttons.pack(fill="x", pady=(0,12))
-        self.connect_btn=ttk.Button(buttons,text="Connect & Start", command=self.start)
+        self.connect_btn=ttk.Button(buttons,text="Approve & Connect", command=self.start)
         self.connect_btn.pack(side="left")
         self.stop_btn=ttk.Button(buttons,text="Stop Monitoring",command=self.stop,state="disabled")
         self.stop_btn.pack(side="left", padx=10)
@@ -309,6 +315,13 @@ class ClientApp:
         self.log.pack(fill="both",expand=True,pady=(10,0))
         tk.Label(body,text="Connected before exam: readiness checks only. App activity starts after entering. Stops on exam expiry or when you click Stop.",
                  bg="#F3F1EA",fg="#687365",wraplength=480,justify="left",font=("Arial",9)).pack(anchor="w",pady=(9,0))
+
+    def receive_pairing(self, request: dict) -> bool:
+        """HTTP thread only queues a request; Tk widgets are changed on the UI thread."""
+        if self.worker and self.worker.is_alive():
+            return False
+        self.updates.put(("pair_request", request))
+        return True
 
     def start(self) -> None:
         if not self.agreed.get():
@@ -323,7 +336,7 @@ class ClientApp:
             return
         code = self.code.get().strip()
         if not re.fullmatch(r"[a-fA-F0-9]{64}", code):
-            self.status.set("Paste the full 64-character one-time pairing code")
+            self.status.set("Return to your exam and click Connect Desktop Client first")
             return
         if platform_key() == "unsupported":
             self.status.set("Unsupported operating system")
@@ -343,12 +356,26 @@ class ClientApp:
 
     def close(self) -> None:
         self.stop()
+        if self.bridge:
+            self.bridge.close()
         self.window.destroy()
 
     def poll_updates(self) -> None:
         try:
             while True:
                 msg=self.updates.get_nowait()
+                if isinstance(msg, tuple) and msg[0] == "pair_request":
+                    payload = msg[1]
+                    # This is still pending local user consent, never auto-start.
+                    try:
+                        self.url.set(validate_server_url(payload["server"]))
+                        self.code.set(payload["pair_code"])
+                        self.status.set("Pairing received · Check consent and click Approve & Connect")
+                        self.window.deiconify()
+                        self.window.lift()
+                    except (KeyError, ValueError):
+                        self.status.set("Invalid pairing request")
+                    continue
                 self.status.set(msg)
                 self.log.configure(state="normal")
                 self.log.insert("end", dt.datetime.now().strftime("%H:%M:%S")+"  "+msg+"\n")

@@ -4,6 +4,7 @@ import {useQuery} from "@tanstack/react-query";
 import {ArrowLeft,CheckCircle2,ChevronRight,Download,ShieldCheck,ShieldX,RefreshCw,MonitorCheck,Laptop,Copy,LockKeyhole,Check} from "lucide-react";
 import {examMonitor} from "@/services/exam-monitor";
 import {desktopMonitor,type DesktopStatus} from "@/services/desktop-monitor";
+import {desktopClientAvailable,sendDesktopPairRequest,desktopApiOrigin} from "@/lib/desktop-client-bridge";
 import {examError,examService} from "@/services/exams";
 import {monitorBridge,approvedExamKey} from "@/lib/exam-monitor-bridge";
 import {detectExamBrowser,extensionAddress,type ExamBrowser,type SupportedExamBrowser} from "@/lib/exam-browser-support";
@@ -18,9 +19,9 @@ function identifyOS(): DesktopOS {
   return "unsupported";
 }
 const operatingSystems:{id:DesktopOS;name:string;launch:string;requirements:string}[]=[
-  {id:"windows",name:"Windows",launch:"START_WINDOWS.cmd",requirements:"Python 3 with Tkinter installed"},
-  {id:"macos",name:"macOS",launch:"sh START_MAC_LINUX.sh",requirements:"Python 3 with Tkinter and venv"},
-  {id:"linux",name:"Linux",launch:"sh START_MAC_LINUX.sh",requirements:"Python 3, python3-tk, python3-venv; X11 for app detection"},
+  {id:"windows",name:"Windows",launch:"Open EduNexus-Secure-Exam.exe",requirements:"64-bit Windows"},
+  {id:"macos",name:"macOS",launch:"Open the installed application",requirements:"Intel or Apple Silicon Mac"},
+  {id:"linux",name:"Linux",launch:"Open the installed application",requirements:"Linux x64; X11 for app detection"},
 ];
 type GuideStep = {src:string;alt:string;heading:string;text:string};
 const setupGuide = (browser:SupportedExamBrowser): GuideStep[] => {
@@ -47,7 +48,7 @@ export function ExamEntryGate({classroomId,examId,onEnter,onExit}:{classroomId:s
   const [os,setOs]=useState<DesktopOS>("unsupported");
   const [desktopState,setDesktopState]=useState<DesktopStatus|null>(null);
   const [desktopBusy,setDesktopBusy]=useState(false);
-  const [desktopCode,setDesktopCode]=useState("");
+  const [pairPending,setPairPending]=useState(false);
   const [desktopError,setDesktopError]=useState("");
   useEffect(()=>{setOs(identifyOS());},[]);
   useEffect(()=>{
@@ -60,10 +61,17 @@ export function ExamEntryGate({classroomId,examId,onEnter,onExit}:{classroomId:s
     const timer=window.setInterval(()=>void poll(),5000);
     return()=>{mounted=false;window.clearInterval(timer);};
   },[classroomId,examId,policy.data?.enabled]);
-  async function generateDesktopPair(){
+  async function connectDesktopAutomatically(){
+    if(desktopBusy || desktopState?.connected)return;
     setDesktopError("");setDesktopBusy(true);
-    try{const r=await desktopMonitor.preflightPair(classroomId,examId);setDesktopCode(r.pair_code);setDesktopState({connected:false});}
-    catch(e){setDesktopError(examError(e));}
+    try {
+      if(!(await desktopClientAvailable())) throw new Error("Open the updated EduNexus Secure Exam app on this computer, then try again.");
+      const r=await desktopMonitor.preflightPair(classroomId,examId);
+      // A one-time token still exists for secure backend identity binding,
+      // but is transferred to the local app; students do not copy it.
+      await sendDesktopPairRequest(r.pair_code,desktopApiOrigin());
+      setPairPending(true);
+    } catch(e){setDesktopError(examError(e));setPairPending(false);}
     finally{setDesktopBusy(false);}
   }
   async function recheckDesktop(){
@@ -145,27 +153,31 @@ export function ExamEntryGate({classroomId,examId,onEnter,onExit}:{classroomId:s
         <p className="text-xs text-[#647060]">Chrome/Edge requires manual installation for an unpacked extension; a website cannot install it automatically. Use the same browser profile for the exam.</p>
         <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={()=>void verify()} disabled={checking||detected==="checking"||browser==="unsupported"} className="inline-flex items-center gap-2 rounded-xl border border-[#B5C6B2] bg-white px-4 py-3 text-sm font-semibold hover:bg-[#F0F3ED] disabled:opacity-60"><RefreshCw size={16} className={checking?"animate-spin":""}/>{checking?"Checking…":"Check extension connection"}</button><span className="text-sm text-[#697365]">{detected==="checking"?"Checking browser…":browser==="unsupported"?"Unsupported browser":"Extension not detected yet"}</span></div>
       </section>:<section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#BFDBC3] bg-[#F0F5EE] px-5 py-4"><div className="flex items-center gap-3"><MonitorCheck className="text-[#3C7650]" size={24}/><div><p className="font-semibold">Extension ready</p><p className="text-xs text-[#5C6B5C]">You are ready to review exam monitoring consent.</p></div></div><button className="text-xs font-semibold underline" type="button" onClick={()=>void verify()}>Recheck</button></section>}
-      <section className="space-y-4 rounded-2xl border border-[#D8E0D3] bg-white p-5" aria-label="Desktop monitor setup">
-        <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Laptop size={20} className="text-[#52694C]"/><h3 className="text-lg font-bold">Desktop Client setup</h3></div>
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${desktopState?.connected?"bg-[#E5F1E6] text-[#2C6643]":"bg-[#F8EDE4] text-[#965039]"}`}>{desktopState?.connected?`Connected · ${desktopState.platform||"desktop"}`:"Required · Not connected"}</span>
+            <section className="space-y-5 rounded-2xl border border-[#D8E0D3] bg-white p-5" aria-label="Desktop monitor setup">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2"><Laptop size={20} className="text-[#52694C]"/><h3 className="text-lg font-bold">Secure Exam Desktop Client</h3></div>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${desktopState?.connected?"bg-[#E5F1E6] text-[#2C6643]":"bg-[#F8EDE4] text-[#965039]"}`}>{desktopState?.connected?`Connected · ${desktopState.platform||"desktop"}`:"Connection required"}</span>
         </div>
-        <p className="text-sm text-[#667365]">Install the Secure Exam Client once on this computer. It will connect before your exam; application activity is recorded only after the exam starts. The browser extension remains active separately.</p>
-        <div className="grid gap-3 sm:grid-cols-3" aria-label="Operating system">
-          {operatingSystems.map(item=><div key={item.id} className={`rounded-xl border p-3 text-xs ${os===item.id?"border-[#7E9878] bg-[#EDF3E9]":"border-[#E0E3DD] bg-[#FAFAF8]"}`}><span className="font-bold">{item.name}</span>{os===item.id&&<span className="ml-2 text-[#476643]">Detected</span>}<p className="mt-1 text-[#667365]">{item.requirements}</p></div>)}
-        </div>
-        <a href="/downloads/EduNexus-Secure-Exam-Client.zip" download className="inline-flex items-center gap-2 rounded-xl bg-[#2B342C] px-5 py-3 text-sm font-semibold text-white hover:bg-[#455646]"><Download size={16}/> Download Desktop Client (preview ZIP)</a>
-        <p className="text-xs text-[#687466]">Developer preview: source + start scripts, not a signed native installer. Native installers need separate Windows/macOS/Linux release builds.</p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <article className="overflow-hidden rounded-xl border border-[#DDE3D8]"><img src="/exam-monitor-guide/desktop-01.svg" alt="Extract the desktop client ZIP" className="aspect-[16/9] w-full object-cover"/><div className="p-3"><strong className="text-sm">1. Download & extract</strong><p className="text-xs text-[#697365]">Keep the client folder on your computer.</p></div></article>
-          <article className="overflow-hidden rounded-xl border border-[#DDE3D8]"><img src="/exam-monitor-guide/desktop-02.svg" alt="Start desktop monitoring application" className="aspect-[16/9] w-full object-cover"/><div className="p-3"><strong className="text-sm">2. Start the client</strong><p className="break-all font-mono text-xs text-[#697365]">{operatingSystems.find(item=>item.id===os)?.launch||"Use a supported desktop OS"}</p></div></article>
-          <article className="overflow-hidden rounded-xl border border-[#DDE3D8]"><img src="/exam-monitor-guide/desktop-03.svg" alt="Enter pairing code, then verify connected status" className="aspect-[16/9] w-full object-cover"/><div className="p-3"><strong className="text-sm">3. Pair & verify</strong><p className="text-xs text-[#697365]">Paste your code into the client, connect and wait for Connected status.</p></div></article>
-        </div>
-        <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={()=>void generateDesktopPair()} disabled={desktopBusy||desktopState?.connected||os==="unsupported"} className="rounded-xl bg-[#E8EEE3] px-4 py-2 text-sm font-semibold disabled:opacity-50">{desktopBusy?"Working…":"Generate pairing code"}</button><button type="button" disabled={desktopBusy} onClick={()=>void recheckDesktop()} className="inline-flex items-center gap-2 rounded-xl border border-[#CDD8C7] px-4 py-2 text-sm font-semibold"><RefreshCw size={15}/> Recheck desktop connection</button></div>
-        {desktopCode&&!desktopState?.connected&&<div className="flex flex-wrap gap-2 rounded-xl bg-[#F0F4ED] p-3"><code className="min-w-0 flex-1 break-all text-xs">{desktopCode}</code><button type="button" onClick={()=>void navigator.clipboard.writeText(desktopCode).catch(()=>setDesktopError("Copy failed; select the code manually."))} className="inline-flex items-center gap-1 text-xs font-bold"><Copy size={14}/> Copy</button><span className="w-full text-xs text-[#667365]">One-time pairing code expires in 5 minutes. Do not share.</span></div>}
-        {desktopState?.connected&&<p className="flex items-center gap-2 text-sm font-semibold text-[#356D48]"><Check size={16}/> Desktop Client verified. You may agree and enter.</p>}
-        {desktopError&&<p role="alert" className="text-xs text-[#A44335]">{desktopError}</p>}
+        <p className="text-sm text-[#667365]">Install the desktop app once. Then connect with one click—no pairing code to copy or enter. Desktop activity starts only after the exam begins.</p>
+        {!desktopState?.connected && <div className="space-y-3 rounded-2xl bg-[#F3F5F0] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold">1. Download for your computer</p>
+            {os==="windows" && <a href="https://github.com/al-fardin/EduNexusF/releases/download/v14.2.0/EduNexus-Secure-Exam.exe" className="rounded-xl bg-[#2B342C] px-4 py-2 text-sm font-semibold text-white"> <Download size={15} className="mr-2 inline"/>Windows .exe</a>}
+            {os==="macos" && <div className="flex flex-wrap gap-2"><a href="https://github.com/al-fardin/EduNexusF/releases/download/v14.2.0/EduNexus-Secure-Exam-AppleSilicon.dmg" className="rounded-xl bg-[#2B342C] px-4 py-2 text-sm font-semibold text-white">Apple Silicon .dmg</a><a href="https://github.com/al-fardin/EduNexusF/releases/download/v14.2.0/EduNexus-Secure-Exam-Intel.dmg" className="rounded-xl border border-[#A8B9A0] px-4 py-2 text-sm font-semibold">Intel .dmg</a></div>}
+            {os==="linux" && <a href="https://github.com/al-fardin/EduNexusF/releases/download/v14.2.0/EduNexus-Secure-Exam-Linux-x64.tar.gz" className="rounded-xl bg-[#2B342C] px-4 py-2 text-sm font-semibold text-white"><Download size={15} className="mr-2 inline"/>Linux x64</a>}
+            {os==="unsupported" && <span className="text-sm text-[#99523B]">A supported desktop OS is required.</span>}
+          </div>
+          <p className="text-xs text-[#667365]">Open the downloaded application. On Linux, extract the archive before running the executable. macOS may require approval in Privacy & Security for this unsigned preview.</p>
+          <div className="border-t border-[#DAE2D5] pt-3"><p className="mb-2 text-sm font-semibold">2. Connect Desktop Client</p>
+            <button type="button" onClick={()=>void connectDesktopAutomatically()} disabled={desktopBusy||os==="unsupported"} className="rounded-xl bg-[#2B342C] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{desktopBusy?"Connecting…":"Connect Desktop Client"}</button>
+            <button type="button" disabled={desktopBusy} onClick={()=>void recheckDesktop()} className="ml-2 rounded-xl border border-[#BCC8B9] px-4 py-3 text-sm font-semibold"><RefreshCw size={15} className="mr-1 inline"/>Recheck</button>
+            {pairPending && !desktopState?.connected && <p role="status" className="mt-2 text-sm text-[#506B4A]">Connection request sent. In the desktop app, review the permission and click <strong>Approve & Connect</strong>. This page will verify automatically.</p>}
+          </div>
+        </div>}
+        {desktopState?.connected && <p className="flex items-center gap-2 rounded-xl bg-[#EBF4E9] p-3 text-sm font-semibold text-[#356D48]"><Check size={16}/> Desktop Client verified. You can enter the exam after browser consent.</p>}
+        {desktopError && <p role="alert" className="rounded-xl bg-[#FAEFEA] p-3 text-sm text-[#A44335]">{desktopError}</p>}
       </section>
-      <section className="space-y-4 rounded-2xl border border-[#D8E0D3] bg-white p-5">
+<section className="space-y-4 rounded-2xl border border-[#D8E0D3] bg-white p-5">
         <h3 className="text-lg font-bold">Exam monitoring consent</h3>
         <p className="text-sm font-medium">During this exam, your teacher may review browser visits, searches, AI prompts, exam copy/paste active application names, and Windows clipboard-change metadata (not clipboard text). Do you agree?</p>
         <button type="button" onClick={()=>setDetails(x=>!x)} className="text-xs text-[#586E53] underline">{details?"Hide":"What is monitored?"}</button>
