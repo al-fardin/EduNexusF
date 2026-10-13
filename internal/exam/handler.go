@@ -1,0 +1,529 @@
+package exam
+
+import (
+	"encoding/json"
+	"errors"
+	"strconv"
+	"strings"
+	"time"
+
+	authMiddleware "github.com/edunexus/edunexus/internal/auth/middleware"
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Phase 2 deliberately does not compile code, auto-grade or calculate cheating risk.
+// Answers and teacher-owned marking keys are stored for those later phases.
+type Handler struct{ db *pgxpool.Pool }
+
+func New(db *pgxpool.Pool) *Handler { return &Handler{db: db} }
+
+func Register(app *fiber.App, db *pgxpool.Pool) {
+	h := New(db)
+	RegisterPhase14Client(app, h)
+	g := app.Group("/classrooms/:id/exams", authMiddleware.JWTProtected())
+	g.Get("/", h.List)
+	g.Post("/", h.Create)
+	g.Get("/:examID", h.Get)
+	g.Post("/:examID/publish", h.Publish)
+	g.Post("/:examID/start", h.Start)
+	g.Get("/:examID/attempt", h.Attempt)
+	g.Put("/:examID/attempt", h.Save)
+	g.Post("/:examID/submit", h.Submit)
+	g.Get("/:examID/submissions", h.Submissions)
+	RegisterPhase4(g, h)
+	RegisterPhase3(g, h)
+	RegisterPhase11(g, h)
+}
+
+func failure(c *fiber.Ctx, status int, message string) error {
+	return c.Status(status).JSON(fiber.Map{"success": false, "message": message})
+}
+func result(c *fiber.Ctx, status int, data any) error {
+	return c.Status(status).JSON(fiber.Map{"success": true, "data": data})
+}
+func identity(c *fiber.Ctx) (string, error) {
+	id, ok := c.Locals("user_id").(string)
+	if !ok || id == "" {
+		return "", fiber.NewError(fiber.StatusUnauthorized, "authentication required")
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		return "", fiber.NewError(fiber.StatusUnauthorized, "invalid login")
+	}
+	return id, nil
+}
+func (h *Handler) member(c *fiber.Ctx, teacher bool) (string, error) {
+	user, err := identity(c)
+	if err != nil {
+		return "", err
+	}
+	classID := c.Params("id")
+	if _, err := uuid.Parse(classID); err != nil {
+		return "", fiber.NewError(fiber.StatusBadRequest, "invalid classroom id")
+	}
+	var role string
+	var roll *string
+	err = h.db.QueryRow(c.UserContext(), `
+      SELECT m.member_role,m.student_roll FROM classroom_memberships m
+      JOIN classrooms cl ON cl.id=m.classroom_id
+      WHERE m.classroom_id=$1::uuid AND m.user_id=$2::uuid
+        AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL`, classID, user).Scan(&role, &roll)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", fiber.NewError(fiber.StatusForbidden, "active classroom membership required")
+	}
+	if err != nil {
+		return "", err
+	}
+	if role == "student" && (roll == nil || strings.TrimSpace(*roll) == "") {
+		return "", fiber.NewError(403, "set your Student ID / Roll before entering the exam")
+	}
+	if teacher && role != "teacher" {
+		return "", fiber.NewError(fiber.StatusForbidden, "classroom teacher permission required")
+	}
+	return role, nil
+}
+func examID(c *fiber.Ctx) (string, error) {
+	id := c.Params("examID")
+	if _, err := uuid.Parse(id); err != nil {
+		return "", fiber.NewError(fiber.StatusBadRequest, "invalid exam id")
+	}
+	return id, nil
+}
+
+type Question struct {
+	ID            string   `json:"id"`
+	Kind          string   `json:"kind"`
+	Prompt        string   `json:"prompt"`
+	Points        int      `json:"points"`
+	Options       []string `json:"options,omitempty"`
+	CorrectOption *int     `json:"correct_option,omitempty"`
+	SampleAnswer  string   `json:"sample_answer,omitempty"`
+	Language      string   `json:"language,omitempty"`
+}
+type PublicQuestion struct {
+	ID       string   `json:"id"`
+	Kind     string   `json:"kind"`
+	Prompt   string   `json:"prompt"`
+	Points   int      `json:"points"`
+	Options  []string `json:"options,omitempty"`
+	Language string   `json:"language,omitempty"`
+}
+
+func publicQuestions(questions []Question) []PublicQuestion {
+	out := make([]PublicQuestion, 0, len(questions))
+	for _, q := range questions {
+		out = append(out, PublicQuestion{ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language})
+	}
+	return out
+}
+
+type CreateRequest struct {
+	Title           string     `json:"title"`
+	Description     string     `json:"description"`
+	StartsAt        time.Time  `json:"starts_at"`
+	EndsAt          time.Time  `json:"ends_at"`
+	DurationMinutes int        `json:"duration_minutes"`
+	Questions       []Question `json:"questions"`
+}
+
+func normalizeQuestions(questions []Question) (string, error) {
+	if len(questions) < 1 || len(questions) > 40 {
+		return "", errors.New("1-40 questions required")
+	}
+	seen := map[string]bool{}
+	for i := range questions {
+		q := &questions[i]
+		q.ID = strings.TrimSpace(q.ID)
+		q.Prompt = strings.TrimSpace(q.Prompt)
+		if q.ID == "" || len(q.ID) > 64 || seen[q.ID] {
+			return "", errors.New("question ids must be unique, 1-64 characters")
+		}
+		seen[q.ID] = true
+		if len(q.Prompt) < 3 || len(q.Prompt) > 10000 || q.Points < 1 || q.Points > 100 {
+			return "", errors.New("each question requires prompt (3-10000 chars) and 1-100 points")
+		}
+		switch q.Kind {
+		case "mcq":
+			if len(q.Options) < 2 || len(q.Options) > 6 {
+				return "", errors.New("MCQ requires 2-6 options")
+			}
+			for _, o := range q.Options {
+				if strings.TrimSpace(o) == "" || len(o) > 1000 {
+					return "", errors.New("MCQ choices must contain 1-1000 characters")
+				}
+			}
+			if q.CorrectOption == nil || *q.CorrectOption < 0 || *q.CorrectOption >= len(q.Options) {
+				return "", errors.New("MCQ correct option is required")
+			}
+			q.SampleAnswer = ""
+			q.Language = ""
+		case "theory", "coding":
+			q.Options = nil
+			q.CorrectOption = nil
+			if len(q.SampleAnswer) > 15000 || len(q.Language) > 50 {
+				return "", errors.New("answer key or language is too long")
+			}
+			if q.Kind == "theory" {
+				q.Language = ""
+			}
+		default:
+			return "", errors.New("question type must be mcq, theory or coding")
+		}
+	}
+	raw, err := json.Marshal(questions)
+	return string(raw), err
+}
+
+type Exam struct {
+	ID              string    `json:"id"`
+	ClassroomID     string    `json:"classroom_id"`
+	Title           string    `json:"title"`
+	Description     string    `json:"description"`
+	StartsAt        time.Time `json:"starts_at"`
+	EndsAt          time.Time `json:"ends_at"`
+	DurationMinutes int       `json:"duration_minutes"`
+	Status          string    `json:"status"`
+	QuestionCount   int       `json:"question_count"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+func (h *Handler) List(c *fiber.Ctx) error {
+	role, err := h.member(c, false)
+	if err != nil {
+		return err
+	}
+	query := `SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at
+      FROM classroom_exams WHERE classroom_id=$1::uuid`
+	if role != "teacher" {
+		query += ` AND status='published'`
+	}
+	query += ` ORDER BY starts_at DESC LIMIT 150`
+	rows, err := h.db.Query(c.UserContext(), query, c.Params("id"))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	items := make([]Exam, 0)
+	for rows.Next() {
+		var e Exam
+		if err = rows.Scan(&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt); err != nil {
+			return err
+		}
+		items = append(items, e)
+	}
+	if err = rows.Err(); err != nil {
+		return err
+	}
+	return result(c, 200, items)
+}
+func (h *Handler) Create(c *fiber.Ctx) error {
+	if _, err := h.member(c, true); err != nil {
+		return err
+	}
+	user, _ := identity(c)
+	var req CreateRequest
+	if err := c.BodyParser(&req); err != nil {
+		return failure(c, 400, "invalid exam JSON")
+	}
+	req.Title = strings.TrimSpace(req.Title)
+	req.Description = strings.TrimSpace(req.Description)
+	if len(req.Title) < 3 || len(req.Title) > 200 || len(req.Description) > 5000 {
+		return failure(c, 400, "title must contain 3-200 characters; description max 5000")
+	}
+	if req.StartsAt.IsZero() || req.EndsAt.IsZero() || !req.EndsAt.After(req.StartsAt) || req.EndsAt.Sub(req.StartsAt) > 30*24*time.Hour {
+		return failure(c, 400, "invalid exam date window (max 30 days)")
+	}
+	if req.DurationMinutes < 1 || req.DurationMinutes > 240 {
+		return failure(c, 400, "duration must be between 1 and 240 minutes")
+	}
+	raw, err := normalizeQuestions(req.Questions)
+	if err != nil {
+		return failure(c, 400, err.Error())
+	}
+	var id string
+	err = h.db.QueryRow(c.UserContext(), `INSERT INTO classroom_exams(classroom_id,created_by,title,description,starts_at,ends_at,duration_minutes,questions)
+      VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id::text`, c.Params("id"), user, req.Title, req.Description, req.StartsAt, req.EndsAt, req.DurationMinutes, raw).Scan(&id)
+	if err != nil {
+		return err
+	}
+	return result(c, 201, fiber.Map{"id": id, "status": "draft"})
+}
+func (h *Handler) examWithKeys(c *fiber.Ctx) (Exam, []Question, error) {
+	id, err := examID(c)
+	if err != nil {
+		return Exam{}, nil, err
+	}
+	var e Exam
+	var raw []byte
+	err = h.db.QueryRow(c.UserContext(), `
+      SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,questions
+      FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid`, id, c.Params("id")).Scan(
+		&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt, &raw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Exam{}, nil, fiber.NewError(fiber.StatusNotFound, "exam not found")
+	}
+	if err != nil {
+		return Exam{}, nil, err
+	}
+	var questions []Question
+	if err = json.Unmarshal(raw, &questions); err != nil {
+		return Exam{}, nil, err
+	}
+	return e, questions, nil
+}
+func (h *Handler) Get(c *fiber.Ctx) error {
+	role, err := h.member(c, false)
+	if err != nil {
+		return err
+	}
+	e, questions, err := h.examWithKeys(c)
+	if err != nil {
+		return err
+	}
+	if role == "teacher" {
+		return result(c, 200, fiber.Map{"exam": e, "questions": questions})
+	}
+	// Non-teachers cannot fetch keys or future questions. The only way to see
+	// live questions is an authenticated, active attempt via /attempt.
+	if e.Status != "published" {
+		return failure(c, 404, "exam not found")
+	}
+	return result(c, 200, fiber.Map{"exam": e})
+}
+func (h *Handler) Publish(c *fiber.Ctx) error {
+	if _, err := h.member(c, true); err != nil {
+		return err
+	}
+	id, err := examID(c)
+	if err != nil {
+		return err
+	}
+	tag, err := h.db.Exec(c.UserContext(), `UPDATE classroom_exams SET status='published',published_at=now()
+      WHERE id=$1::uuid AND classroom_id=$2::uuid AND status='draft'`, id, c.Params("id"))
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return failure(c, 409, "exam missing or already published")
+	}
+	return result(c, 200, fiber.Map{"id": id, "status": "published"})
+}
+
+type Attempt struct {
+	ID          string            `json:"id"`
+	StartedAt   time.Time         `json:"started_at"`
+	ExpiresAt   time.Time         `json:"expires_at"`
+	Status      string            `json:"status"`
+	Answers     map[string]string `json:"answers"`
+	SubmittedAt *time.Time        `json:"submitted_at"`
+}
+
+func scanAttempt(row pgx.Row) (Attempt, error) {
+	var a Attempt
+	var raw []byte
+	err := row.Scan(&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &raw, &a.SubmittedAt)
+	if err != nil {
+		return Attempt{}, err
+	}
+	if err = json.Unmarshal(raw, &a.Answers); err != nil {
+		return Attempt{}, err
+	}
+	if a.Answers == nil {
+		a.Answers = map[string]string{}
+	}
+	return a, nil
+}
+func (h *Handler) attemptData(c *fiber.Ctx, create bool) error {
+	role, err := h.member(c, false)
+	if err != nil {
+		return err
+	}
+	if role != "student" {
+		return failure(c, 403, "only students can take classroom exams")
+	}
+	user, _ := identity(c)
+	e, questions, err := h.examWithKeys(c)
+	if err != nil {
+		return err
+	}
+	if e.Status != "published" {
+		return failure(c, 404, "exam not found")
+	}
+	now := time.Now().UTC()
+	if create && (now.Before(e.StartsAt) || !now.Before(e.EndsAt)) {
+		return failure(c, 409, "exam is not currently open")
+	}
+	if create {
+		_, err = h.db.Exec(c.UserContext(), `INSERT INTO classroom_exam_attempts(exam_id,student_id,expires_at)
+          VALUES($1::uuid,$2::uuid,LEAST($3::timestamptz,now()+($4::int * interval '1 minute')))
+          ON CONFLICT (exam_id,student_id) DO NOTHING`, e.ID, user, e.EndsAt, e.DurationMinutes)
+		if err != nil {
+			return err
+		}
+	}
+	a, err := scanAttempt(h.db.QueryRow(c.UserContext(), `SELECT id::text,started_at,expires_at,status,answers,submitted_at
+      FROM classroom_exam_attempts WHERE exam_id=$1::uuid AND student_id=$2::uuid`, e.ID, user))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return failure(c, 404, "join the exam first")
+	}
+	if err != nil {
+		return err
+	}
+	if create && a.Status == "in_progress" {
+		if err = h.promoteDesktopPreflight(c, e.ID, user, a.ID); err != nil {
+			return err
+		}
+	}
+	return result(c, 200, fiber.Map{"exam": e, "questions": publicQuestions(questions), "attempt": a, "server_time": time.Now().UTC()})
+}
+func (h *Handler) Start(c *fiber.Ctx) error {
+	if err := h.requireMonitorAdmission(c); err != nil {
+		return err
+	}
+	if err := h.requireDesktopPreflight(c); err != nil {
+		return err
+	}
+	return h.attemptData(c, true)
+}
+func (h *Handler) Attempt(c *fiber.Ctx) error { return h.attemptData(c, false) }
+
+type AnswerRequest struct {
+	Answers map[string]string `json:"answers"`
+}
+
+func validateAnswers(answers map[string]string, questions []Question) error {
+	if answers == nil {
+		return errors.New("answers object is required")
+	}
+	if len(answers) > len(questions) {
+		return errors.New("too many answers")
+	}
+	allowed := map[string]Question{}
+	for _, q := range questions {
+		allowed[q.ID] = q
+	}
+	for key, value := range answers {
+		q, ok := allowed[key]
+		if !ok {
+			return errors.New("unknown question id")
+		}
+		size := 20000
+		if q.Kind == "mcq" {
+			size = 10
+		} else if q.Kind == "theory" {
+			size = 8000
+		}
+		if len(value) > size {
+			return errors.New("answer exceeds allowed length")
+		}
+		if q.Kind == "mcq" && value != "" {
+			index, err := strconv.Atoi(value)
+			if err != nil || index < 0 || index >= len(q.Options) {
+				return errors.New("invalid MCQ answer")
+			}
+		}
+	}
+	return nil
+}
+func (h *Handler) writeAnswers(c *fiber.Ctx, submit bool) error {
+	role, err := h.member(c, false)
+	if err != nil {
+		return err
+	}
+	if role != "student" {
+		return failure(c, 403, "students only")
+	}
+	user, _ := identity(c)
+	e, questions, err := h.examWithKeys(c)
+	if err != nil {
+		return err
+	}
+	if e.Status != "published" {
+		return failure(c, 404, "exam not found")
+	}
+	var req AnswerRequest
+	if err = c.BodyParser(&req); err != nil {
+		return failure(c, 400, "invalid answers")
+	}
+	if err = validateAnswers(req.Answers, questions); err != nil {
+		return failure(c, 400, err.Error())
+	}
+	raw, err := json.Marshal(req.Answers)
+	if err != nil {
+		return err
+	}
+	newStatus := "in_progress"
+	if submit {
+		newStatus = "submitted"
+	}
+	var a Attempt
+	var answersRaw []byte
+	err = h.db.QueryRow(c.UserContext(), `
+      UPDATE classroom_exam_attempts SET answers=$1::jsonb,status=$2::varchar(16),
+        submitted_at=CASE WHEN $2::varchar(16)='submitted' THEN now() ELSE submitted_at END
+      WHERE exam_id=$3::uuid AND student_id=$4::uuid AND status='in_progress'
+        AND now() <= expires_at AND now() <= $5::timestamptz
+      RETURNING id::text,started_at,expires_at,status,answers,submitted_at`, string(raw), newStatus, e.ID, user, e.EndsAt).Scan(
+		&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &answersRaw, &a.SubmittedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return failure(c, 409, "exam time expired or attempt already submitted")
+	}
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(answersRaw, &a.Answers); err != nil {
+		return err
+	}
+	return result(c, 200, a)
+}
+func (h *Handler) Save(c *fiber.Ctx) error   { return h.writeAnswers(c, false) }
+func (h *Handler) Submit(c *fiber.Ctx) error { return h.writeAnswers(c, true) }
+func (h *Handler) Submissions(c *fiber.Ctx) error {
+	if _, err := h.member(c, true); err != nil {
+		return err
+	}
+	id, err := examID(c)
+	if err != nil {
+		return err
+	}
+	var exists bool
+	err = h.db.QueryRow(c.UserContext(), `SELECT EXISTS(SELECT 1 FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid)`, id, c.Params("id")).Scan(&exists)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return failure(c, 404, "exam not found")
+	}
+	rows, err := h.db.Query(c.UserContext(), `
+      SELECT a.id::text,a.student_id::text,u.first_name,u.last_name,u.email,a.started_at,a.expires_at,a.submitted_at,
+        CASE WHEN a.status='in_progress' AND now()>a.expires_at THEN 'expired' ELSE a.status END,
+        a.answers, COALESCE(cm.student_roll, '')
+      FROM classroom_exam_attempts a JOIN users u ON a.student_id=u.id
+      LEFT JOIN classroom_memberships cm ON cm.classroom_id=$2::uuid AND cm.user_id=a.student_id AND cm.member_role='student'
+      WHERE a.exam_id=$1::uuid ORDER BY a.started_at DESC LIMIT 300`, id, c.Params("id"))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	out := make([]fiber.Map, 0)
+	for rows.Next() {
+		var aid, uid, first, last, email, status, roll string
+		var started, expires time.Time
+		var submitted *time.Time
+		var raw []byte
+		if err = rows.Scan(&aid, &uid, &first, &last, &email, &started, &expires, &submitted, &status, &raw, &roll); err != nil {
+			return err
+		}
+		var answers map[string]string
+		if err = json.Unmarshal(raw, &answers); err != nil {
+			return err
+		}
+		out = append(out, fiber.Map{"id": aid, "student_id": uid, "student_name": strings.TrimSpace(first + " " + last), "email": email, "started_at": started, "expires_at": expires, "submitted_at": submitted, "status": status, "answers": answers, "student_roll": roll})
+	}
+	if err = rows.Err(); err != nil {
+		return err
+	}
+	return result(c, 200, out)
+}

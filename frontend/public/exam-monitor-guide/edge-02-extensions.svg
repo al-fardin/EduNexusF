@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Enable Developer mode">
+<rect width="640" height="400" fill="#EAF0E8"/>
+<rect x="28" y="25" width="584" height="350" rx="24" fill="#FFFFFF" stroke="#CDD9CB" stroke-width="3"/>
+<path d="M52 25H588Q612 25 612 49V85H28V49Q28 25 52 25" fill="#273E50"/>
+<circle cx="57" cy="55" r="8" fill="#D4DFE6"/><circle cx="82" cy="55" r="8" fill="#8EB6C7"/><circle cx="107" cy="55" r="8" fill="#6795A8"/>
+<rect x="160" y="39" width="409" height="35" rx="10" fill="#E8F0F4"/>
+<text x="177" y="63" font-family="Arial, sans-serif" font-size="18" fill="#24465B">edge://extensions</text>
+<text x="50" y="127" font-family="Arial, sans-serif" font-size="16" font-weight="bold" letter-spacing="2" fill="#507487">STEP 02 · MICROSOFT EDGE</text>
+<text x="50" y="162" font-family="Arial, sans-serif" font-weight="bold" font-size="26" fill="#253C37">Enable Developer mode</text>
+<text x="50" y="188" font-family="Arial, sans-serif" font-size="16" fill="#607467">Open Edge extensions from the address bar.</text>
+
+<rect x="48" y="218" width="544" height="100" rx="17" fill="#F2F6F3"/>
+<text x="70" y="259" font-family="Arial" font-size="22" fill="#2B413E">Developer mode</text>
+<rect x="452" y="230" width="109" height="47" rx="24" fill="#477C6B"/>
+<circle cx="536" cy="253" r="19" fill="white"/>
+<rect x="441" y="222" width="129" height="65" rx="20" fill="none" stroke="#D8A04A" stroke-width="4"/>
+<text x="70" y="294" font-family="Arial" font-size="15" fill="#738175">Switch it ON before loading the extension</text>
+<rect x="36" y="31" width="574" height="336" rx="19" fill="none" stroke="#D7DFD5" stroke-width="1.5"/>
+</svg>

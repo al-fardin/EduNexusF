@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img">
+<rect width="640" height="400" fill="#EDF1EA"/><rect x="36" y="35" width="568" height="335" rx="22" fill="#fff" stroke="#C5D2C3" stroke-width="3"/>
+<rect x="36" y="35" width="568" height="50" rx="22" fill="#2B342C"/><rect x="36" y="65" width="568" height="20" fill="#2B342C"/>
+<circle cx="70" cy="60" r="7" fill="#D9E3D3"/><circle cx="96" cy="60" r="7" fill="#899D84"/><circle cx="122" cy="60" r="7" fill="#61775B"/>
+<rect x="75" y="110" width="490" height="60" rx="12" fill="#E8EFE5"/><text x="96" y="149" font-family="Arial" font-size="23" fill="#29382C">chrome://extensions</text><text x="76" y="225" font-family="Arial" font-size="27" font-weight="bold" fill="#2B342C">Extensions</text><text x="76" y="293" font-family="Arial" font-size="23" fill="#445445">Developer mode</text><rect x="447" y="264" width="110" height="48" rx="24" fill="#5F7358"/><circle cx="526" cy="288" r="18" fill="#fff"/><rect x="435" y="251" width="132" height="74" rx="14" fill="none" stroke="#D49C42" stroke-width="5"/></svg>

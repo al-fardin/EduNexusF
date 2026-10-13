@@ -1,0 +1,82 @@
+﻿name: Build EduNexus Secure Exam Client
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build Windows EXE
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r desktop-client/requirements.txt pyinstaller
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name EduNexus-Secure-Exam desktop-client/client.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EduNexus-Windows
+          path: dist/EduNexus-Secure-Exam.exe
+
+  macos:
+    strategy:
+      matrix:
+        include:
+          - runner: macos-15-intel
+            arch: Intel
+          - runner: macos-latest
+            arch: AppleSilicon
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build macOS App
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r desktop-client/requirements.txt pyinstaller
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name EduNexus-Secure-Exam desktop-client/client.py
+
+      - name: Package DMG
+        run: |
+          hdiutil create -volname "EduNexus Secure Exam" -srcfolder dist/EduNexus-Secure-Exam.app -ov -format UDZO dist/EduNexus-Secure-Exam-${{ matrix.arch }}.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EduNexus-macOS-${{ matrix.arch }}
+          path: dist/*.dmg
+
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk python3-venv patchelf
+
+      - name: Build Linux Executable
+        run: |
+          python3 -m venv --system-site-packages .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install -r desktop-client/requirements.txt pyinstaller
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name EduNexus-Secure-Exam desktop-client/client.py
+          tar -czf EduNexus-Secure-Exam-Linux-x64.tar.gz -C dist EduNexus-Secure-Exam
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EduNexus-Linux
+          path: EduNexus-Secure-Exam-Linux-x64.tar.gz

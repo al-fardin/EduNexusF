@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img">
+<rect width="640" height="400" fill="#EDF1EA"/><rect x="36" y="35" width="568" height="335" rx="22" fill="#fff" stroke="#C5D2C3" stroke-width="3"/>
+<rect x="36" y="35" width="568" height="50" rx="22" fill="#2B342C"/><rect x="36" y="65" width="568" height="20" fill="#2B342C"/>
+<circle cx="70" cy="60" r="7" fill="#D9E3D3"/><circle cx="96" cy="60" r="7" fill="#899D84"/><circle cx="122" cy="60" r="7" fill="#61775B"/>
+<text x="75" y="139" font-family="Arial" font-size="26" font-weight="bold" fill="#2B342C">Extensions</text><rect x="75" y="180" width="230" height="62" rx="10" fill="#5F7358"/><text x="96" y="220" font-family="Arial" font-size="23" font-weight="bold" fill="#fff">Load unpacked</text><rect x="75" y="276" width="490" height="54" rx="12" fill="#ECF0E9"/><text x="98" y="311" font-family="Arial" font-size="20" fill="#344438">EduNexus-Exam-Monitor/</text><path d="M191 246V270" fill="none" stroke="#D49C42" stroke-width="6"/><path d="M179 259L191 277 203 259" fill="none" stroke="#D49C42" stroke-width="5"/></svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Load unpacked">
+<rect width="640" height="400" fill="#EAF0E8"/>
+<rect x="28" y="25" width="584" height="350" rx="24" fill="#FFFFFF" stroke="#CDD9CB" stroke-width="3"/>
+<path d="M52 25H588Q612 25 612 49V85H28V49Q28 25 52 25" fill="#273E50"/>
+<circle cx="57" cy="55" r="8" fill="#D4DFE6"/><circle cx="82" cy="55" r="8" fill="#8EB6C7"/><circle cx="107" cy="55" r="8" fill="#6795A8"/>
+<rect x="160" y="39" width="409" height="35" rx="10" fill="#E8F0F4"/>
+<text x="177" y="63" font-family="Arial, sans-serif" font-size="18" fill="#24465B">edge://extensions</text>
+<text x="50" y="127" font-family="Arial, sans-serif" font-size="16" font-weight="bold" letter-spacing="2" fill="#507487">STEP 03 · MICROSOFT EDGE</text>
+<text x="50" y="162" font-family="Arial, sans-serif" font-weight="bold" font-size="26" fill="#253C37">Load unpacked</text>
+<text x="50" y="188" font-family="Arial, sans-serif" font-size="16" fill="#607467">Choose the extracted extension folder.</text>
+
+<rect x="45" y="211" width="550" height="114" rx="17" fill="#F2F6F3"/>
+<rect x="68" y="236" width="205" height="59" rx="13" fill="#477C6B"/>
+<text x="95" y="273" font-family="Arial" font-weight="bold" font-size="21" fill="white">Load unpacked</text>
+<rect x="61" y="229" width="220" height="73" rx="15" fill="none" stroke="#D8A04A" stroke-width="4"/>
+<text x="306" y="254" font-family="Arial" font-size="18" fill="#294A45">Select:</text>
+<text x="306" y="285" font-family="Arial" font-weight="bold" font-size="19" fill="#294A45">EduNexus-Exam-Monitor</text>
+<rect x="36" y="31" width="574" height="336" rx="19" fill="none" stroke="#D7DFD5" stroke-width="1.5"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Verify extension access">
+<rect width="640" height="400" fill="#EAF0E8"/>
+<rect x="28" y="25" width="584" height="350" rx="24" fill="#FFFFFF" stroke="#CDD9CB" stroke-width="3"/>
+<path d="M52 25H588Q612 25 612 49V85H28V49Q28 25 52 25" fill="#273E50"/>
+<circle cx="57" cy="55" r="8" fill="#D4DFE6"/><circle cx="82" cy="55" r="8" fill="#8EB6C7"/><circle cx="107" cy="55" r="8" fill="#6795A8"/>
+<rect x="160" y="39" width="409" height="35" rx="10" fill="#E8F0F4"/>
+<text x="177" y="63" font-family="Arial, sans-serif" font-size="18" fill="#24465B">edge://extensions</text>
+<text x="50" y="127" font-family="Arial, sans-serif" font-size="16" font-weight="bold" letter-spacing="2" fill="#507487">STEP 04 · MICROSOFT EDGE</text>
+<text x="50" y="162" font-family="Arial, sans-serif" font-weight="bold" font-size="26" fill="#253C37">Verify extension access</text>
+<text x="50" y="188" font-family="Arial, sans-serif" font-size="16" fill="#607467">Allow localhost and return to the exam.</text>
+
+<rect x="48" y="211" width="544" height="118" rx="18" fill="#F2F6F3"/>
+<circle cx="83" cy="253" r="23" fill="#DDECE1"/>
+<path d="M69 253L79 263L98 243" stroke="#397C57" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="123" y="254" font-family="Arial" font-size="22" font-weight="bold" fill="#284B39">EduNexus Exam Monitor</text>
+<text x="123" y="284" font-family="Arial" font-size="17" fill="#5F7267">Enabled · localhost:3000 allowed</text>
+<rect x="460" y="285" width="110" height="31" rx="15" fill="#DCEDE0"/>
+<text x="479" y="305" font-family="Arial" font-weight="bold" font-size="16" fill="#37764E">READY</text>
+<rect x="36" y="31" width="574" height="336" rx="19" fill="none" stroke="#D7DFD5" stroke-width="1.5"/>
+</svg>

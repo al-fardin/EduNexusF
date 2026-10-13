@@ -1,0 +1,35 @@
+.env
+.env
+
+# Private classroom material storage
+uploads/
+
+# Dependencies and build output
+node_modules/
+.next/
+.venv/
+__pycache__/
+*.pyc
+dist/
+build/
+release-builds/
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+
+# Local data and backups
+*.log
+*.db
+*.sqlite
+*.dump
+*backup*/
+postgres_data/
+redis_data/
+minio_data/
+/*.zip
+
