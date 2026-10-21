@@ -17,7 +17,15 @@ const EXT = "EDUNEXUS_MONITOR_EXT_V1";
 export function monitorBridge(type: MonitorBridgeType, payload: Record<string,unknown> = {}): Promise<MonitorBridgeReply> {
   return new Promise(resolve => {
     if (typeof window === "undefined") return resolve({ok:false,error:"Browser required"});
-    const requestId = window.crypto.randomUUID();
+    // crypto.randomUUID() is unavailable on HTTP LAN origins (insecure context).
+    // getRandomValues() remains available for a non-secret correlation ID.
+    if (typeof window.crypto?.getRandomValues !== "function") {
+      return resolve({ok:false,error:"Browser crypto unavailable"});
+    }
+    const requestId = typeof window.crypto.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : Array.from(window.crypto.getRandomValues(new Uint8Array(16)),
+          b => b.toString(16).padStart(2, "0")).join("");
     let finished = false;
     const finish = (value:MonitorBridgeReply) => {
       if (finished) return;

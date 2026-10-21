@@ -318,12 +318,13 @@ type Attempt struct {
 	Status      string            `json:"status"`
 	Answers     map[string]string `json:"answers"`
 	SubmittedAt *time.Time        `json:"submitted_at"`
+	Revision    int64             `json:"revision"`
 }
 
 func scanAttempt(row pgx.Row) (Attempt, error) {
 	var a Attempt
 	var raw []byte
-	err := row.Scan(&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &raw, &a.SubmittedAt)
+	err := row.Scan(&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &raw, &a.SubmittedAt, &a.Revision)
 	if err != nil {
 		return Attempt{}, err
 	}
@@ -348,7 +349,7 @@ func (h *Handler) attemptData(c *fiber.Ctx, create bool) error {
 	if err != nil {
 		return err
 	}
-	if e.Status != "published" {
+	if e.Status != "published" && (create || e.Status != "closed") {
 		return failure(c, 404, "exam not found")
 	}
 	now := time.Now().UTC()
@@ -363,7 +364,7 @@ func (h *Handler) attemptData(c *fiber.Ctx, create bool) error {
 			return err
 		}
 	}
-	a, err := scanAttempt(h.db.QueryRow(c.UserContext(), `SELECT id::text,started_at,expires_at,status,answers,submitted_at
+	a, err := scanAttempt(h.db.QueryRow(c.UserContext(), `SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision
       FROM classroom_exam_attempts WHERE exam_id=$1::uuid AND student_id=$2::uuid`, e.ID, user))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return failure(c, 404, "join the exam first")
@@ -390,7 +391,8 @@ func (h *Handler) Start(c *fiber.Ctx) error {
 func (h *Handler) Attempt(c *fiber.Ctx) error { return h.attemptData(c, false) }
 
 type AnswerRequest struct {
-	Answers map[string]string `json:"answers"`
+	Answers          map[string]string `json:"answers"`
+	ExpectedRevision *int64            `json:"expected_revision,omitempty"`
 }
 
 func validateAnswers(answers map[string]string, questions []Question) error {
@@ -440,7 +442,7 @@ func (h *Handler) writeAnswers(c *fiber.Ctx, submit bool) error {
 	if err != nil {
 		return err
 	}
-	if e.Status != "published" {
+	if e.Status != "published" && !(submit && e.Status == "closed") {
 		return failure(c, 404, "exam not found")
 	}
 	var req AnswerRequest
@@ -462,13 +464,35 @@ func (h *Handler) writeAnswers(c *fiber.Ctx, submit bool) error {
 	var answersRaw []byte
 	err = h.db.QueryRow(c.UserContext(), `
       UPDATE classroom_exam_attempts SET answers=$1::jsonb,status=$2::varchar(16),
+        revision=revision+1, last_saved_at=now(),
         submitted_at=CASE WHEN $2::varchar(16)='submitted' THEN now() ELSE submitted_at END
       WHERE exam_id=$3::uuid AND student_id=$4::uuid AND status='in_progress'
         AND now() <= expires_at AND now() <= $5::timestamptz
-      RETURNING id::text,started_at,expires_at,status,answers,submitted_at`, string(raw), newStatus, e.ID, user, e.EndsAt).Scan(
-		&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &answersRaw, &a.SubmittedAt)
+        AND ($6::bigint IS NULL OR revision=$6::bigint)
+      RETURNING id::text,started_at,expires_at,status,answers,submitted_at,revision`,
+		string(raw), newStatus, e.ID, user, e.EndsAt, req.ExpectedRevision).Scan(
+		&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &answersRaw, &a.SubmittedAt, &a.Revision)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return failure(c, 409, "exam time expired or attempt already submitted")
+		// A successful submit response can be lost on an unreliable connection.
+		// Retrying POST /submit must report the *stored* attempt, never mutate it.
+		stored, readErr := scanAttempt(h.db.QueryRow(c.UserContext(), `
+          SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision
+          FROM classroom_exam_attempts WHERE exam_id=$1::uuid AND student_id=$2::uuid`, e.ID, user))
+		if readErr != nil && !errors.Is(readErr, pgx.ErrNoRows) {
+			return readErr
+		}
+		if readErr == nil {
+			if submit && stored.Status == "submitted" {
+				return result(c, 200, stored)
+			}
+			if stored.Status == "submitted" {
+				return failure(c, 409, "exam already submitted")
+			}
+			if req.ExpectedRevision != nil && stored.Revision != *req.ExpectedRevision {
+				return failure(c, 409, "Another save reached the server first. Review the latest saved answers before retrying.")
+			}
+		}
+		return failure(c, 409, "exam time expired, closed, or attempt unavailable")
 	}
 	if err != nil {
 		return err

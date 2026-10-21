@@ -31,6 +31,7 @@ export type ExamAttempt = {
   status: "in_progress" | "submitted";
   answers: Record<string, string>;
   submitted_at: string | null;
+  revision: number;
 };
 export type LiveExam = {
   exam: ExamInfo;
@@ -86,12 +87,12 @@ export const examService = {
     const r = await api.get<Envelope<LiveExam>>(`${prefix(classroomId)}/${id}/attempt`);
     return r.data.data;
   },
-  async save(classroomId: string, id: string, answers: Record<string,string>): Promise<ExamAttempt> {
-    const r = await api.put<Envelope<ExamAttempt>>(`${prefix(classroomId)}/${id}/attempt`, {answers});
+  async save(classroomId: string, id: string, answers: Record<string,string>, expectedRevision?: number): Promise<ExamAttempt> {
+    const r = await api.put<Envelope<ExamAttempt>>(`${prefix(classroomId)}/${id}/attempt`, {answers, expected_revision: expectedRevision});
     return r.data.data;
   },
-  async submit(classroomId: string, id: string, answers: Record<string,string>): Promise<ExamAttempt> {
-    const r = await api.post<Envelope<ExamAttempt>>(`${prefix(classroomId)}/${id}/submit`, {answers});
+  async submit(classroomId: string, id: string, answers: Record<string,string>, expectedRevision?: number): Promise<ExamAttempt> {
+    const r = await api.post<Envelope<ExamAttempt>>(`${prefix(classroomId)}/${id}/submit`, {answers, expected_revision: expectedRevision});
     return r.data.data;
   },
 };

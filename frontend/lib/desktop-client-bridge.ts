@@ -39,5 +39,15 @@ export function desktopApiOrigin(): string {
   const explicit = process.env.NEXT_PUBLIC_EDUNEXUS_DESKTOP_API_ORIGIN;
   if (explicit) return explicit.replace(/\/$/, "");
   if (["localhost", "127.0.0.1"].includes(window.location.hostname)) return "http://127.0.0.1:8080";
+  // Dev convenience only: a LAN-hosted Next.js app on the same machine as the Go API.
+  // Production should set NEXT_PUBLIC_EDUNEXUS_DESKTOP_API_ORIGIN to an HTTPS API.
+  const hostname = window.location.hostname;
+  const octets = hostname.split(".").map(Number);
+  if (window.location.protocol === "http:" && octets.length === 4 &&
+      octets.every((n, i) => /^\d+$/.test(hostname.split(".")[i]) && n >= 0 && n <= 255) &&
+      (octets[0] === 10 || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+       (octets[0] === 192 && octets[1] === 168))) {
+    return `http://${hostname}:8080`;
+  }
   throw new Error("Desktop API URL is not configured for this deployment. Contact your exam administrator.");
 }

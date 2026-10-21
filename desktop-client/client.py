@@ -18,7 +18,7 @@ import threading
 import time
 import tkinter as tk
 from tkinter import ttk
-from local_bridge import DesktopPairingBridge
+from local_bridge import DesktopPairingBridge, dev_lan_http_permitted
 from urllib import error as urlerror
 from urllib import request as urlrequest
 from urllib.parse import urlsplit
@@ -42,13 +42,19 @@ def platform_key() -> str:
 def validate_server_url(raw: str) -> str:
     value = raw.strip().rstrip("/")
     parsed = urlsplit(value)
+    try:
+        _ = parsed.port
+    except ValueError as ex:
+        raise ValueError("Invalid API server port") from ex
     if parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ("", "/"):
         raise ValueError("Enter the API server root, without a path or credentials")
     if parsed.scheme == "https" and parsed.hostname:
         return value
     if parsed.scheme == "http" and parsed.hostname in ("localhost", "127.0.0.1", "::1"):
         return value
-    raise ValueError("Use HTTPS; plain HTTP is permitted only for local development")
+    if dev_lan_http_permitted(parsed):
+        return value
+    raise ValueError("Use HTTPS; private LAN HTTP requires EDUNEXUS_ALLOW_LAN_HTTP=1 for development")
 
 
 def api_post(url: str, path: str, data: dict, session_token: str | None = None) -> dict:

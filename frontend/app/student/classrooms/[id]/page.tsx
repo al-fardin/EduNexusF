@@ -1,4 +1,6 @@
 "use client";
+import { readActiveExam } from "@/lib/exam-resume";
+import { useEffect as useExamResumeEffect } from "react";
 import { ExamResults } from "@/components/classroom/exam-results";
 import { StudentRollGate } from "@/components/classroom/student-roll-gate";
 
@@ -81,6 +83,9 @@ export default function StudentClassroomPage() {
     useState<StudentClassroomTab>(
       "stream"
     );
+  useExamResumeEffect(() => {
+    setActiveTab(readActiveExam(classroomId) ? "exam" : "stream");
+  }, [classroomId]);
 
   const classroomQuery = useQuery({
     queryKey: [

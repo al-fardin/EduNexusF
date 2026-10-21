@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import ipaddress
 import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -18,11 +19,39 @@ DEFAULT_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
 MAX_BODY = 1024
 
 
+# Explicit opt-in ONLY for local development over a trusted, private IPv4 LAN.
+# HTTPS remains required for actual deployments. Never use Access-Control-Allow-Origin: *.
+_PRIVATE_LAN = tuple(ipaddress.ip_network(net) for net in (
+    "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+))
+
+
+def dev_lan_http_permitted(parsed) -> bool:
+    if os.environ.get("EDUNEXUS_ALLOW_LAN_HTTP") != "1" or parsed.scheme != "http":
+        return False
+    try:
+        ip = ipaddress.ip_address(parsed.hostname or "")
+        return ip.version == 4 and any(ip in network for network in _PRIVATE_LAN)
+    except ValueError:
+        return False
+
+
+def valid_web_origin(value: str) -> bool:
+    try:
+        parsed = urlsplit(value)
+        if (not parsed.hostname or parsed.username or parsed.password or parsed.query or
+                parsed.fragment or parsed.path not in ("", "/")):
+            return False
+        _ = parsed.port  # Also reject malformed ports.
+        return parsed.scheme == "https" or dev_lan_http_permitted(parsed)
+    except ValueError:
+        return False
+
+
 def allowed_origins() -> frozenset[str]:
-    # For deployment, ship ONLY the operator-owned HTTPS exam origin here.
+    # The operator must specify the exact origin; we never trust an arbitrary LAN website.
     extra = [o.strip().rstrip("/") for o in os.environ.get("EDUNEXUS_WEB_ORIGINS", "").split(",") if o.strip()]
-    extra = [o for o in extra if urlsplit(o).scheme == "https" and urlsplit(o).hostname]
-    return frozenset((*DEFAULT_ORIGINS, *extra))
+    return frozenset((*DEFAULT_ORIGINS, *(o for o in extra if valid_web_origin(o))))
 
 
 def valid_request(data: object) -> bool:
@@ -35,10 +64,15 @@ def valid_request(data: object) -> bool:
     if not isinstance(raw_server, str) or len(raw_server) > 250:
         return False
     url = urlsplit(raw_server)
+    try:
+        _ = url.port
+    except ValueError:
+        return False
     if url.username or url.password or url.query or url.fragment or url.path not in ("", "/"):
         return False
-    return bool(url.scheme == "https" and url.hostname or
-                url.scheme == "http" and url.hostname in ("localhost", "127.0.0.1", "::1"))
+    return bool((url.scheme == "https" and url.hostname) or
+                (url.scheme == "http" and url.hostname in ("localhost", "127.0.0.1", "::1")) or
+                dev_lan_http_permitted(url))
 
 
 class BridgeServer(ThreadingHTTPServer):
