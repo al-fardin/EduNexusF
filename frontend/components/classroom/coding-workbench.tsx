@@ -1,5 +1,7 @@
 "use client";
 
+import { LocalTesterPanel } from "@/components/classroom/local-tester-panel";
+import type { TesterAttachment } from "@/services/question-testers";
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
@@ -22,7 +24,7 @@ loader.config({ paths: { vs: "/monaco/vs" } });
 // The same Monaco editor engine used in VS Code, with EduNexus-specific colors.
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false, loading: () => <div className="flex h-full items-center justify-center animate-pulse text-sm text-[#637466]">Loading editor…</div> });
 
-type Props = { classroomId: string; examId: string; questionId: string; language: string; code: string; onChange: (next: string) => void };
+type Props = { tester?: TesterAttachment; classroomId: string; examId: string; questionId: string; language: string; code: string; onChange: (next: string) => void };
 const maxWorkspaceBytes = 19500; // Existing exam answers cap each coding response at 20,000 bytes.
 const filePathPattern = /^[A-Za-z0-9_./-]+$/;
 const light = "#FBFAF6";
@@ -54,7 +56,7 @@ function validateName(name: string) {
   return name.length > 0 && name.length <= 120 && filePathPattern.test(name) && !name.split("/").some(x => x === "." || x === ".." || x.startsWith(".")) && !name.startsWith("/") && !name.endsWith("/") && !name.includes("//");
 }
 
-export function CodingWorkbench({ classroomId, examId, questionId, language, code, onChange }: Props) {
+export function CodingWorkbench({ classroomId, examId, questionId, language, code, onChange, tester }: Props) {
   const workspace = useMemo(() => parseWorkspace(code, language), [code, language]);
   const [current, setCurrent] = useState<string | null>(null);
   const [tabs, setTabs] = useState<string[]>([]);
@@ -237,6 +239,7 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
       <pre role="status" className="mt-1 max-h-48 min-h-16 overflow-auto whitespace-pre-wrap break-words rounded-md border border-[#DFE5DC] bg-[#FBFAF6] p-3 font-mono text-xs leading-5 text-[#273629]">{running?"Compiling and running in isolated Docker…":output?(output.stdout||"")+(output.stderr?"\n"+output.stderr:"") || "Process finished (no output).":"Terminal ready · Choose an entry file and press Run."}</pre>
       {output?.truncated&&<p className="mt-1 text-[#9B703C]">Output truncated at the server limit.</p>}
     </div>}
+    {tester && <LocalTesterPanel classroomId={classroomId} examId={examId} questionId={questionId} tester={tester} workspace={workspace} language={entryLanguage || language} />}
     {showInputDialog && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#101810]/55 p-4" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setShowInputDialog(false)}}>
       <div role="dialog" aria-modal="true" aria-label="Run program input" className="w-full max-w-xl rounded-[23px_13px_21px_16px] border border-[#BFCBB9] bg-[#FBFAF6] p-5 shadow-2xl">
         <div className="flex items-center gap-2 font-semibold text-[#2B342C]"><TerminalSquare size={18}/> Run {workspace.entry}</div>

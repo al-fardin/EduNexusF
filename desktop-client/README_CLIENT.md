@@ -1,42 +1,40 @@
-# EduNexus Secure Exam Client — Phase 14B Developer Preview
+# EduNexus Desktop 1.5
 
-This is a **source-based preview**, NOT a signed Windows installer, macOS .dmg, or Linux AppImage. Do not deploy as a high-stakes proctoring product without native builds, security review, end-to-end tests and student accessibility review.
+## Student setup
 
-## One-time setup
+1. Download the Windows app from the exam entry page and open it.
+2. On the exam page, select **Connect Desktop Client**.
+3. Review the activity permissions and select **Approve connection** in the app.
+4. Enter the exam. For questions with a tester, select **Run Tests**, then **Approve & run** in the app. Results appear below the coding editor.
 
-- **Windows**: Install Python 3 (including Tkinter) from python.org; extract this ZIP; double-click `START_WINDOWS.cmd`. If your browser warns about an untrusted script, inspect it before running.
-- **macOS**: Install Python 3 with Tkinter. Open Terminal in the extracted folder and run `sh START_MAC_LINUX.sh`. Grant the required macOS Accessibility permission if application-name monitoring is needed.
-- **Linux (X11)**: Install Python 3, Tkinter, venv and xdotool (distro packages vary), then run `sh START_MAC_LINUX.sh`. On Wayland, cross-app foreground detection is unavailable in this preview: the teacher sees a coverage warning.
+The app has Connection, Test runner and Activity tabs. Monitoring starts after exam entry and stops on expiry or Disconnect. It records foreground app names and Windows clipboard-change metadata, without reading clipboard text, messages, passwords, window titles or screenshots.
 
-The app asks for a **Server API URL** and a one-time **pairing code**. On the student's own development computer with EduNexus on port 8080, the default `http://127.0.0.1:8080` works. For a deployed server use its HTTPS API origin, e.g. `https://api.your-school.example`. Pair codes expire after five minutes.
+`.exe` testers require Windows. macOS/Linux retain exam monitoring support, with platform permission and X11/Wayland limitations. To run from source, use `START_WINDOWS.cmd` or `START_MAC_LINUX.sh` (Python 3 with Tkinter and the requirements file).
 
-1. In the browser's exam setup page, verify the existing browser extension.
-2. Generate a Desktop Client pairing code.
-3. In this desktop app, enter the API origin and pairing code, review the monitoring notice, then connect.
-4. Return to the browser and wait for `Connected` before `Agree & Enter Exam`.
-5. **Before exam entry**, only connectivity heartbeats are sent; no foreground application events.
-6. **During an active attempt**, foreground application *names* and times are sent. The existing Chrome/Edge extension separately records supported exam-time browser evidence. This app does not read app messages, passwords, screenshots, window titles, or file contents.
-7. Stops on exam expiration or when the student clicks Stop. Teacher sees missing coverage after disconnection.
+## Teacher testers
 
-## Native packaging for developers
+Testers are optional on coding questions in both **Create exam** and **Edit exam**. Attach a Windows PE `.exe` up to 10 MB, replace it or remove it before the first attempt. Questions without a tester keep their existing behavior. Attachments are immutable and scoped to the classroom; storage is limited to 200 MB per classroom, including draft uploads.
 
-- Windows: run `BUILD_WINDOWS.ps1` **on Windows**. This produces an unsigned `.exe` in `dist/` if PyInstaller is available.
-- macOS/Linux: run `sh BUILD_NATIVE_ON_THIS_OS.sh` **on the target OS**. You must package/sign/notarize as appropriate, and test permissions and desktop environments.
-- Do not claim that these native executables are signed, notarized, or tested until they actually are.
+The executable must implement [TESTER_PROTOCOL.md](TESTER_PROTOCOL.md). An arbitrary GUI tester is not automatically compatible. A working Python-solution example is provided in `examples/sum_tester.py`.
 
-Security model: the pairing token is random, one-use and scoped to an exam session. Heartbeats prove a connected agent, **not** that the student cannot bypass monitoring. Events are review signals, not automatic cheating proof.
+Each run requires local approval. The app verifies SHA-256 and uses a short-lived, single-use server ticket, restricted loopback bridge, exact web-origin checks and the connected exam server. Runs have a 60-second limit, 128 KB per output stream, a 512 MB Windows Job Object memory limit and a 16-process limit. Cancellation/disconnection kills the job's processes.
 
-## Phase 14C clipboard-change metadata (Windows)
+**Execution uses the student's account permissions. Job Objects provide resource and lifetime limits, not a security sandbox. Only approve trusted teacher testers.** Local results provide feedback and do not change grades or attest submission correctness. Test cases distributed to a student's PC cannot be guaranteed secret.
 
-When explicit monitoring consent is given AND an exam attempt is active, the
-Windows client observes OS clipboard *sequence-number changes* (not clipboard
-contents) and attaches the foreground application name and observation time.
-It cannot confirm a copy command or which browser tab supplied text.
-Browser-extension `external_copy` and exam `exam_paste` events remain separate.
-The teacher review UI may correlate closely timed events as **possible source**,
-not proof of cheating. Linux/macOS continue tracking foreground apps; clipboard
-source tracking is not supported there in this preview. No global keylogging,
-clipboard text reading, window-title capture or private messaging access.
+## Build and deploy
 
-Stop the running desktop client and start this updated version for 14C changes to
-apply; installing backend/frontend files cannot update a running client.
+- Apply `database/migrations/000022_question_testers.up.sql` after existing migrations. For standard Docker setup, run `powershell -File APPLY_QUESTION_TESTERS.ps1` from the project root.
+- Windows: `powershell -File desktop-client/BUILD_WINDOWS.ps1`. Produces the native app and refreshes the frontend download.
+- macOS/Linux: `sh desktop-client/BUILD_NATIVE_ON_THIS_OS.sh` on the target OS. Windows testers are unsupported there.
+- Set `NEXT_PUBLIC_EDUNEXUS_DESKTOP_API_ORIGIN` to the HTTPS API origin and `EDUNEXUS_WEB_ORIGINS` to the exact web origin on student clients for deployed installations. Source launchers inherit these environment variables.
+- Builds are unsigned. Production distribution should use platform signing/notarization.
+- Restart an already open client to use an update.
+
+## Verify
+
+```powershell
+python -m unittest discover -s desktop-client/tests -v
+python -m PyInstaller --onefile --console --name Sum-Tester --distpath release-builds --specpath release-builds desktop-client/examples/sum_tester.py
+$env:EDUNEXUS_TESTER_EXE = (Resolve-Path release-builds/Sum-Tester.exe).Path
+python -m unittest discover -s desktop-client/tests -v
+```

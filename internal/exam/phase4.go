@@ -55,6 +55,9 @@ func (h *Handler) EditExam(c *fiber.Ctx) error {
 	if len(req.Title) < 3 || len(req.Title) > 200 || len(req.Description) > 5000 || req.DurationMinutes < 1 || req.DurationMinutes > 240 || req.StartsAt.IsZero() || !req.EndsAt.After(req.StartsAt) || req.EndsAt.Sub(req.StartsAt) > 30*24*time.Hour {
 		return failure(c, 400, "invalid exam details")
 	}
+	if err := h.hydrateTesters(c, req.Questions); err != nil {
+		return err
+	}
 	raw, err := normalizeQuestions(req.Questions)
 	if err != nil {
 		return failure(c, 400, err.Error())

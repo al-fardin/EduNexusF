@@ -17,7 +17,7 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(len(client.normalized_app('x'*200)),160)
     def test_event_fields(self):
         ev=client.make_event('foreground_app','Firefox.exe')
-        self.assertEqual(set(ev),{'id','kind','app_name'})
+        self.assertEqual(set(ev),{'id','kind','app_name','at'})
         self.assertNotIn('screenshot',ev)
     def test_wayland_unsupported(self):
         with patch.object(client.platform,'system',return_value='Linux'),patch.dict('os.environ',{'XDG_SESSION_TYPE':'wayland'}):

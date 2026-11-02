@@ -15,3 +15,7 @@ This project contains the **redesigned frontend** plus the **unchanged Go backen
 ## Get started
 
 Open `FRONTEND_PREVIEW.html` now. To run the actual integrated frontend, see `frontend/README.md`.
+
+## Desktop client and optional question testers
+
+EduNexus Desktop 1.5 adds a refreshed interface and optional Windows `.exe` testers on coding questions. See [Desktop setup](desktop-client/README_CLIENT.md) and the [tester protocol](desktop-client/TESTER_PROTOCOL.md). Apply migration `000022_question_testers` before using attachments.

@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 PORT = 47913
 LOCAL_HOST = "127.0.0.1"
 DEFAULT_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
-MAX_BODY = 1024
+MAX_BODY = 65536
 
 
 # Explicit opt-in ONLY for local development over a trusted, private IPv4 LAN.
@@ -79,7 +79,8 @@ class BridgeServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = False
 
-    def __init__(self, callback):
+    def __init__(self, callback, test_runs=None):
+        self.test_runs = test_runs
         super().__init__((LOCAL_HOST, PORT), BridgeHandler)
         self.callback = callback
 
@@ -108,11 +109,11 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_OPTIONS(self):
-        if self.path not in ("/pair", "/health") or not self._authorized():
+        if (self.path not in ("/pair", "/health", "/test-runs") and not re.fullmatch(r"/test-runs/[a-f0-9]{64}(?:/cancel)?", self.path)) or not self._authorized():
             return self._reply(403, {"ok": False})
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", self.headers["Origin"])
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS" if self.path == "/pair" else "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS" if self.path in ("/pair", "/test-runs") or self.path.endswith("/cancel") else "GET, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Access-Control-Allow-Private-Network", "true")
         self.send_header("Vary", "Origin")
@@ -120,12 +121,15 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        if re.fullmatch(r"/test-runs/[a-f0-9]{64}", self.path) and self._authorized() and self.server.test_runs:
+            job = self.server.test_runs.status(self.path.rsplit("/", 1)[1], self.headers["Origin"])
+            return self._reply(200, {"ok": True, **job}) if job else self._reply(404, {"ok": False, "error": "Test run not found"})
         if self.path != "/health" or not self._authorized():
             return self._reply(403, {"ok": False})
-        self._reply(200, {"ok": True, "client": "EduNexus Secure Exam", "pairing": "local-confirmation"})
+        self._reply(200, {"ok": True, "client": "EduNexus Secure Exam", "pairing": "local-confirmation", "tester_protocol": "edunexus.tester.v1" if self.server.test_runs else None})
 
     def do_POST(self):
-        if self.path != "/pair" or not self._authorized():
+        if (self.path not in ("/pair", "/test-runs") and not re.fullmatch(r"/test-runs/[a-f0-9]{64}/cancel", self.path)) or not self._authorized():
             return self._reply(403, {"ok": False, "error": "not_allowed"})
         if self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json":
             return self._reply(415, {"ok": False})
@@ -136,6 +140,20 @@ class BridgeHandler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(length))
         except (ValueError, UnicodeDecodeError):
             return self._reply(400, {"ok": False})
+        if self.path.endswith("/cancel"):
+            job_id = self.path.split("/")[2]
+            if not self.server.test_runs or not self.server.test_runs.status(job_id, self.headers["Origin"]):
+                return self._reply(404, {"ok": False})
+            self.server.test_runs.reject(job_id)
+            return self._reply(200, {"ok": True})
+        if self.path == "/test-runs":
+            if not self.server.test_runs:
+                return self._reply(409, {"ok": False, "error": "Update the desktop client to run tests"})
+            try:
+                job = self.server.test_runs.create(data, self.headers["Origin"])
+                return self._reply(202, {"ok": True, **job})
+            except ValueError as exc:
+                return self._reply(400, {"ok": False, "error": str(exc)})
         if not valid_request(data):
             return self._reply(400, {"ok": False, "error": "invalid_pair"})
         if not self.server.callback(data):
@@ -144,8 +162,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
 
 class DesktopPairingBridge:
-    def __init__(self, callback):
-        self.httpd = BridgeServer(callback)
+    def __init__(self, callback, test_runs=None):
+        self.httpd = BridgeServer(callback, test_runs)
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
 
     def start(self):

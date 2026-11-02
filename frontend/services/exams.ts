@@ -1,8 +1,11 @@
 import { api } from "@/lib/api";
 
+import type { TesterAttachment } from "@/services/question-testers";
+
 type Envelope<T> = { success: boolean; data: T; message?: string };
 export type QuestionKind = "mcq" | "theory" | "coding";
 export type ExamQuestion = {
+  tester?: TesterAttachment;
   id: string;
   kind: QuestionKind;
   prompt: string;

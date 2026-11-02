@@ -23,6 +23,7 @@ func New(db *pgxpool.Pool) *Handler { return &Handler{db: db} }
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := New(db)
 	RegisterPhase14Client(app, h)
+	registerQuestionTesters(app, h)
 	g := app.Group("/classrooms/:id/exams", authMiddleware.JWTProtected())
 	g.Get("/", h.List)
 	g.Post("/", h.Create)
@@ -93,28 +94,30 @@ func examID(c *fiber.Ctx) (string, error) {
 }
 
 type Question struct {
-	ID            string   `json:"id"`
-	Kind          string   `json:"kind"`
-	Prompt        string   `json:"prompt"`
-	Points        int      `json:"points"`
-	Options       []string `json:"options,omitempty"`
-	CorrectOption *int     `json:"correct_option,omitempty"`
-	SampleAnswer  string   `json:"sample_answer,omitempty"`
-	Language      string   `json:"language,omitempty"`
+	Tester        *TesterAttachment `json:"tester,omitempty"`
+	ID            string            `json:"id"`
+	Kind          string            `json:"kind"`
+	Prompt        string            `json:"prompt"`
+	Points        int               `json:"points"`
+	Options       []string          `json:"options,omitempty"`
+	CorrectOption *int              `json:"correct_option,omitempty"`
+	SampleAnswer  string            `json:"sample_answer,omitempty"`
+	Language      string            `json:"language,omitempty"`
 }
 type PublicQuestion struct {
-	ID       string   `json:"id"`
-	Kind     string   `json:"kind"`
-	Prompt   string   `json:"prompt"`
-	Points   int      `json:"points"`
-	Options  []string `json:"options,omitempty"`
-	Language string   `json:"language,omitempty"`
+	Tester   *TesterAttachment `json:"tester,omitempty"`
+	ID       string            `json:"id"`
+	Kind     string            `json:"kind"`
+	Prompt   string            `json:"prompt"`
+	Points   int               `json:"points"`
+	Options  []string          `json:"options,omitempty"`
+	Language string            `json:"language,omitempty"`
 }
 
 func publicQuestions(questions []Question) []PublicQuestion {
 	out := make([]PublicQuestion, 0, len(questions))
 	for _, q := range questions {
-		out = append(out, PublicQuestion{ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language})
+		out = append(out, PublicQuestion{ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language, Tester: q.Tester})
 	}
 	return out
 }
@@ -143,6 +146,9 @@ func normalizeQuestions(questions []Question) (string, error) {
 		seen[q.ID] = true
 		if len(q.Prompt) < 3 || len(q.Prompt) > 10000 || q.Points < 1 || q.Points > 100 {
 			return "", errors.New("each question requires prompt (3-10000 chars) and 1-100 points")
+		}
+		if q.Tester != nil && q.Kind != "coding" {
+			return "", errors.New("testers can only be attached to coding questions")
 		}
 		switch q.Kind {
 		case "mcq":
@@ -237,6 +243,9 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	}
 	if req.DurationMinutes < 1 || req.DurationMinutes > 240 {
 		return failure(c, 400, "duration must be between 1 and 240 minutes")
+	}
+	if err := h.hydrateTesters(c, req.Questions); err != nil {
+		return err
 	}
 	raw, err := normalizeQuestions(req.Questions)
 	if err != nil {

@@ -162,7 +162,7 @@ export function ExamEntryGate({classroomId,examId,onEnter,onExit}:{classroomId:s
         {!desktopState?.connected && <div className="space-y-3 rounded-2xl bg-[#F3F5F0] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold">1. Download for your computer</p>
-            {os==="windows" && <a href="https://github.com/al-fardin/EduNexusF/releases/download/v14.2.0/EduNexus-Secure-Exam.exe" className="rounded-xl bg-[#2B342C] px-4 py-2 text-sm font-semibold text-white"> <Download size={15} className="mr-2 inline"/>Windows .exe</a>}
+            {os==="windows" && <a href="/downloads/EduNexus-Secure-Exam.exe" className="rounded-xl bg-[#2B342C] px-4 py-2 text-sm font-semibold text-white"> <Download size={15} className="mr-2 inline"/>Windows .exe</a>}
             {os==="macos" && <div className="flex flex-wrap gap-2"><a href="https://github.com/al-fardin/EduNexusF/releases/download/v14.2.0/EduNexus-Secure-Exam-AppleSilicon.dmg" className="rounded-xl bg-[#2B342C] px-4 py-2 text-sm font-semibold text-white">Apple Silicon .dmg</a><a href="https://github.com/al-fardin/EduNexusF/releases/download/v14.2.0/EduNexus-Secure-Exam-Intel.dmg" className="rounded-xl border border-[#A8B9A0] px-4 py-2 text-sm font-semibold">Intel .dmg</a></div>}
             {os==="linux" && <a href="https://github.com/al-fardin/EduNexusF/releases/download/v14.2.0/EduNexus-Secure-Exam-Linux-x64.tar.gz" className="rounded-xl bg-[#2B342C] px-4 py-2 text-sm font-semibold text-white"><Download size={15} className="mr-2 inline"/>Linux x64</a>}
             {os==="unsupported" && <span className="text-sm text-[#99523B]">A supported desktop OS is required.</span>}
