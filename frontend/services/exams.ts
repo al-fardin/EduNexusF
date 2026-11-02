@@ -35,6 +35,7 @@ export type ExamAttempt = {
   answers: Record<string, string>;
   submitted_at: string | null;
   revision: number;
+  last_saved_at?: string | null;
 };
 export type LiveExam = {
   exam: ExamInfo;
@@ -63,6 +64,9 @@ export type NewExam = {
 };
 const prefix = (classroomId: string) => `/classrooms/${classroomId}/exams`;
 export const examService = {
+  async active(classroomId: string): Promise<Array<{exam_id:string;title:string;expires_at:string;last_saved_at:string|null}>> {
+    return (await api.get<Envelope<Array<{exam_id:string;title:string;expires_at:string;last_saved_at:string|null}>>>(`${prefix(classroomId)}/active`)).data.data;
+  },
   async list(classroomId: string): Promise<ExamInfo[]> {
     const r = await api.get<Envelope<ExamInfo[]>>(prefix(classroomId));
     return r.data.data;

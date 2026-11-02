@@ -1,4 +1,6 @@
 "use client";
+import { useAuthStore } from "@/store/auth-store";
+import { readExamDraft, saveExamDraft, removeExamDraft, sameAnswers } from "@/lib/exam-drafts";
 import { StudentDesktopPair } from "@/components/classroom/desktop-monitoring";
 import { ExamEntryGate } from "@/components/classroom/exam-entry-gate";
 import { StudentExamMonitor } from "@/components/classroom/exam-monitoring";
@@ -30,6 +32,7 @@ export function ExamBoard({ classroomId, canManage }: Props) {
   const [entryExam, setEntryExam] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
   const list = useQuery({ queryKey: ["classrooms", classroomId, "exams"], queryFn: () => examService.list(classroomId), enabled: !taking });
+  const activeAttempts = useQuery({queryKey:["active-exams",classroomId],queryFn:()=>examService.active(classroomId),enabled:!canManage&&!taking&&!entryExam,refetchInterval:30000});
   const [notice, setNotice] = useState("");
   const [restoreState, setRestoreState] = useState<"checking" | "ready" | "error">("checking");
   const [restoreError, setRestoreError] = useState("");
@@ -109,6 +112,7 @@ export function ExamBoard({ classroomId, canManage }: Props) {
       <div><h2 className="text-2xl font-bold">Live examinations</h2><p className="mt-1 text-sm text-[#536058]">MCQ, written and coding exams. Saved securely with classroom-level permissions.</p></div>
       {canManage && <button type="button" className={primary} onClick={() => { setCreating(v=>!v); setNotice(""); }}><Plus size={17} /> {creating ? "Close editor" : "Create exam"}</button>}
     </div>
+    {!canManage && activeAttempts.data?.map(attempt=><div key={attempt.exam_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4"><div><p className="font-semibold">{attempt.title}</p><p className="text-xs text-muted-foreground">In progress � {attempt.last_saved_at?`Saved ${dateLabel(attempt.last_saved_at)}`:"No server save yet"}</p></div><button className={primary} onClick={()=>{rememberActiveExam(classroomId,attempt.exam_id,"active");setTaking(attempt.exam_id);}}>Resume exam</button></div>)}
     {notice && <div role="status" className="rounded-xl bg-[#e9ede5] px-4 py-3 text-sm text-[#5f7358]">{notice}</div>}
     {creating && canManage && <ExamCreator classroomId={classroomId} onClose={() => {setCreating(false);void client.invalidateQueries({queryKey:["classrooms",classroomId,"exams"]});}} />}
 
@@ -181,23 +185,25 @@ function ExamTake({classroomId,examId,onClose}:{classroomId:string;examId:string
   const submittingRef=useRef(false);
   const [online,setOnline]=useState(true);
   const [conflictDraft,setConflictDraft]=useState<Record<string,string>|null>(null);
-  const draftKey=(attemptID:string)=>`en-exam-v15:${attemptID}`;
+  const userId=useAuthStore(state=>state.user?.id??"");
+  const [clockOffset,setClockOffset]=useState(0);
   function storeDraft(next:Record<string,string>) {
     if(!live||submitted)return;
-    try{window.sessionStorage.setItem(draftKey(live.attempt.id),JSON.stringify({answers:next,serverRevision:serverRevision.current,at:Date.now()}));}catch{}
+    if(!saveExamDraft(userId,live.attempt.id,{answers:next,serverRevision:serverRevision.current,at:Date.now(),expiresAt:live.attempt.expires_at}))setSaved("Browser storage unavailable � keep this page open until saved");
   }
-  function removeDraft(){if(live)try{window.sessionStorage.removeItem(draftKey(live.attempt.id));}catch{}}
+  function removeDraft(){if(live)try{removeExamDraft(userId,live.attempt.id);}catch{}}
 
   const [loading,setLoading]=useState(true);
-  useEffect(()=>{let mounted=true;examService.start(classroomId,examId).then(data=>{
+  useEffect(()=>{let mounted=true;examService.attempt(classroomId,examId).catch(err=>{if(err?.response?.status===404)return examService.start(classroomId,examId);throw err;}).then(data=>{
     if(!mounted)return;
     serverRevision.current=data.attempt.revision??0;
+    setClockOffset(Date.parse(data.server_time)-Date.now());
     let recovered=data.attempt.answers;
     if(data.attempt.status==="in_progress"){
       try{
-        const raw=window.sessionStorage.getItem(draftKey(data.attempt.id));
-        if(raw){const local=JSON.parse(raw) as {answers?:Record<string,string>;serverRevision?:number};
-          if(local.answers && typeof local.answers==="object" && JSON.stringify(local.answers)!==JSON.stringify(recovered)){
+        const local=readExamDraft(userId,data.attempt.id);
+        if(local){
+          if(local.answers && typeof local.answers==="object" && !sameAnswers(local.answers,recovered)){
             if(local.serverRevision===serverRevision.current){recovered=local.answers;dirty.current=true;revision.current++;setSaved("Unsynced draft restored. Saving when online.");}
             else{setConflictDraft(local.answers);setError("A newer answer version exists on the server. Review your local draft before restoring.");}
           }
@@ -208,7 +214,7 @@ function ExamTake({classroomId,examId,onClose}:{classroomId:string;examId:string
       clearActiveExam(classroomId,examId);
     }
     setLive(data);setAnswers(recovered);answersRef.current=recovered;setSubmitted(data.attempt.status==="submitted");
-  }).catch(e=>{if(mounted)setError(examError(e));}).finally(()=>{if(mounted)setLoading(false);});return()=>{mounted=false};},[classroomId,examId]);
+  }).catch(e=>{if(mounted)setError(examError(e));}).finally(()=>{if(mounted)setLoading(false);});return()=>{mounted=false};},[classroomId,examId,userId]);
   useEffect(()=>{const tick=()=>setNow(Date.now());const initial=window.setTimeout(tick,0);const timer=window.setInterval(tick,1000);return()=>{window.clearTimeout(initial);window.clearInterval(timer);};},[]);
   useEffect(()=>{
     if(!live || submitted)return;
@@ -227,6 +233,7 @@ function ExamTake({classroomId,examId,onClose}:{classroomId:string;examId:string
   async function syncAnswers():Promise<boolean>{
     if(!live||submitted)return false;
     if(savePromiseRef.current)return savePromiseRef.current;
+    if(conflictDraft)return false;
     if(!dirty.current)return true;
     if(!navigator.onLine){setSaved("Offline — draft kept in this browser tab");return false;}
     const snapshot={...answersRef.current};const localRevision=revision.current;const expected=serverRevision.current;
@@ -256,27 +263,27 @@ function ExamTake({classroomId,examId,onClose}:{classroomId:string;examId:string
       if(dirty.current){setError("Your latest answers are not yet saved. Reconnect or resolve the save conflict before submitting.");return;}
       const final=await examService.submit(classroomId,examId,answersRef.current,serverRevision.current);
       serverRevision.current=final.revision;
-      setSubmitted(true);dirty.current=false;removeDraft();clearActiveExam(classroomId,examId);setSaved("Submitted successfully");
+      setLive(current=>current?{...current,attempt:final}:current);setSubmitted(true);dirty.current=false;removeDraft();clearActiveExam(classroomId,examId);setSaved("Submitted successfully");
     }catch(e){
       // A response may be lost after the server successfully committed submission.
       try{
         const check=await examService.attempt(classroomId,examId);
         if(check.attempt.status==="submitted"){
-          setSubmitted(true);dirty.current=false;removeDraft();clearActiveExam(classroomId,examId);setSaved("Submission confirmed by server");return;
+          setLive(check);setSubmitted(true);dirty.current=false;removeDraft();clearActiveExam(classroomId,examId);setSaved("Submission confirmed by server");return;
         }
       }catch{}
       setError(examError(e)+" — submission not confirmed; try again after checking your connection.");
     }finally{submittingRef.current=false;setSaving(false);}
   }
   const until=live?Math.min(Date.parse(live.attempt.expires_at),Date.parse(live.exam.ends_at)):0;
-  const left=Math.max(0,Math.floor((until-now)/1000));const timedOut=Boolean(live)&&left<=0;
+  const left=Math.max(0,Math.floor((until-(now+clockOffset))/1000));const timedOut=Boolean(live)&&left<=0;
   return <section className={panel}><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h3 className="text-xl font-bold">{live?.exam.title??"Exam session"}</h3><button className={outline} onClick={onClose}><ArrowLeft size={16}/> Back to exams</button></div>
     {(loading||Boolean(live&&!now))&&<ExamSessionSkeleton />}
-    {!online&&<p role="status" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Offline: unsynced answers are kept only in this browser tab session. Reconnect before submitting.</p>}
-    {conflictDraft&&<div role="alert" className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">Another tab/device saved a newer answer version. Your local draft is retained. <button type="button" className="ml-2 font-semibold underline" onClick={()=>{if(!window.confirm("Replace the newer server answers with your older local draft? This will overwrite other changes."))return;answersRef.current=conflictDraft;setAnswers(conflictDraft);revision.current++;dirty.current=true;setConflictDraft(null);setError("");storeDraft(conflictDraft);}}>Replace server answers with my local draft</button> <button type="button" className="ml-2 underline" onClick={()=>{removeDraft();setConflictDraft(null);setError("");}}>Keep newer server answers</button></div>}
+    {!online&&<p role="status" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Offline: your draft is stored in this browser. Reconnect before the deadline to submit.</p>}
+    {conflictDraft&&<div role="alert" className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">Another tab/device saved a newer answer version. Your local draft is retained. <button type="button" className="ml-2 font-semibold underline" onClick={()=>{if(!window.confirm("Replace the newer server answers with your older local draft? This will overwrite other changes."))return;answersRef.current=conflictDraft;setAnswers(conflictDraft);revision.current++;dirty.current=true;setConflictDraft(null);setError("");storeDraft(conflictDraft);}}>Replace server answers with my local draft</button> <button type="button" className="ml-2 underline" onClick={()=>{removeDraft();dirty.current=false;setConflictDraft(null);setError("");}}>Keep newer server answers</button></div>}
     {error&&<p className="mb-4 rounded-xl bg-[#fff0ef] p-3 text-sm text-[#b34450]" role="alert">{error}</p>}
     {live&&now>0&&<><StudentDesktopPair classroomId={classroomId} examId={examId}/><StudentExamMonitor classroomId={classroomId} examId={examId} attemptId={live.attempt.id} expiresAt={live.attempt.expires_at} active={!submitted&&!timedOut}/><div className="mb-5 flex flex-wrap items-center gap-3"><span className="inline-flex items-center gap-2 rounded-xl bg-[#e9ede5] px-4 py-2 text-sm font-bold"><Clock3 size={16}/>{String(Math.floor(left/3600)).padStart(2,"0")}:{String(Math.floor(left/60)%60).padStart(2,"0")}:{String(left%60).padStart(2,"0")}</span><span className="text-xs text-[#6f756f]">Deadline is enforced by server Â· {dateLabel(live.attempt.expires_at)}</span></div>
-      {submitted?<div className="rounded-xl bg-[#e9ede5] p-5"><CheckCircle2 className="mb-2 text-[#5f7358]"/><p className="font-semibold">Your exam has been submitted.</p><p className="text-sm text-[#536058]">Teacher will review answers. Results are not available yet.</p></div>:timedOut?<div className="rounded-xl bg-[#e9ede5] p-5"><LockKeyhole className="mb-2"/><p className="font-semibold">Time has expired.</p><p className="mt-1 text-sm">You cannot change or submit new answers. Any answers saved before the deadline are retained for teacher review.</p></div>:<>
+      {submitted?<div className="rounded-xl bg-[#e9ede5] p-5"><CheckCircle2 className="mb-2 text-[#5f7358]"/><p className="font-semibold">Your exam has been submitted.</p><p className="mt-2 text-sm">Receipt: {live.attempt.id}</p><p className="text-sm">Submitted {live.attempt.submitted_at?dateLabel(live.attempt.submitted_at):"Confirmed"} � Revision {live.attempt.revision}</p></div>:timedOut?<div className="rounded-xl bg-[#e9ede5] p-5"><LockKeyhole className="mb-2"/><p className="font-semibold">Time has expired.</p><p className="mt-1 text-sm">You cannot change or submit new answers. Any answers saved before the deadline are retained for teacher review.</p></div>:<>
       <div className="space-y-4">{live.questions.map((q,i)=><div key={q.id} className="rounded-[22px_10px_18px_12px] border border-[#d9ddd4] bg-[#f3f1ea] p-4"><div className="mb-3 flex items-start justify-between gap-4"><p className="font-semibold">{i+1}. {q.prompt}</p><span className="shrink-0 rounded-lg bg-[#e9ede5] px-2 py-1 text-xs">{q.points} pts</span></div>
         {q.kind==="mcq"?<div className="space-y-2">{q.options?.map((o,j)=><label key={j} className="flex cursor-pointer items-center gap-3 rounded-lg border border-[#dfe4d9] px-3 py-2 text-sm"><input type="radio" name={q.id} checked={answers[q.id]===String(j)} onChange={()=>change(q.id,String(j))}/>{o}</label>)}</div>:<><p className="mb-2 text-xs font-medium text-[#536058]">{q.kind==="coding"?`Code answer (${q.language||"text"}). Code can be run in the isolated compiler when enabled.`:"Written response"}</p>{q.kind==="coding"?<CodingWorkbench classroomId={classroomId} examId={examId} questionId={q.id} tester={q.tester} language={q.language||"other"} code={answers[q.id]??""} onChange={(value)=>change(q.id,value)} />:<textarea value={answers[q.id]??""} onChange={e=>change(q.id,e.target.value)} maxLength={8000} spellCheck rows={6} className={field} placeholder="Type your answer..."/>}</>}
       </div>)}</div><div className="mt-5 flex flex-wrap items-center gap-3"><button className={outline} disabled={saving} onClick={()=>void save()}>{saving ? <LoaderCircle size={17} className="animate-spin"/> : <Save size={17}/>} {saving?"Savingâ€¦":"Save progress"}</button><button className={primary} disabled={saving} onClick={()=>void submit()}>{saving ? <LoaderCircle size={17} className="animate-spin"/> : <Send size={17}/>} {saving ? "Processingâ€¦" : "Submit final answers"}</button><span className="text-xs text-[#6f756f]" role="status">{saved}</span></div>

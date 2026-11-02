@@ -26,6 +26,7 @@ func Register(app *fiber.App, db *pgxpool.Pool) {
 	registerQuestionTesters(app, h)
 	g := app.Group("/classrooms/:id/exams", authMiddleware.JWTProtected())
 	g.Get("/", h.List)
+	g.Get("/active", h.ActiveAttempts)
 	g.Post("/", h.Create)
 	g.Get("/:examID", h.Get)
 	g.Post("/:examID/publish", h.Publish)
@@ -321,6 +322,7 @@ func (h *Handler) Publish(c *fiber.Ctx) error {
 }
 
 type Attempt struct {
+	LastSavedAt *time.Time        `json:"last_saved_at"`
 	ID          string            `json:"id"`
 	StartedAt   time.Time         `json:"started_at"`
 	ExpiresAt   time.Time         `json:"expires_at"`
@@ -333,7 +335,7 @@ type Attempt struct {
 func scanAttempt(row pgx.Row) (Attempt, error) {
 	var a Attempt
 	var raw []byte
-	err := row.Scan(&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &raw, &a.SubmittedAt, &a.Revision)
+	err := row.Scan(&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &raw, &a.SubmittedAt, &a.Revision, &a.LastSavedAt)
 	if err != nil {
 		return Attempt{}, err
 	}
@@ -373,7 +375,7 @@ func (h *Handler) attemptData(c *fiber.Ctx, create bool) error {
 			return err
 		}
 	}
-	a, err := scanAttempt(h.db.QueryRow(c.UserContext(), `SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision
+	a, err := scanAttempt(h.db.QueryRow(c.UserContext(), `SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at
       FROM classroom_exam_attempts WHERE exam_id=$1::uuid AND student_id=$2::uuid`, e.ID, user))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return failure(c, 404, "join the exam first")
@@ -478,14 +480,14 @@ func (h *Handler) writeAnswers(c *fiber.Ctx, submit bool) error {
       WHERE exam_id=$3::uuid AND student_id=$4::uuid AND status='in_progress'
         AND now() <= expires_at AND now() <= $5::timestamptz
         AND ($6::bigint IS NULL OR revision=$6::bigint)
-      RETURNING id::text,started_at,expires_at,status,answers,submitted_at,revision`,
+      RETURNING id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at`,
 		string(raw), newStatus, e.ID, user, e.EndsAt, req.ExpectedRevision).Scan(
-		&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &answersRaw, &a.SubmittedAt, &a.Revision)
+		&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &answersRaw, &a.SubmittedAt, &a.Revision, &a.LastSavedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A successful submit response can be lost on an unreliable connection.
 		// Retrying POST /submit must report the *stored* attempt, never mutate it.
 		stored, readErr := scanAttempt(h.db.QueryRow(c.UserContext(), `
-          SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision
+          SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at
           FROM classroom_exam_attempts WHERE exam_id=$1::uuid AND student_id=$2::uuid`, e.ID, user))
 		if readErr != nil && !errors.Is(readErr, pgx.ErrNoRows) {
 			return readErr
