@@ -7,7 +7,7 @@ Phone attempts use an explicit, stored `mobile` entry mode and rule acceptance, 
 ## Local testing APK
 
 1. Start Docker and run `./APPLY_LEARNING_FEATURES.ps1` from the repository root. This includes migration 27.
-2. Run `./START_LOCAL_MOBILE.ps1`. It starts the API and web app if their ports are free and prints the LAN address. Backend settings come from `.env` (created from `.env.example` with a random local JWT secret when absent); the web API proxy uses the same computer.
+2. Run `./START_LOCAL_MOBILE.ps1`. It starts the API and development web server if their ports are free and prints the LAN address. Use `-Production` to build a fresh production frontend before starting it; do not rebuild `.next` while a production server is running. Backend settings come from `.env` (created from `.env.example` with a random local JWT secret when absent); the web API proxy uses the same computer.
 3. Connect the phone to the same Wi-Fi. Install `release-builds/android/EduNexus-debug.apk`, or open the printed APK download link on the phone. Android may ask you to allow installation from the browser/file manager.
 4. Open EduNexus. This build initially connects to `http://192.168.0.231:3000`. If the PC address changes, choose **Workspace address** on the connection error screen. The debug app accepts HTTPS and private-network HTTP addresses.
 
