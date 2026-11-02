@@ -24,6 +24,7 @@ func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := New(db)
 	RegisterPhase14Client(app, h)
 	registerQuestionTesters(app, h)
+	registerQuestionBank(app, h)
 	g := app.Group("/classrooms/:id/exams", authMiddleware.JWTProtected())
 	g.Get("/", h.List)
 	g.Get("/active", h.ActiveAttempts)

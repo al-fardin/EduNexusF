@@ -5,6 +5,7 @@ import { StudentDesktopPair } from "@/components/classroom/desktop-monitoring";
 import { ExamEntryGate } from "@/components/classroom/exam-entry-gate";
 import { StudentExamMonitor } from "@/components/classroom/exam-monitoring";
 import { TeacherSubmissionExplorer } from "@/components/classroom/teacher-submission-explorer";
+import { QuestionBank, SaveBankQuestion } from "@/components/classroom/question-bank";
 import { QuestionTesterUpload } from "@/components/classroom/question-tester-upload";
 import { CodingWorkbench } from "@/components/classroom/coding-workbench";
 import { codingService } from "@/services/coding";
@@ -114,6 +115,7 @@ export function ExamBoard({ classroomId, canManage }: Props) {
     </div>
     {!canManage && activeAttempts.data?.map(attempt=><div key={attempt.exam_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4"><div><p className="font-semibold">{attempt.title}</p><p className="text-xs text-muted-foreground">In progress � {attempt.last_saved_at?`Saved ${dateLabel(attempt.last_saved_at)}`:"No server save yet"}</p></div><button className={primary} onClick={()=>{rememberActiveExam(classroomId,attempt.exam_id,"active");setTaking(attempt.exam_id);}}>Resume exam</button></div>)}
     {notice && <div role="status" className="rounded-xl bg-[#e9ede5] px-4 py-3 text-sm text-[#5f7358]">{notice}</div>}
+    {canManage && !creating && <QuestionBank classroomId={classroomId}/>}
     {creating && canManage && <ExamCreator classroomId={classroomId} onClose={() => {setCreating(false);void client.invalidateQueries({queryKey:["classrooms",classroomId,"exams"]});}} />}
 
     {reviewing && canManage && <TeacherReview classroomId={classroomId} examId={reviewing} onClose={()=>setReviewing(null)}/>}
@@ -156,6 +158,7 @@ function ExamCreator({classroomId,onClose}:{classroomId:string;onClose:()=>void}
       <label className="space-y-2 text-sm font-semibold">Start (local time)<input className={field} type="datetime-local" value={starts} onChange={e=>setStarts(e.target.value)}/></label>
       <label className="space-y-2 text-sm font-semibold">End (local time)<input className={field} type="datetime-local" value={ends} onChange={e=>setEnds(e.target.value)}/></label>
     </div><label className="mt-4 block space-y-2 text-sm font-semibold">Instructions<textarea className={field} value={description} rows={2} maxLength={5000} onChange={e=>setDescription(e.target.value)} placeholder="Allowed tools, exam rules, gradingâ€¦"/></label>
+    <QuestionBank classroomId={classroomId} onAdd={items=>setQuestions(current=>{if(current.length+items.length>40){window.alert("Maximum 40 questions per exam");return current;}return [...current,...items]})}/>
     <div className="mt-6 flex items-center justify-between gap-2"><h4 className="font-bold">Questions ({questions.length}/40)</h4><button type="button" className={outline} disabled={questions.length>=40} onClick={()=>setQuestions(q=>[...q,newQuestion()])}><Plus size={16}/> Add question</button></div>
     <div className="mt-4 space-y-4">{questions.map((q,i)=><section key={q.id} className="rounded-[22px_10px_20px_12px] border border-[#d9ddd4] bg-[#f3f1ea] p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><strong>Question {i+1}</strong><button type="button" className="text-xs font-semibold text-[#b34450]" disabled={questions.length===1} onClick={()=>setQuestions(current=>current.filter((_,n)=>i!==n))}><Trash2 size={15}/></button></div>
@@ -164,6 +167,7 @@ function ExamCreator({classroomId,onClose}:{classroomId:string;onClose:()=>void}
       <label className="mt-3 block space-y-1 text-sm">Question / problem statement<textarea className={field} rows={3} maxLength={10000} value={q.prompt} onChange={e=>updateQuestion(i,{prompt:e.target.value})}/></label>
       {q.kind==="mcq"?<div className="mt-3 space-y-2"><p className="text-xs text-[#536058]">Choose the correct answer (teacher only).</p>{q.options?.map((option,j)=><div key={j} className="flex items-center gap-2"><input aria-label={`Correct option ${j+1}`} type="radio" name={`correct-${q.id}`} checked={q.correct_option===j} onChange={()=>updateQuestion(i,{correct_option:j})}/><input aria-label={`Option ${j+1}`} className={field} value={option} onChange={e=>updateQuestion(i,{options:q.options?.map((o,k)=>k===j?e.target.value:o)})}/>{(q.options?.length??0)>2&&<button type="button" className="text-[#b34450]" onClick={()=>updateQuestion(i,{options:q.options?.filter((_,k)=>k!==j),correct_option:0})}><Trash2 size={16}/></button>}</div>)}<button type="button" className={outline} disabled={(q.options?.length??0)>=6} onClick={()=>updateQuestion(i,{options:[...(q.options??[]),""]})}>Add option</button></div>:
         <div className="mt-3 grid gap-3"><label className="space-y-1 text-sm">Reference solution / marking notes (teacher only)<textarea className={field} rows={3} value={q.sample_answer??""} maxLength={15000} onChange={e=>updateQuestion(i,{sample_answer:e.target.value})}/></label>{q.kind==="coding"&&<label className="space-y-1 text-sm">Expected language<select className={field} value={q.language||"python"} onChange={e=>updateQuestion(i,{language:e.target.value})}><option value="python">Python</option><option value="go">Go</option><option value="cpp">C++</option><option value="java">Java</option><option value="javascript">JavaScript</option><option value="c">C</option><option value="typescript">TypeScript</option><option value="rust">Rust</option><option value="ruby">Ruby</option><option value="php">PHP</option><option value="other">Other (no compiler)</option></select></label>}</div>}
+      <SaveBankQuestion classroomId={classroomId} question={q}/>
       {q.kind === "coding" && <QuestionTesterUpload classroomId={classroomId} tester={q.tester} disabled={mutation.isPending || uploads > 0} onBusyChange={delta=>setUploads(n=>n+delta)} onChange={tester=>setQuestions(list=>list.map(item=>item.id===q.id && item.kind==="coding"?{...item,tester}:item))} />}
     </section>)}</div>
     {mutation.isError&&<p className="mt-4 text-sm text-[#b34450]" role="alert">{examError(mutation.error)}</p>}
