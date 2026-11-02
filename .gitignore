@@ -33,3 +33,10 @@ redis_data/
 minio_data/
 /*.zip
 
+
+# Android signing credentials
+android-app/.keys/
+*.keystore
+*.jks
+
+frontend/public/downloads/*.apk

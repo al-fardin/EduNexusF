@@ -83,7 +83,7 @@ function DashboardHome() {
               <div className="rounded-[19px] bg-[#f4f4ea] p-4 text-[#202620]"><School size={21} color="#536058"/><div className="mt-4 text-3xl font-black">{owned.isPending?"—":teachingClasses.length}</div><div className="text-xs text-[#6f756f]">Created classes</div></div>
               <div className="rounded-[19px] bg-[#f4f4ea] p-4 text-[#202620]"><GraduationCap size={21} color="#536058"/><div className="mt-4 text-3xl font-black">{joined.isPending?"—":learningClasses.length}</div><div className="text-xs text-[#6f756f]">Joined classes</div></div>
             </div>
-            
+
           </div>
         </div>
       </section>
