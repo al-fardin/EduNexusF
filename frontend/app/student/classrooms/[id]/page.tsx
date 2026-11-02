@@ -28,6 +28,7 @@ import { useState } from "react";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { StreamFeed } from "@/components/classroom/stream-feed";
+import { LearningAnalytics } from "@/components/classroom/learning-analytics";
 import { AssignmentBoard } from "@/components/classroom/assignments";
 import { MaterialLibrary } from "@/components/classroom/material-library";
 import {
@@ -37,6 +38,7 @@ import {
 
 type StudentClassroomTab =
   | "stream"
+  | "analytics"
   | "classwork"
   | "people"
   | "attendance"
@@ -47,6 +49,7 @@ const tabs: {
   key: StudentClassroomTab;
   label: string;
 }[] = [
+  {key:"analytics",label:"Analytics"},
   {
     key: "stream",
     label: "Stream",
@@ -237,6 +240,7 @@ export default function StudentClassroomPage() {
   />
 )}
 
+            {activeTab === "analytics" && <LearningAnalytics classroomId={classroomId}/>}
             {activeTab === "classwork" && (
               <><MaterialLibrary classroomId={classroomId} canManage={false} /><AssignmentBoard classroomId={classroomId} canManage={false}/></>
             )}

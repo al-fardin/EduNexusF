@@ -13,6 +13,7 @@ type Handler struct{ db *pgxpool.Pool }
 
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := &Handler{db: db}
+	app.Get("/classrooms/:id/analytics", authMiddleware.JWTProtected(), h.Analytics)
 	g := app.Group("/classrooms/:id/assignments", authMiddleware.JWTProtected())
 	g.Get("/", h.ListAssignments)
 	g.Post("/", h.SaveAssignment)

@@ -101,6 +101,7 @@ func (h *Handler) BankSave(c *fiber.Ctx) error {
 		if len(item.Topic) > 120 || (item.Difficulty != "easy" && item.Difficulty != "medium" && item.Difficulty != "hard") {
 			return failure(c, 400, "invalid topic or difficulty")
 		}
+		item.Question.Topic = item.Topic
 		qs := []Question{item.Question}
 		if err := h.hydrateTesters(c, qs); err != nil {
 			return err

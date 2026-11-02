@@ -5,6 +5,7 @@ import type { TesterAttachment } from "@/services/question-testers";
 type Envelope<T> = { success: boolean; data: T; message?: string };
 export type QuestionKind = "mcq" | "theory" | "coding";
 export type ExamQuestion = {
+  topic?: string;
   tester?: TesterAttachment;
   id: string;
   kind: QuestionKind;

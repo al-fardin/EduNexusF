@@ -96,6 +96,7 @@ func examID(c *fiber.Ctx) (string, error) {
 }
 
 type Question struct {
+	Topic         string            `json:"topic,omitempty"`
 	Tester        *TesterAttachment `json:"tester,omitempty"`
 	ID            string            `json:"id"`
 	Kind          string            `json:"kind"`
@@ -107,6 +108,7 @@ type Question struct {
 	Language      string            `json:"language,omitempty"`
 }
 type PublicQuestion struct {
+	Topic    string            `json:"topic,omitempty"`
 	Tester   *TesterAttachment `json:"tester,omitempty"`
 	ID       string            `json:"id"`
 	Kind     string            `json:"kind"`
@@ -119,7 +121,7 @@ type PublicQuestion struct {
 func publicQuestions(questions []Question) []PublicQuestion {
 	out := make([]PublicQuestion, 0, len(questions))
 	for _, q := range questions {
-		out = append(out, PublicQuestion{ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language, Tester: q.Tester})
+		out = append(out, PublicQuestion{ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language, Tester: q.Tester, Topic: q.Topic})
 	}
 	return out
 }
@@ -142,6 +144,9 @@ func normalizeQuestions(questions []Question) (string, error) {
 		q := &questions[i]
 		q.ID = strings.TrimSpace(q.ID)
 		q.Prompt = strings.TrimSpace(q.Prompt)
+		if len(q.Topic) > 120 {
+			return "", errors.New("question topic exceeds 120 characters")
+		}
 		if q.ID == "" || len(q.ID) > 64 || seen[q.ID] {
 			return "", errors.New("question ids must be unique, 1-64 characters")
 		}
