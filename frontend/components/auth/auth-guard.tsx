@@ -2,11 +2,13 @@
 
 import {
   useEffect,
+  useState,
   useSyncExternalStore,
 } from "react";
 import { useRouter } from "next/navigation";
 
-import { useAuthStore } from "@/store/auth-store";
+import { authService } from "@/services/auth";
+import { useAuthStore, type AuthUser } from "@/store/auth-store";
 
 function subscribe() {
   return () => {};
@@ -32,6 +34,12 @@ export function AuthGuard({
   const setAccessToken = useAuthStore(
     (state) => state.setAccessToken
   );
+
+  const user=useAuthStore(state=>state.user);
+  const setUser=useAuthStore(state=>state.setUser);
+  const [profileError,setProfileError]=useState(false);
+  const [profileRetry,setProfileRetry]=useState(0);
+  useEffect(()=>{if(!accessToken||user)return;let cancelled=false;authService.me().then(response=>{if(!cancelled){setUser(response.data as AuthUser);setProfileError(false)}}).catch(()=>{if(!cancelled)setProfileError(true)});return()=>{cancelled=true};},[accessToken,user,setUser,profileRetry]);
 
   const savedToken = isClient
     ? window.localStorage.getItem(
@@ -60,7 +68,8 @@ export function AuthGuard({
     setAccessToken,
   ]);
 
-  if (!isClient || !accessToken) {
+  if(profileError&&!user)return <main className="flex min-h-screen items-center justify-center"><div className="space-y-3 text-center"><p>Unable to verify your account. Check your connection.</p><button className="rounded-xl border border-border px-4 py-2" onClick={()=>{setProfileError(false);setProfileRetry(n=>n+1)}}>Retry</button></div></main>;
+  if (!isClient || !accessToken || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">

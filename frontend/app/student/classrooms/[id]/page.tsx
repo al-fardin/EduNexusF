@@ -1,4 +1,5 @@
 "use client";
+import { useAuthStore } from "@/store/auth-store";
 import { readActiveExam } from "@/lib/exam-resume";
 import { useEffect as useExamResumeEffect } from "react";
 import { ExamResults } from "@/components/classroom/exam-results";
@@ -23,11 +24,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { StreamFeed } from "@/components/classroom/stream-feed";
+import { AITutor } from "@/components/classroom/ai-tutor";
 import { LearningAnalytics } from "@/components/classroom/learning-analytics";
 import { AssignmentBoard } from "@/components/classroom/assignments";
 import { MaterialLibrary } from "@/components/classroom/material-library";
@@ -38,6 +40,7 @@ import {
 
 type StudentClassroomTab =
   | "stream"
+  | "tutor"
   | "analytics"
   | "classwork"
   | "people"
@@ -49,7 +52,6 @@ const tabs: {
   key: StudentClassroomTab;
   label: string;
 }[] = [
-  {key:"analytics",label:"Analytics"},
   {
     key: "stream",
     label: "Stream",
@@ -74,6 +76,8 @@ const tabs: {
     key: "exam",
     label: "Exam",
   },
+  {key:"analytics",label:"Analytics"},
+  {key:"tutor",label:"AI tutor"},
 ];
 
 export default function StudentClassroomPage() {
@@ -82,15 +86,18 @@ export default function StudentClassroomPage() {
   }>();
 
   const classroomId = params.id ?? "";
+  const resumeUserId=useAuthStore(s=>s.user?.id);
+  const requestedTab=useSearchParams().get("tab");
 
   const [activeTab, setActiveTab] =
     useState<StudentClassroomTab>(
       "stream"
     );
   useExamResumeEffect(() => {
-    const requested=new URLSearchParams(window.location.search).get("tab");
+    if(!resumeUserId)return;
+    const requested=requestedTab;
     setActiveTab(readActiveExam(classroomId)?"exam":tabs.some(t=>t.key===requested)?requested as StudentClassroomTab:"stream");
-  }, [classroomId]);
+  }, [classroomId,resumeUserId,requestedTab]);
 
   const classroomQuery = useQuery({
     queryKey: [
@@ -240,6 +247,7 @@ export default function StudentClassroomPage() {
   />
 )}
 
+            {activeTab === "tutor" && <AITutor classroomId={classroomId} canManage={false}/>}
             {activeTab === "analytics" && <LearningAnalytics classroomId={classroomId}/>}
             {activeTab === "classwork" && (
               <><MaterialLibrary classroomId={classroomId} canManage={false} /><AssignmentBoard classroomId={classroomId} canManage={false}/></>

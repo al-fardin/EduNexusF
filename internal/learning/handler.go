@@ -7,12 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"net/http"
 )
 
-type Handler struct{ db *pgxpool.Pool }
+type Handler struct {
+	db            *pgxpool.Pool
+	tutorHTTP     *http.Client
+	tutorEndpoint string
+}
 
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := &Handler{db: db}
+	registerTutor(app, h)
 	app.Get("/classrooms/:id/analytics", authMiddleware.JWTProtected(), h.Analytics)
 	g := app.Group("/classrooms/:id/assignments", authMiddleware.JWTProtected())
 	g.Get("/", h.ListAssignments)

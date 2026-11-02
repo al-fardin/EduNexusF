@@ -19,3 +19,7 @@ Open `FRONTEND_PREVIEW.html` now. To run the actual integrated frontend, see `fr
 ## Desktop client and optional question testers
 
 EduNexus Desktop 1.5 adds a refreshed interface and optional Windows `.exe` testers on coding questions. See [Desktop setup](desktop-client/README_CLIENT.md) and the [tester protocol](desktop-client/TESTER_PROTOCOL.md). Apply migration `000022_question_testers` before using attachments.
+
+## Learning features rollout
+
+See [LEARNING_FEATURES.md](LEARNING_FEATURES.md) for the six learning modules, deployment migrations, SMTP setup and OpenAI tutor configuration.

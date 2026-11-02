@@ -28,11 +28,12 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect,useState } from "react";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { StreamFeed } from "@/components/classroom/stream-feed";
+import { AITutor } from "@/components/classroom/ai-tutor";
 import { LearningAnalytics } from "@/components/classroom/learning-analytics";
 import { AssignmentBoard } from "@/components/classroom/assignments";
 import { MaterialLibrary } from "@/components/classroom/material-library";
@@ -44,6 +45,7 @@ import {
 
 type ClassroomTab =
   | "stream"
+  | "tutor"
   | "analytics"
   | "classwork"
   | "people"
@@ -55,7 +57,6 @@ const tabs: {
   key: ClassroomTab;
   label: string;
 }[] = [
-  {key:"analytics",label:"Analytics"},
   {
     key: "stream",
     label: "Stream",
@@ -80,6 +81,8 @@ const tabs: {
     key: "exam",
     label: "Exam",
   },
+  {key:"analytics",label:"Analytics"},
+  {key:"tutor",label:"AI tutor"},
 ];
 
 export default function ClassroomDetailsPage() {
@@ -90,11 +93,12 @@ export default function ClassroomDetailsPage() {
   const queryClient = useQueryClient();
 
   const classroomId = params.id ?? "";
+  const requestedTab=useSearchParams().get("tab");
 
   const [activeTab, setActiveTab] =
     useState<ClassroomTab>("stream");
 
-  useEffect(()=>{const requested=new URLSearchParams(window.location.search).get("tab");if(tabs.some(t=>t.key===requested))setActiveTab(requested as ClassroomTab)},[classroomId]);
+  useEffect(()=>{const requested=requestedTab;if(tabs.some(t=>t.key===requested))setActiveTab(requested as ClassroomTab)},[classroomId,requestedTab]);
   const [copied, setCopied] =
     useState(false);
 
@@ -362,6 +366,7 @@ export default function ClassroomDetailsPage() {
   />
 )}
 
+            {activeTab === "tutor" && <AITutor classroomId={classroomId} canManage={true}/>}
             {activeTab === "analytics" && <LearningAnalytics classroomId={classroomId}/>}
             {activeTab === "classwork" && (
               <><MaterialLibrary classroomId={classroomId} canManage={true} /><AssignmentBoard classroomId={classroomId} canManage={true}/></>

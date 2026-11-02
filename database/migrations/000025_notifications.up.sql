@@ -59,9 +59,9 @@ BEGIN
  END IF;
  RETURN NEW;
 END $$;
-CREATE TRIGGER notify_exam_published AFTER UPDATE OF status ON classroom_exams FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
-CREATE TRIGGER notify_assignment_published AFTER UPDATE OF status ON classroom_assignments FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
-CREATE TRIGGER notify_material_added AFTER INSERT ON classroom_materials FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
-CREATE TRIGGER notify_announcement_added AFTER INSERT ON classroom_stream_posts FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
-CREATE TRIGGER notify_result_published AFTER INSERT OR UPDATE ON classroom_exam_result_publications FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
-CREATE TRIGGER notify_assignment_submission AFTER INSERT OR UPDATE ON classroom_assignment_submissions FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
+CREATE OR REPLACE TRIGGER notify_exam_published AFTER UPDATE OF status ON classroom_exams FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
+CREATE OR REPLACE TRIGGER notify_assignment_published AFTER UPDATE OF status ON classroom_assignments FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
+CREATE OR REPLACE TRIGGER notify_material_added AFTER INSERT ON classroom_materials FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
+CREATE OR REPLACE TRIGGER notify_announcement_added AFTER INSERT ON classroom_stream_posts FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
+CREATE OR REPLACE TRIGGER notify_result_published AFTER INSERT OR UPDATE ON classroom_exam_result_publications FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();
+CREATE OR REPLACE TRIGGER notify_assignment_submission AFTER INSERT OR UPDATE ON classroom_assignment_submissions FOR EACH ROW EXECUTE FUNCTION edunexus_learning_notification();

@@ -168,10 +168,12 @@ func (h *Handler) tick(ctx context.Context) {
 	defer cancel()
 	_, err := h.db.Exec(poll, `SELECT edunexus_notify(a.classroom_id,NULL,'assignment-reminder:'||a.id||':'||a.due_at||':'||w.hours,'reminder','Assignment due soon: '||a.title,'Your assignment deadline is approaching.','classwork','student',m.user_id)
  FROM classroom_assignments a JOIN classroom_memberships m ON m.classroom_id=a.classroom_id AND m.member_role='student' AND m.status='active'
- CROSS JOIN (VALUES(24),(1))w(hours) WHERE a.status='published' AND a.due_at>now() AND a.due_at<=now()+w.hours*interval '1 hour'
+ CROSS JOIN (VALUES(24),(1))w(hours) WHERE a.status='published' AND a.due_at>now() AND a.due_at<=now()+w.hours*interval '1 hour' AND (w.hours=1 OR a.due_at>now()+interval '1 hour')
+ AND NOT EXISTS(SELECT 1 FROM user_notifications n WHERE n.user_id=m.user_id AND n.event_key='assignment-reminder:'||a.id||':'||a.due_at||':'||w.hours)
  AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions s WHERE s.assignment_id=a.id AND s.student_id=m.user_id) LIMIT 500;
- SELECT edunexus_notify(e.classroom_id,NULL,'exam-reminder:'||e.id||':'||e.starts_at||':'||w.hours,'reminder','Upcoming exam: '||e.title,'Review your exam schedule and entry setup.','exam','student')
- FROM classroom_exams e CROSS JOIN (VALUES(24),(1))w(hours) WHERE e.status='published' AND e.closed_at IS NULL AND e.starts_at>now() AND e.starts_at<=now()+w.hours*interval '1 hour' LIMIT 100;`)
+ SELECT edunexus_notify(e.classroom_id,NULL,'exam-reminder:'||e.id||':'||e.starts_at||':'||w.hours,'reminder','Upcoming exam: '||e.title,'Review your exam schedule and entry setup.','exam','student',m.user_id)
+ FROM classroom_exams e JOIN classroom_memberships m ON m.classroom_id=e.classroom_id AND m.member_role='student' AND m.status='active' CROSS JOIN (VALUES(24),(1))w(hours) WHERE e.status='published' AND e.closed_at IS NULL AND e.starts_at>now() AND e.starts_at<=now()+w.hours*interval '1 hour' AND (w.hours=1 OR e.starts_at>now()+interval '1 hour')
+ AND NOT EXISTS(SELECT 1 FROM user_notifications n WHERE n.user_id=m.user_id AND n.event_key='exam-reminder:'||e.id||':'||e.starts_at||':'||w.hours) LIMIT 500;`)
 	if err != nil {
 		if ctx.Err() == nil {
 			log.Print("Notification worker: reminders unavailable; check migrations")
@@ -183,6 +185,9 @@ func (h *Handler) tick(ctx context.Context) {
 		return
 	}
 	for i := 0; i < 20 && poll.Err() == nil; i++ {
+		if deadline, ok := poll.Deadline(); ok && time.Until(deadline) < 16*time.Second {
+			break
+		}
 		if err = h.deliver(poll); errors.Is(err, pgx.ErrNoRows) {
 			break
 		} else if err != nil {
