@@ -58,18 +58,32 @@ func (h *Handler) EditExam(c *fiber.Ctx) error {
 	if err := h.hydrateTesters(c, req.Questions); err != nil {
 		return err
 	}
+	if req.AllowMobileMCQ && !mcqOnly(req.Questions) {
+		return failure(c, 400, "phone access is available for MCQ-only exams")
+	}
 	raw, err := normalizeQuestions(req.Questions)
 	if err != nil {
 		return failure(c, 400, err.Error())
 	}
-	tag, err := h.db.Exec(c.UserContext(), `UPDATE classroom_exams SET title=$3,description=$4,starts_at=$5,ends_at=$6,duration_minutes=$7,questions=$8::jsonb
+	tx, err := h.db.Begin(c.UserContext())
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(c.UserContext())
+	if _, err = tx.Exec(c.UserContext(), `SELECT id FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid FOR UPDATE`, e.ID, c.Params("id")); err != nil {
+		return err
+	}
+	tag, err := tx.Exec(c.UserContext(), `UPDATE classroom_exams SET title=$3,description=$4,starts_at=$5,ends_at=$6,duration_minutes=$7,questions=$8::jsonb,allow_mobile_mcq=$9
         WHERE id=$1::uuid AND classroom_id=$2::uuid AND closed_at IS NULL
-          AND NOT EXISTS(SELECT 1 FROM classroom_exam_attempts WHERE exam_id=$1::uuid)`, e.ID, c.Params("id"), req.Title, req.Description, req.StartsAt, req.EndsAt, req.DurationMinutes, raw)
+          AND NOT EXISTS(SELECT 1 FROM classroom_exam_attempts WHERE exam_id=$1::uuid)`, e.ID, c.Params("id"), req.Title, req.Description, req.StartsAt, req.EndsAt, req.DurationMinutes, raw, req.AllowMobileMCQ)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
 		return failure(c, 409, "exam already has student attempts; question/schedule editing is locked")
+	}
+	if err = tx.Commit(c.UserContext()); err != nil {
+		return err
 	}
 	return result(c, 200, fiber.Map{"updated": true})
 }

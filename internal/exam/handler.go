@@ -30,6 +30,7 @@ func Register(app *fiber.App, db *pgxpool.Pool) {
 	g.Get("/active", h.ActiveAttempts)
 	g.Post("/", h.Create)
 	g.Get("/:examID", h.Get)
+	g.Get("/:examID/access", h.ExamAccess)
 	g.Post("/:examID/publish", h.Publish)
 	g.Post("/:examID/start", h.Start)
 	g.Get("/:examID/attempt", h.Attempt)
@@ -127,6 +128,7 @@ func publicQuestions(questions []Question) []PublicQuestion {
 }
 
 type CreateRequest struct {
+	AllowMobileMCQ  bool       `json:"allow_mobile_mcq"`
 	Title           string     `json:"title"`
 	Description     string     `json:"description"`
 	StartsAt        time.Time  `json:"starts_at"`
@@ -190,6 +192,7 @@ func normalizeQuestions(questions []Question) (string, error) {
 }
 
 type Exam struct {
+	AllowMobileMCQ  bool      `json:"allow_mobile_mcq"`
 	ID              string    `json:"id"`
 	ClassroomID     string    `json:"classroom_id"`
 	Title           string    `json:"title"`
@@ -207,7 +210,7 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	query := `SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at
+	query := `SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq
       FROM classroom_exams WHERE classroom_id=$1::uuid`
 	if role != "teacher" {
 		query += ` AND status='published'`
@@ -221,7 +224,7 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	items := make([]Exam, 0)
 	for rows.Next() {
 		var e Exam
-		if err = rows.Scan(&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt); err != nil {
+		if err = rows.Scan(&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt, &e.AllowMobileMCQ); err != nil {
 			return err
 		}
 		items = append(items, e)
@@ -254,13 +257,16 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	if err := h.hydrateTesters(c, req.Questions); err != nil {
 		return err
 	}
+	if req.AllowMobileMCQ && !mcqOnly(req.Questions) {
+		return failure(c, 400, "phone access is available for MCQ-only exams")
+	}
 	raw, err := normalizeQuestions(req.Questions)
 	if err != nil {
 		return failure(c, 400, err.Error())
 	}
 	var id string
-	err = h.db.QueryRow(c.UserContext(), `INSERT INTO classroom_exams(classroom_id,created_by,title,description,starts_at,ends_at,duration_minutes,questions)
-      VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id::text`, c.Params("id"), user, req.Title, req.Description, req.StartsAt, req.EndsAt, req.DurationMinutes, raw).Scan(&id)
+	err = h.db.QueryRow(c.UserContext(), `INSERT INTO classroom_exams(classroom_id,created_by,title,description,starts_at,ends_at,duration_minutes,questions,allow_mobile_mcq)
+      VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8::jsonb,$9) RETURNING id::text`, c.Params("id"), user, req.Title, req.Description, req.StartsAt, req.EndsAt, req.DurationMinutes, raw, req.AllowMobileMCQ).Scan(&id)
 	if err != nil {
 		return err
 	}
@@ -274,9 +280,9 @@ func (h *Handler) examWithKeys(c *fiber.Ctx) (Exam, []Question, error) {
 	var e Exam
 	var raw []byte
 	err = h.db.QueryRow(c.UserContext(), `
-      SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,questions
+      SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq,questions
       FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid`, id, c.Params("id")).Scan(
-		&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt, &raw)
+		&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt, &e.AllowMobileMCQ, &raw)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Exam{}, nil, fiber.NewError(fiber.StatusNotFound, "exam not found")
 	}
@@ -328,6 +334,7 @@ func (h *Handler) Publish(c *fiber.Ctx) error {
 }
 
 type Attempt struct {
+	EntryMode   string            `json:"entry_mode"`
 	LastSavedAt *time.Time        `json:"last_saved_at"`
 	ID          string            `json:"id"`
 	StartedAt   time.Time         `json:"started_at"`
@@ -341,7 +348,7 @@ type Attempt struct {
 func scanAttempt(row pgx.Row) (Attempt, error) {
 	var a Attempt
 	var raw []byte
-	err := row.Scan(&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &raw, &a.SubmittedAt, &a.Revision, &a.LastSavedAt)
+	err := row.Scan(&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &raw, &a.SubmittedAt, &a.Revision, &a.LastSavedAt, &a.EntryMode)
 	if err != nil {
 		return Attempt{}, err
 	}
@@ -381,12 +388,15 @@ func (h *Handler) attemptData(c *fiber.Ctx, create bool) error {
 			return err
 		}
 	}
-	a, err := scanAttempt(h.db.QueryRow(c.UserContext(), `SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at
+	a, err := scanAttempt(h.db.QueryRow(c.UserContext(), `SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at,entry_mode
       FROM classroom_exam_attempts WHERE exam_id=$1::uuid AND student_id=$2::uuid`, e.ID, user))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return failure(c, 404, "join the exam first")
 	}
 	if err != nil {
+		return err
+	}
+	if err = phoneAttemptAllowed(c, e, questions, a); err != nil {
 		return err
 	}
 	if create && a.Status == "in_progress" {
@@ -397,6 +407,22 @@ func (h *Handler) attemptData(c *fiber.Ctx, create bool) error {
 	return result(c, 200, fiber.Map{"exam": e, "questions": publicQuestions(questions), "attempt": a, "server_time": time.Now().UTC()})
 }
 func (h *Handler) Start(c *fiber.Ctx) error {
+	var entry struct {
+		Mode string `json:"entry_mode"`
+	}
+	if len(c.Body()) > 0 && c.BodyParser(&entry) != nil {
+		return failure(c, 400, "invalid exam entry")
+	}
+	if entry.Mode == "mobile" {
+		return h.startMobile(c)
+	}
+	if entry.Mode != "" && entry.Mode != "desktop" {
+		return failure(c, 400, "invalid exam entry mode")
+	}
+	if isPhoneAgent(c.Get("User-Agent")) {
+		return failure(c, 403, "Use the phone entry option when your teacher enables it")
+	}
+
 	if err := h.requireMonitorAdmission(c); err != nil {
 		return err
 	}
@@ -462,6 +488,15 @@ func (h *Handler) writeAnswers(c *fiber.Ctx, submit bool) error {
 	if e.Status != "published" && !(submit && e.Status == "closed") {
 		return failure(c, 404, "exam not found")
 	}
+	if isPhoneAgent(c.Get("User-Agent")) {
+		a, err := scanAttempt(h.db.QueryRow(c.UserContext(), `SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at,entry_mode FROM classroom_exam_attempts WHERE exam_id=$1::uuid AND student_id=$2::uuid`, e.ID, user))
+		if err != nil {
+			return failure(c, 403, "start an approved phone exam first")
+		}
+		if err = phoneAttemptAllowed(c, e, questions, a); err != nil {
+			return err
+		}
+	}
 	var req AnswerRequest
 	if err = c.BodyParser(&req); err != nil {
 		return failure(c, 400, "invalid answers")
@@ -486,14 +521,14 @@ func (h *Handler) writeAnswers(c *fiber.Ctx, submit bool) error {
       WHERE exam_id=$3::uuid AND student_id=$4::uuid AND status='in_progress'
         AND now() <= expires_at AND now() <= $5::timestamptz
         AND ($6::bigint IS NULL OR revision=$6::bigint)
-      RETURNING id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at`,
+      RETURNING id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at,entry_mode`,
 		string(raw), newStatus, e.ID, user, e.EndsAt, req.ExpectedRevision).Scan(
-		&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &answersRaw, &a.SubmittedAt, &a.Revision, &a.LastSavedAt)
+		&a.ID, &a.StartedAt, &a.ExpiresAt, &a.Status, &answersRaw, &a.SubmittedAt, &a.Revision, &a.LastSavedAt, &a.EntryMode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A successful submit response can be lost on an unreliable connection.
 		// Retrying POST /submit must report the *stored* attempt, never mutate it.
 		stored, readErr := scanAttempt(h.db.QueryRow(c.UserContext(), `
-          SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at
+          SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at,entry_mode
           FROM classroom_exam_attempts WHERE exam_id=$1::uuid AND student_id=$2::uuid`, e.ID, user))
 		if readErr != nil && !errors.Is(readErr, pgx.ErrNoRows) {
 			return readErr

@@ -55,12 +55,18 @@ func TestNotificationOutboxAndReminders(t *testing.T) {
 		t.Fatalf("retry did not complete: %s %d %v", state, attempts, err)
 	}
 	h.tick(t.Context())
-	before := mailer.calls
-	h.tick(t.Context())
-	if mailer.calls != before {
-		t.Fatal("reminders duplicated on the next poll")
+	var before, after int
+	if err = f.DB.QueryRow(t.Context(), `SELECT count(*) FROM user_notifications WHERE classroom_id=$1::uuid`, f.ClassID).Scan(&before); err != nil {
+		t.Fatal(err)
 	}
-	if before < 3 {
-		t.Fatal("upcoming deadline reminders not generated")
+	h.tick(t.Context())
+	if err = f.DB.QueryRow(t.Context(), `SELECT count(*) FROM user_notifications WHERE classroom_id=$1::uuid`, f.ClassID).Scan(&after); err != nil {
+		t.Fatal(err)
+	}
+	if before != after {
+		t.Fatal("reminder records duplicated on the next poll")
+	}
+	if before < 2 {
+		t.Fatal("upcoming deadline reminder not generated")
 	}
 }

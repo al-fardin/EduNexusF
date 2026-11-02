@@ -123,7 +123,7 @@ func TestAssignmentLifecycleAndIsolation(t *testing.T) {
 		t.Fatalf("incorrect latest-version analytics: %#v", stats)
 	}
 	var count int
-	err := f.DB.QueryRow(t.Context(), `SELECT count(*) FROM user_notifications WHERE user_id=$1::uuid AND classroom_id=$2::uuid`, f.Student, f.ClassID).Scan(&count)
+	err := f.DB.QueryRow(t.Context(), `SELECT count(*) FROM user_notifications WHERE user_id=$1::uuid AND classroom_id=$2::uuid AND kind IN ('assignment','grade')`, f.Student, f.ClassID).Scan(&count)
 	if err != nil || count != 2 {
 		t.Fatalf("publish and grade notifications: %d %v", count, err)
 	}
