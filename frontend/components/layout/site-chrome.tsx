@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { BookOpenText, GraduationCap, LayoutDashboard, Menu, Plus, Settings2, UserRound, X } from "lucide-react";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { useAuthStore } from "@/store/auth-store";
 
 const navigation = [
@@ -93,6 +94,7 @@ export function SiteChrome({children}: {children: React.ReactNode}) {
           })}
         </nav>
         <div className="en-top-actions">
+          {!isPreview&&<NotificationBell/>}
           {!isPreview && <Link href="/instructor/classrooms/create" className="en-user" aria-label="Create classroom"><Plus size={17}/> <span>New class</span></Link>}
           <Link href={isPreview?"/login":"/settings"} className="en-user" title={user?.first_name ?? "Account"}>
             <UserRound size={16}/><span>{isPreview?"Sign in":user?.first_name || "Account"}</span>

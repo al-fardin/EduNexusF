@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect,useState } from "react";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { StreamFeed } from "@/components/classroom/stream-feed";
@@ -91,6 +91,7 @@ export default function ClassroomDetailsPage() {
   const [activeTab, setActiveTab] =
     useState<ClassroomTab>("stream");
 
+  useEffect(()=>{const requested=new URLSearchParams(window.location.search).get("tab");if(tabs.some(t=>t.key===requested))setActiveTab(requested as ClassroomTab)},[classroomId]);
   const [copied, setCopied] =
     useState(false);
 

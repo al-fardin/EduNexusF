@@ -16,6 +16,7 @@ import (
 
 	"github.com/edunexus/edunexus/internal/exam"
 	"github.com/edunexus/edunexus/internal/learning"
+	"github.com/edunexus/edunexus/internal/notifications"
 	"github.com/edunexus/edunexus/internal/platform/config"
 	dbsqlc "github.com/edunexus/edunexus/internal/platform/database/sqlc"
 	"github.com/edunexus/edunexus/internal/platform/mail"
@@ -111,6 +112,8 @@ func Register(
 	authH := authHandler.New(
 		authSvc,
 	)
+
+	notifications.Register(app, dbPool, mailer, cfg.SMTPHost != "" && cfg.SMTPPort != "" && cfg.SMTPFrom != "")
 
 	authRoutes.Register(
 		app,

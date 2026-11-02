@@ -1,0 +1,10 @@
+DROP TRIGGER IF EXISTS notify_exam_published ON classroom_exams;
+DROP TRIGGER IF EXISTS notify_assignment_published ON classroom_assignments;
+DROP TRIGGER IF EXISTS notify_material_added ON classroom_materials;
+DROP TRIGGER IF EXISTS notify_announcement_added ON classroom_stream_posts;
+DROP TRIGGER IF EXISTS notify_result_published ON classroom_exam_result_publications;
+DROP TRIGGER IF EXISTS notify_assignment_submission ON classroom_assignment_submissions;
+DROP FUNCTION IF EXISTS edunexus_learning_notification();
+DROP FUNCTION IF EXISTS edunexus_notify(UUID,UUID,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,UUID);
+DROP TABLE IF EXISTS user_notifications;
+DROP TABLE IF EXISTS notification_preferences;

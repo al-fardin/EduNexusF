@@ -85,7 +85,8 @@ export default function StudentClassroomPage() {
       "stream"
     );
   useExamResumeEffect(() => {
-    setActiveTab(readActiveExam(classroomId) ? "exam" : "stream");
+    const requested=new URLSearchParams(window.location.search).get("tab");
+    setActiveTab(readActiveExam(classroomId)?"exam":tabs.some(t=>t.key===requested)?requested as StudentClassroomTab:"stream");
   }, [classroomId]);
 
   const classroomQuery = useQuery({
