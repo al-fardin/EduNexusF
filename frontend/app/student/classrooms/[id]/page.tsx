@@ -61,14 +61,6 @@ const tabs: {
     label: "Classwork",
   },
   {
-    key: "people",
-    label: "People",
-  },
-  {
-    key: "attendance",
-    label: "Attendance",
-  },
-  {
     key: "results",
     label: "Results",
   },
@@ -180,7 +172,7 @@ export default function StudentClassroomPage() {
             My classes
           </Link>
 
-          <section className="overflow-hidden rounded-3xl bg-primary p-6 text-white shadow-lg sm:p-8">
+          <section className="en-class-hero overflow-hidden rounded-3xl bg-primary p-6 text-white shadow-lg sm:p-8">
             <div className="mb-4 inline-flex rounded-2xl bg-card/10 p-3">
               <School size={28} />
             </div>
@@ -218,12 +210,13 @@ export default function StudentClassroomPage() {
             )}
           </section>
 
-          <nav className="mt-6 overflow-x-auto rounded-2xl border border-border bg-card p-2 shadow-sm">
+          <nav aria-label="Classroom sections" className="en-class-tabs mt-6 overflow-x-auto rounded-2xl border border-border bg-card p-2 shadow-sm">
             <div className="flex min-w-max gap-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.key}
                   type="button"
+                  aria-pressed={activeTab===tab.key}
                   onClick={() =>
                     setActiveTab(tab.key)
                   }

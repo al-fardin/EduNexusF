@@ -1,4 +1,5 @@
 "use client";
+import { ContentSkeleton } from "@/components/ui/content-skeleton";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -59,18 +60,18 @@ function DashboardHome() {
   return <main className="min-h-screen bg-transparent px-4 pb-14 pt-9 sm:px-6 lg:px-8">
     <div className="mx-auto max-w-6xl space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3"><span className="en-dot"/><span className="en-label">YOUR SPACE / DASHBOARD</span></div>
+        <div className="flex items-center gap-3"><span className="en-dot"/><span className="en-label">DASHBOARD</span></div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/settings" className="en-btn en-btn-light"><Settings2 size={16}/> Settings</Link>
           <button type="button" className="en-btn en-btn-light" disabled={loggingOut} onClick={()=>void signOut()}><LogOut size={16}/> {loggingOut?"Signing out…":"Sign out"}</button>
         </div>
       </div>
-      <section className="en-hero px-7 py-9 sm:px-10 sm:py-12">
+      <section className="en-hero en-dashboard-hero px-7 py-9 sm:px-10 sm:py-12">
         <div className="relative z-10 grid gap-8 lg:grid-cols-[1.4fr_.7fr] lg:items-end">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#b6c1b2]/60 bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#dfe4d9]"><Sparkles size={14}/> MADE FOR TEACHING & LEARNING</span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#b6c1b2]/60 bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#dfe4d9]"><Sparkles size={14}/> YOUR WORKSPACE</span>
             <h1 className="mt-5 max-w-[660px] text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl" style={{fontFamily:"ui-monospace, Menlo, Consolas, monospace",letterSpacing:"-.06em"}}>Welcome back,<br/><span className="text-[#cbd2c5]">{name}.</span></h1>
-            <p className="mt-5 max-w-lg text-sm leading-7 text-[#cbd2c5]">Your classes, conversations and learning moments — all together in one cozy corner of the internet.</p>
+            <p className="mt-5 max-w-lg text-sm leading-7 text-[#cbd2c5]">Your classes and coursework, in one place.</p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/instructor/classrooms/create" className="en-btn en-btn-light"><CirclePlus size={17}/> Create a class <ArrowRight size={16}/></Link>
               <Link href="/student/classrooms/join" className="en-btn border-[#cbd2c5] bg-transparent text-[#e9ede5]"><DoorOpen size={17}/> Join a class <ArrowRight size={16}/></Link>
@@ -82,7 +83,7 @@ function DashboardHome() {
               <div className="rounded-[19px] bg-[#f4f4ea] p-4 text-[#202620]"><School size={21} color="#536058"/><div className="mt-4 text-3xl font-black">{owned.isPending?"—":teachingClasses.length}</div><div className="text-xs text-[#6f756f]">Created classes</div></div>
               <div className="rounded-[19px] bg-[#f4f4ea] p-4 text-[#202620]"><GraduationCap size={21} color="#536058"/><div className="mt-4 text-3xl font-black">{joined.isPending?"—":learningClasses.length}</div><div className="text-xs text-[#6f756f]">Joined classes</div></div>
             </div>
-            <p className="mt-3 text-xs leading-5 text-[#cbd2c5]">These counts show classes returned on the first page, not lifetime totals.</p>
+            
           </div>
         </div>
       </section>
@@ -91,21 +92,21 @@ function DashboardHome() {
       {profileError && <div role="alert" className="rounded-xl border border-[#ffd0d0] bg-[#fff0ef] p-4 text-sm text-[#b34450]">{profileError}</div>}
 
       <section className="space-y-4" aria-label="Created classes">
-        <SectionHeading eyebrow="01 / LEAD THE WAY" title="Classes you created" description="Your teaching spaces, ready when you are." link="/instructor/classrooms" linkLabel="View created classes"/>
+        <SectionHeading eyebrow="TEACHING" title="Classes you created" description="Manage your classrooms." link="/instructor/classrooms" linkLabel="View created classes"/>
         <ClassList classes={teachingClasses} loading={owned.isPending} failed={owned.isError} kind="teacher"/>
       </section>
       <section className="space-y-4" aria-label="Joined classes">
-        <SectionHeading eyebrow="02 / KEEP EXPLORING" title="Classes you joined" description="Pick up right where you left off." link="/student/classrooms" linkLabel="View joined classes"/>
+        <SectionHeading eyebrow="LEARNING" title="Classes you joined" description="Continue your coursework." link="/student/classrooms" linkLabel="View joined classes"/>
         <ClassList classes={learningClasses} loading={joined.isPending} failed={joined.isError} kind="student"/>
       </section>
 
       <section className="en-ticket-card p-6 sm:p-8" aria-label="Account snapshot">
-        <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="en-label">03 / YOUR PROFILE</p><h2 className="en-section-title mt-2">Account snapshot</h2></div><Link href="/settings" className="en-btn en-btn-light"><Settings2 size={16}/> Manage profile</Link></div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="en-label">PROFILE</p><h2 className="en-section-title mt-2">Account snapshot</h2></div><Link href="/settings" className="en-btn en-btn-light"><Settings2 size={16}/> Manage profile</Link></div>
         {loadingProfile&&!user ? <div className="mt-6 h-24 animate-pulse rounded-xl bg-accent"/> : user ?
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <div className="en-inner-paper"><p className="en-label">Name</p><p className="mt-2 font-bold">{user.first_name} {user.last_name}</p><p className="mt-1 text-xs en-muted">@{user.username}</p></div>
           <div className="en-inner-paper"><p className="en-label">Email</p><p className="mt-2 break-words font-bold text-sm">{user.email}</p><span className="mt-2 inline-flex items-center gap-1 text-xs" style={{color:user.email_verified?"#5f7358":"#a96508"}}>{user.email_verified?<CheckCircle2 size={13}/>:<Mail size={13}/>} {user.email_verified?"Verified":"Verification pending"}</span></div>
-          <div className="en-inner-paper"><p className="en-label">Account status</p><p className="mt-2 font-bold capitalize">{user.status}</p><p className="mt-1 text-xs en-muted">Your role depends on each classroom.</p></div>
+          <div className="en-inner-paper"><p className="en-label">Account status</p><p className="mt-2 font-bold capitalize">{user.status}</p><p className="mt-1 text-xs en-muted"></p></div>
         </div>:<p className="mt-5 text-sm en-muted">Profile information is unavailable.</p>}
       </section>
     </div>
@@ -117,9 +118,9 @@ function SectionHeading({eyebrow,title,description,link,linkLabel}:{eyebrow:stri
 }
 
 function ClassList({classes,loading,failed,kind}:{classes:Classroom[];loading:boolean;failed:boolean;kind:"teacher"|"student"}) {
-  if(loading)return <div className="grid gap-4 md:grid-cols-3">{[1,2,3].map(i=><div key={i} className="h-52 animate-pulse rounded-3xl bg-[#cbd2c5]"/>)}</div>;
-  if(failed)return <div className="en-empty"><p className="font-semibold">Could not load these classes.</p><p className="mt-2 text-sm en-muted">The connected backend may be offline or this action may not yet be enabled for your account.</p></div>;
-  if(!classes.length)return <div className="en-empty"><BookOpenText size={29} className="mx-auto text-[#536058]"/><p className="mt-3 font-semibold">{kind==="teacher"?"No created classes yet":"No joined classes yet"}</p><p className="mt-2 text-sm en-muted">{kind==="teacher"?"Start a space for the people you teach.":"Have a class code? You can join in seconds."}</p><Link href={kind==="teacher"?"/instructor/classrooms/create":"/student/classrooms/join"} className="en-btn en-btn-dark mt-5">{kind==="teacher"?"Create class":"Join class"}<ArrowRight size={16}/></Link></div>;
+  if(loading)return <ContentSkeleton rows={3}/>;
+  if(failed)return <div className="en-empty"><p className="font-semibold">Could not load these classes.</p><p className="mt-2 text-sm en-muted">Check your connection and try again.</p></div>;
+  if(!classes.length)return <div className="en-empty"><BookOpenText size={29} className="mx-auto text-[#536058]"/><p className="mt-3 font-semibold">{kind==="teacher"?"No created classes yet":"No joined classes yet"}</p><p className="mt-2 text-sm en-muted">{kind==="teacher"?"Create your first class.":"Join with a class code."}</p><Link href={kind==="teacher"?"/instructor/classrooms/create":"/student/classrooms/join"} className="en-btn en-btn-dark mt-5">{kind==="teacher"?"Create class":"Join class"}<ArrowRight size={16}/></Link></div>;
   return <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{classes.map((classroom,index)=><Link key={classroom.id} href={`${kind==="teacher"?"/instructor":"/student"}/classrooms/${classroom.id}`} className="en-ticket-card group block transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
     <div className="en-class-strip" style={{filter:index%3===1?"hue-rotate(-12deg)":index%3===2?"hue-rotate(12deg)":undefined}}/>
     <div className="p-6"><div className="flex justify-between gap-3"><span className="en-tag">{kind==="teacher"?"Created by you":"Joined class"}</span><ArrowRight size={19} className="text-[#536058] transition-transform group-hover:translate-x-1"/></div>

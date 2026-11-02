@@ -1,4 +1,5 @@
 "use client";
+import { copyText } from "@/lib/clipboard";
 import { ExamResults } from "@/components/classroom/exam-results";
 import { CourseCodeSettings } from "@/components/classroom/course-code-settings";
 import { ExamManagement } from "@/components/classroom/exam-management";
@@ -68,10 +69,6 @@ const tabs: {
   {
     key: "people",
     label: "People",
-  },
-  {
-    key: "attendance",
-    label: "Attendance",
   },
   {
     key: "results",
@@ -165,7 +162,7 @@ export default function ClassroomDetailsPage() {
       return;
     }
 
-    await navigator.clipboard.writeText(
+    await copyText(
       code
     );
 
@@ -260,7 +257,7 @@ export default function ClassroomDetailsPage() {
             Teaching classes
           </Link>
 
-          <section className="overflow-hidden rounded-3xl bg-primary text-white shadow-lg">
+          <section className="en-class-hero overflow-hidden rounded-3xl bg-primary text-white shadow-lg">
             <div className="p-6 sm:p-8">
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -337,12 +334,13 @@ export default function ClassroomDetailsPage() {
             </div>
           </section>
 
-          <nav className="mt-6 overflow-x-auto rounded-2xl border border-border bg-card p-2 shadow-sm">
+          <nav aria-label="Classroom sections" className="en-class-tabs mt-6 overflow-x-auto rounded-2xl border border-border bg-card p-2 shadow-sm">
             <div className="flex min-w-max gap-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.key}
                   type="button"
+                  aria-pressed={activeTab===tab.key}
                   onClick={() =>
                     setActiveTab(tab.key)
                   }

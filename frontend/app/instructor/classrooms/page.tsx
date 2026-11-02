@@ -1,4 +1,5 @@
 "use client";
+import { copyText } from "@/lib/clipboard";
 
 import {
   useMutation,
@@ -95,7 +96,7 @@ export default function TeachingClassroomsPage() {
   async function copyClassCode(
     code: string
   ) {
-    await navigator.clipboard.writeText(
+    await copyText(
       code
     );
 

@@ -1,4 +1,6 @@
 "use client";
+import { clientId } from "@/lib/client-id";
+import {ContentSkeleton} from "@/components/ui/content-skeleton";
 import {useRef,useState} from "react";
 import {useQuery,useQueryClient} from "@tanstack/react-query";
 import {assignments,type Assignment,type Submission} from "@/services/assignments";
@@ -13,7 +15,7 @@ export function AssignmentBoard({classroomId,canManage}:{classroomId:string;canM
  async function publish(id:string){setBusy(true);setError("");try{await assignments.publish(classroomId,id);await refresh()}catch(e){setError(examError(e))}finally{setBusy(false)}}
  return <section className="mt-6 space-y-4 rounded-2xl border border-border bg-card p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Assignments</h2><p className="mt-1 text-sm text-muted-foreground">Coursework, submissions and feedback.</p></div>{canManage&&<button className={btn} onClick={()=>setEditing({allow_resubmit:true,max_points:100})}>Create assignment</button>}</div>
  {editing&&<AssignmentEditor key={editing.id??"new"} value={editing} onCancel={()=>setEditing(null)} onSave={async value=>{await assignments.save(classroomId,value);await refresh();setEditing(null)}}/>}
- {listing.isPending&&<p role="status">Loading assignments…</p>}{(error||listing.isError)&&<p role="alert" className="text-sm text-red-700">{error||examError(listing.error)}</p>}
+ {listing.isPending&&<ContentSkeleton rows={2}/>}{(error||listing.isError)&&<p role="alert" className="text-sm text-red-700">{error||examError(listing.error)}</p>}
  {listing.data?.length===0&&<p className="text-sm text-muted-foreground">No assignments yet.</p>}
  {listing.data?.map(a=><article key={a.id} className="rounded-xl border border-border p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-semibold">{a.title}</h3><p className="mt-1 text-xs text-muted-foreground">Due {date(a.due_at)} · {a.max_points} points · {a.status}{a.allow_late?" · Late work accepted":""}</p></div><div className="flex flex-wrap gap-2"><button className={btn} onClick={()=>setSelected(selected===a.id?null:a.id)}>{selected===a.id?"Close":"Open assignment"}</button>{canManage&&<><button className={btn} onClick={()=>setEditing(a)}>Edit</button>{a.status==="draft"&&<button className={btn} disabled={busy} onClick={()=>void publish(a.id)}>Publish</button>}</>}</div></div>{selected===a.id&&<AssignmentDetails classroomId={classroomId} assignment={a} canManage={canManage}/>}</article>)}
  </section>;
@@ -31,7 +33,7 @@ function AssignmentDetails({classroomId,assignment:a,canManage}:{classroomId:str
  const client=useQueryClient();const [answer,setAnswer]=useState("");const [file,setFile]=useState<File|null>(null);const [busy,setBusy]=useState(false);const [notice,setNotice]=useState("");const request=useRef<string|null>(null);
  const history=useQuery({queryKey:["assignment-submissions",classroomId,a.id],queryFn:()=>assignments.submissions(classroomId,a.id)});
  const latest=history.data?.[0];const canSubmit=!canManage&&a.status==="published"&&(!latest||a.allow_resubmit)&&(!latest||latest.version<10);
- async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setNotice("");request.current??=crypto.randomUUID();const body=new FormData();body.append("answer",answer);body.append("request_id",request.current);body.append("expected_version",String(latest?.version??0));if(file)body.append("file",file);
+ async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setNotice("");request.current??=clientId();const body=new FormData();body.append("answer",answer);body.append("request_id",request.current);body.append("expected_version",String(latest?.version??0));if(file)body.append("file",file);
  try{await assignments.submit(classroomId,a.id,body);request.current=null;setNotice("Submission confirmed");await client.invalidateQueries({queryKey:["assignment-submissions",classroomId,a.id]})}catch(err){setNotice(examError(err))}finally{setBusy(false)}}
  return <div className="mt-4 space-y-4 border-t border-border pt-4"><p className="whitespace-pre-wrap text-sm">{a.instructions||"No additional instructions."}</p>
  {history.isPending&&<p role="status" className="text-sm">Loading submissions…</p>}{history.isError&&<p role="alert" className="text-sm text-red-700">{examError(history.error)}</p>}

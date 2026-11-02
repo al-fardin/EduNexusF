@@ -1,4 +1,7 @@
 "use client";
+import { clientId } from "@/lib/client-id";
+import {MobileExamEntry} from "@/components/classroom/mobile-exam-entry";
+import {useMobileDevice} from "@/lib/mobile-device";
 import {useEffect,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {ArrowLeft,CheckCircle2,ChevronRight,Download,ShieldCheck,ShieldX,RefreshCw,MonitorCheck,Laptop,Copy,LockKeyhole,Check} from "lucide-react";
@@ -34,7 +37,7 @@ const setupGuide = (browser:SupportedExamBrowser): GuideStep[] => {
   ];
 };
 
-export function ExamEntryGate({classroomId,examId,onEnter,onExit}:{classroomId:string;examId:string;onEnter:()=>void;onExit:()=>void}){
+function DesktopExamEntryGate({classroomId,examId,onEnter,onExit}:{classroomId:string;examId:string;onEnter:()=>void;onExit:()=>void}){
   const policy=useQuery({queryKey:["monitor-policy",classroomId,examId],queryFn:()=>examMonitor.policy(classroomId,examId),retry:1});
   const exams=useQuery({queryKey:["classrooms",classroomId,"exams"],queryFn:()=>examService.list(classroomId),staleTime:30000});
   const [detected,setDetected]=useState<Detection>("checking");
@@ -112,7 +115,7 @@ export function ExamEntryGate({classroomId,examId,onEnter,onExit}:{classroomId:s
       if(!check.ok){setDetected("missing");throw new Error("Extension disconnected. Recheck the connection.");}
       const desk=await desktopMonitor.preflightStatus(classroomId,examId);
       if(!desk.connected){setDesktopState(desk);throw new Error("Desktop Client disconnected. Reconnect and recheck before entering.");}
-      const sessionKey=`exam-${examId}-${window.crypto.randomUUID()}`;
+      const sessionKey=`exam-${examId}-${clientId()}`;
       const examEnd=exams.data?.find(exam=>exam.id===examId)?.ends_at;
       const endMs=examEnd?Date.parse(examEnd):NaN;
       if(!Number.isFinite(endMs)||endMs<=Date.now())throw new Error("Exam window closed or cannot be verified. Return to exams.");
@@ -190,3 +193,5 @@ export function ExamEntryGate({classroomId,examId,onEnter,onExit}:{classroomId:s
     {error&&<p role="alert" className="rounded-xl border border-[#E7C5B8] bg-[#FAEFEA] p-4 text-sm text-[#934A3C]">{error}</p>}
   </section>;
 }
+
+export function ExamEntryGate(props:{classroomId:string;examId:string;onEnter:()=>void;onExit:()=>void}){return useMobileDevice()?<MobileExamEntry {...props}/>:<DesktopExamEntryGate {...props}/>;}

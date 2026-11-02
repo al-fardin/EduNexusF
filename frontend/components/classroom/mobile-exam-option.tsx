@@ -1,0 +1,3 @@
+export function MobileExamOption({enabled,onChange,mcqOnly}:{enabled:boolean;onChange:(value:boolean)=>void;mcqOnly:boolean}){
+ return <div className="mt-4 rounded-xl border border-border bg-card p-4"><label className="flex items-start gap-3 text-sm font-semibold"><input type="checkbox" className="mt-0.5 h-5 w-5" disabled={!mcqOnly} checked={enabled&&mcqOnly} onChange={e=>onChange(e.target.checked)}/><span>Allow phone access<span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">{mcqOnly?'Students can take this MCQ exam in the mobile app or browser. Phone attempts use the exam page without desktop monitoring.':'Available for MCQ-only exams. Coding exams require a computer.'}</span></span></label></div>;
+}

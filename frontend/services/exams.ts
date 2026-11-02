@@ -17,6 +17,7 @@ export type ExamQuestion = {
   language?: string;
 };
 export type ExamInfo = {
+  allow_mobile_mcq?: boolean;
   id: string;
   classroom_id: string;
   title: string;
@@ -29,6 +30,7 @@ export type ExamInfo = {
   created_at: string;
 };
 export type ExamAttempt = {
+  entry_mode?: "desktop" | "mobile";
   id: string;
   started_at: string;
   expires_at: string;
@@ -56,6 +58,7 @@ export type ExamSubmission = {
   answers: Record<string, string>;
 };
 export type NewExam = {
+  allow_mobile_mcq?: boolean;
   title: string;
   description: string;
   starts_at: string;
@@ -65,6 +68,7 @@ export type NewExam = {
 };
 const prefix = (classroomId: string) => `/classrooms/${classroomId}/exams`;
 export const examService = {
+  async access(classroomId:string,id:string):Promise<{allow_mobile_mcq:boolean;mcq_only:boolean;has_coding:boolean}>{return (await api.get(`${prefix(classroomId)}/${id}/access`)).data.data;},
   async active(classroomId: string): Promise<Array<{exam_id:string;title:string;expires_at:string;last_saved_at:string|null}>> {
     return (await api.get<Envelope<Array<{exam_id:string;title:string;expires_at:string;last_saved_at:string|null}>>>(`${prefix(classroomId)}/active`)).data.data;
   },
@@ -87,8 +91,8 @@ export const examService = {
     const r = await api.get<Envelope<ExamSubmission[]>>(`${prefix(classroomId)}/${id}/submissions`);
     return r.data.data;
   },
-  async start(classroomId: string, id: string): Promise<LiveExam> {
-    const r = await api.post<Envelope<LiveExam>>(`${prefix(classroomId)}/${id}/start`);
+  async start(classroomId: string, id: string,entry_mode:"desktop"|"mobile"="desktop",mobile_rules_accepted=false): Promise<LiveExam> {
+    const r = await api.post<Envelope<LiveExam>>(`${prefix(classroomId)}/${id}/start`,{entry_mode,mobile_rules_accepted});
     return r.data.data;
   },
   async attempt(classroomId: string, id: string): Promise<LiveExam> {

@@ -1,4 +1,5 @@
 "use client";
+import { clientId } from "@/lib/client-id";
 import { useRef,useState } from "react";
 import { useQuery,useQueryClient } from "@tanstack/react-query";
 import { questionBank,type BankItem } from "@/services/question-bank";
@@ -12,7 +13,7 @@ export function SaveBankQuestion({classroomId,question}:{classroomId:string;ques
 export function QuestionBank({classroomId,onAdd}:{classroomId:string;onAdd?:(questions:ExamQuestion[])=>void}){
  const [topic,setTopic]=useState("");const [difficulty,setDifficulty]=useState("");const [count,setCount]=useState(5);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const upload=useRef<HTMLInputElement>(null);const client=useQueryClient();
  const list=useQuery({queryKey:["question-bank",classroomId,topic,difficulty],queryFn:()=>questionBank.list(classroomId,topic,difficulty)});
- const add=(items:BankItem[])=>onAdd?.(items.map(i=>({...i.question,id:crypto.randomUUID()})));
+ const add=(items:BankItem[])=>onAdd?.(items.map(i=>({...i.question,id:clientId()})));
  const refresh=()=>client.invalidateQueries({queryKey:["question-bank",classroomId]});
  async function perform(fn:()=>Promise<unknown>){setBusy(true);setError("");try{await fn();await refresh()}catch(e){setError(examError(e))}finally{setBusy(false)}}
  return <details className="my-4 rounded-2xl border border-border bg-card p-4"><summary className="cursor-pointer font-semibold">Question bank</summary><div className="mt-4 space-y-4">

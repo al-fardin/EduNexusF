@@ -1,12 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./mobile.css";
 import { QueryProvider } from "@/providers/query-provider";
 import { SiteChrome } from "@/components/layout/site-chrome";
 import { NetworkFeedback } from "@/components/ui/network-feedback";
 
+export const viewport:Viewport={width:"device-width",initialScale:1,viewportFit:"cover",themeColor:"#253e32"};
 export const metadata: Metadata = {
-  title: "EduNexus | Learning, reimagined",
-  description: "Your classroom companion: create classes, join learning spaces, share announcements, and stay organised.",
+  manifest:"/manifest.webmanifest",
+  appleWebApp:{capable:true,title:"EduNexus",statusBarStyle:"default"},
+  title: "EduNexus",
+  description: "Classes, exams and coursework.",
   icons: {icon:"/edunexus-mark.svg"},
 };
 
