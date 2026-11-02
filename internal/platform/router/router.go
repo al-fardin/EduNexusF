@@ -15,6 +15,7 @@ import (
 	classroomService "github.com/edunexus/edunexus/internal/classroom/service"
 
 	"github.com/edunexus/edunexus/internal/exam"
+	"github.com/edunexus/edunexus/internal/learning"
 	"github.com/edunexus/edunexus/internal/platform/config"
 	dbsqlc "github.com/edunexus/edunexus/internal/platform/database/sqlc"
 	"github.com/edunexus/edunexus/internal/platform/mail"
@@ -171,6 +172,7 @@ func Register(
 		)
 
 	exam.Register(app, dbPool)
+	learning.Register(app, dbPool)
 
 	classroomRoutes.Register(
 		app,
@@ -178,6 +180,6 @@ func Register(
 		membershipH,
 		streamH,
 		classroomHandler.NewMaterial(dbPool, streamSvc),
-        classroomHandler.NewEnrollmentPhase5(dbPool),
+		classroomHandler.NewEnrollmentPhase5(dbPool),
 	)
 }

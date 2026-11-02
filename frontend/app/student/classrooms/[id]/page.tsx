@@ -28,6 +28,7 @@ import { useState } from "react";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { StreamFeed } from "@/components/classroom/stream-feed";
+import { AssignmentBoard } from "@/components/classroom/assignments";
 import { MaterialLibrary } from "@/components/classroom/material-library";
 import {
   classroomService,
@@ -236,7 +237,7 @@ export default function StudentClassroomPage() {
 )}
 
             {activeTab === "classwork" && (
-              <MaterialLibrary classroomId={classroomId} canManage={false} />
+              <><MaterialLibrary classroomId={classroomId} canManage={false} /><AssignmentBoard classroomId={classroomId} canManage={false}/></>
             )}
 
             {activeTab === "people" && (

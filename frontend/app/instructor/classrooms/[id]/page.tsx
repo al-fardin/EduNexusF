@@ -33,6 +33,7 @@ import { useState } from "react";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { StreamFeed } from "@/components/classroom/stream-feed";
+import { AssignmentBoard } from "@/components/classroom/assignments";
 import { MaterialLibrary } from "@/components/classroom/material-library";
 import {
   ClassroomMember,
@@ -358,7 +359,7 @@ export default function ClassroomDetailsPage() {
 )}
 
             {activeTab === "classwork" && (
-              <MaterialLibrary classroomId={classroomId} canManage={true} />
+              <><MaterialLibrary classroomId={classroomId} canManage={true} /><AssignmentBoard classroomId={classroomId} canManage={true}/></>
             )}
 
             {activeTab === "people" && (
