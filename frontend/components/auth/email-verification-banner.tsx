@@ -60,7 +60,7 @@ export function EmailVerificationBanner({
   };
 
   return (
-    <section className="mb-6 rounded-2xl border border-[#cbd2c5] bg-[#e9ede5] p-5">
+    <section className="mb-6 rounded-2xl border border-border bg-secondary p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[#a96508]">
@@ -103,13 +103,13 @@ export function EmailVerificationBanner({
       </div>
 
       {successMessage && (
-        <p className="mt-4 rounded-lg bg-[#e9ede5] px-4 py-3 text-sm text-[#5f7358]">
+        <p className="mt-4 rounded-lg bg-secondary px-4 py-3 text-sm text-primary">
           {successMessage}
         </p>
       )}
 
       {errorMessage && (
-        <p className="mt-4 rounded-lg bg-[#fff0ef] px-4 py-3 text-sm text-[#b34450]">
+        <p className="mt-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </p>
       )}

@@ -124,7 +124,7 @@ function VerifyEmailContent() {
             onClick={() =>
               void verifyEmail()
             }
-            className="mt-7 w-full rounded-xl bg-primary px-4 py-3 font-medium text-white transition hover:bg-[#536058]"
+            className="mt-7 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground"
           >
             Verify email
           </button>
@@ -134,7 +134,7 @@ function VerifyEmailContent() {
           <button
             type="button"
             disabled
-            className="mt-7 w-full cursor-not-allowed rounded-xl bg-primary px-4 py-3 font-medium text-white opacity-60"
+            className="mt-7 w-full cursor-not-allowed rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground opacity-60"
           >
             Verifying...
           </button>
@@ -143,7 +143,7 @@ function VerifyEmailContent() {
         {status === "success" && (
           <Link
             href="/"
-            className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-white transition hover:bg-[#536058]"
+            className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground"
           >
             Go to dashboard
           </Link>
@@ -178,7 +178,7 @@ function StatusIcon({
 
   if (status === "error") {
     return (
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-[#b34450]">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-destructive">
         <XCircle className="h-8 w-8" />
       </div>
     );

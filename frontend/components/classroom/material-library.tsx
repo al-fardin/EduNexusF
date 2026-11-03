@@ -67,8 +67,8 @@ export function MaterialUploadForm({ classroomId, compact = false, onUploaded }:
         <label className="block text-sm font-medium">Description (optional)
           <textarea rows={compact ? 2 : 3} maxLength={5000} value={description} disabled={mutation.isPending} onChange={(e) => setDescription(e.target.value)} className="mt-1 block w-full resize-y rounded-xl border border-border bg-background p-3 outline-none focus:border-primary" placeholder="What should students read or prepare?" />
         </label>
-        {(validationError || mutation.isError) && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{validationError || getStreamErrorMessage(mutation.error)}</p>}
-        <button type="submit" disabled={!file || !title.trim() || !!validationError || mutation.isPending} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+        {(validationError || mutation.isError) && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{validationError || getStreamErrorMessage(mutation.error)}</p>}
+        <button type="submit" disabled={!file || !title.trim() || !!validationError || mutation.isPending} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {mutation.isPending ? <LoaderCircle size={17} className="animate-spin" /> : <FileUp size={17} />} {mutation.isPending ? "Uploading material…" : "Upload & publish to Stream"}
         </button>
       </form>
@@ -91,7 +91,7 @@ export function MaterialDownloadButton({ classroomId, materialId, filename, labe
     <button type="button" onClick={download} disabled={working} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-secondary px-4 py-2 text-sm font-semibold text-foreground hover:brightness-95 disabled:opacity-50">
       {working ? <LoaderCircle size={16} className="animate-spin" /> : <Download size={16} />} {label}
     </button>
-    {error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}
+    {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
   </div>;
 }
 
@@ -116,10 +116,10 @@ export function MaterialLibrary({ classroomId, canManage }: { classroomId: strin
         <div className="flex items-center gap-2">{canManage&&<button className="en-outline-button" onClick={()=>setComposer("material")}><Plus size={16}/>Add material</button>}<button type="button" onClick={() => void materials.refetch()} disabled={materials.isFetching} className="rounded-xl border border-border p-3 disabled:opacity-60" aria-label="Refresh materials"><RefreshCw size={18} className={materials.isFetching ? "animate-spin" : ""} /></button></div>
       </div>
       {materials.isPending && <div className="space-y-3" role="status" aria-label="Loading materials">
-        {[0,1,2].map(i=><div key={i} className="rounded-2xl border border-[#ded2c2] bg-[#f3f1ea] p-4"><div className="en-skeleton mb-3 h-5 w-2/5 rounded-lg"/><div className="en-skeleton mb-3 h-3 w-4/5 rounded-lg"/><div className="en-skeleton h-9 w-32 rounded-xl"/></div>)}
+        {[0,1,2].map(i=><div key={i} className="rounded-2xl border border-border bg-background p-4"><div className="en-skeleton mb-3 h-5 w-2/5 rounded-lg"/><div className="en-skeleton mb-3 h-3 w-4/5 rounded-lg"/><div className="en-skeleton h-9 w-32 rounded-xl"/></div>)}
       </div>}
-      {remove.isError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{getStreamErrorMessage(remove.error)}</p>}
-      {materials.isError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{getStreamErrorMessage(materials.error)}</p>}
+      {remove.isError && <p role="alert" className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{getStreamErrorMessage(remove.error)}</p>}
+      {materials.isError && <p role="alert" className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{getStreamErrorMessage(materials.error)}</p>}
       {materials.isSuccess && materials.data.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">No materials shared yet.</p>}
       {materials.isSuccess && <div className="space-y-3">{materials.data.map((item: ClassroomMaterial) => <article key={item.id} className="rounded-2xl border border-border bg-background p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -129,7 +129,7 @@ export function MaterialLibrary({ classroomId, canManage }: { classroomId: strin
           </div>
           <div className="flex flex-wrap items-start gap-2">
             <MaterialDownloadButton classroomId={classroomId} materialId={item.id} filename={item.file_name} />
-            {canManage && <button type="button" disabled={remove.isPending} onClick={() => { if (window.confirm(`Delete ${item.title}?`)) remove.mutate(item.id); }} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-red-200 px-3 text-sm text-red-700 disabled:opacity-50">{remove.isPending && remove.variables === item.id ? <LoaderCircle size={15} className="animate-spin"/> : <Trash2 size={15} />} {remove.isPending && remove.variables === item.id ? "Deleting…" : "Delete"}</button>}
+            {canManage && <button type="button" disabled={remove.isPending} onClick={() => { if (window.confirm(`Delete ${item.title}?`)) remove.mutate(item.id); }} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-destructive/30 px-3 text-sm text-destructive disabled:opacity-50">{remove.isPending && remove.variables === item.id ? <LoaderCircle size={15} className="animate-spin"/> : <Trash2 size={15} />} {remove.isPending && remove.variables === item.id ? "Deleting…" : "Delete"}</button>}
           </div>
         </div>
       </article>)}</div>}

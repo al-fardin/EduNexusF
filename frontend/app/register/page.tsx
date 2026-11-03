@@ -188,7 +188,7 @@ export default function RegisterPage() {
         </div>
 
         {errorMessage && (
-          <p className="mt-5 rounded-xl border border-[#ffd0d0] bg-[#fff0ef] px-4 py-3 text-sm text-[#b34450]">
+          <p className="mt-5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {errorMessage}
           </p>
         )}
@@ -199,7 +199,7 @@ export default function RegisterPage() {
           onClick={() =>
             void registerAccount()
           }
-          className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-medium text-white transition hover:bg-[#536058] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading
             ? "Creating account..."

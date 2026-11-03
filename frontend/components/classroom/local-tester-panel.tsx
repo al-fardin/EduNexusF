@@ -34,11 +34,11 @@ export function LocalTesterPanel({ classroomId, examId, questionId, tester, work
         <button type="button" disabled={busy || !workspace.entry} onClick={() => void run()} className="inline-flex items-center gap-2 rounded-lg bg-[#24634B] px-4 py-2 text-xs font-semibold text-white hover:bg-[#1B4C39] disabled:opacity-50">{busy ? <LoaderCircle size={15} className="animate-spin" /> : <FlaskConical size={15} />}{busy ? "Testing…" : "Run Tests"}</button></div>
     </div>
     {busy && <p role="status" className="mt-3 text-xs text-[#415D46]">{state === "awaiting_approval" ? "Approve the tester in EduNexus Desktop to continue." : state === "running" ? "Running tests on your PC…" : "Preparing tester…"}</p>}
-    {error && <p role="alert" className="mt-3 text-xs text-red-700">{error}</p>}
+    {error && <p role="alert" className="mt-3 text-xs text-destructive">{error}</p>}
     {result && <div className="mt-3 rounded-lg border border-[#D5DFD2] bg-white p-3">
       <p role="status" className="flex items-center gap-2 text-sm font-semibold">{result.passed === result.total ? <CheckCircle2 size={17} className="text-green-700" /> : <XCircle size={17} className="text-amber-700" />}{result.passed} / {result.total} tests passed<span className="ml-auto text-xs font-normal text-[#58695C]">{result.duration_ms} ms</span></p>
       <p className="mt-1 text-xs text-[#58695C]">Result for the code tested. Local feedback; final marks are assigned separately.</p>
-      {result.cases.length > 0 && <ul className="mt-3 max-h-48 space-y-2 overflow-auto">{result.cases.map((test, i) => <li key={i} className="border-t border-[#E4EAE1] pt-2 text-xs"><span className="font-semibold">{test.name}</span><span className={`ml-2 ${test.status === "passed" ? "text-green-700" : "text-red-700"}`}>{test.status}</span>{test.message && <p className="mt-1 whitespace-pre-wrap break-words text-[#58695C]">{test.message}</p>}</li>)}</ul>}
+      {result.cases.length > 0 && <ul className="mt-3 max-h-48 space-y-2 overflow-auto">{result.cases.map((test, i) => <li key={i} className="border-t border-[#E4EAE1] pt-2 text-xs"><span className="font-semibold">{test.name}</span><span className={`ml-2 ${test.status === "passed" ? "text-green-700" : "text-destructive"}`}>{test.status}</span>{test.message && <p className="mt-1 whitespace-pre-wrap break-words text-[#58695C]">{test.message}</p>}</li>)}</ul>}
     </div>}
   </section>;
 }

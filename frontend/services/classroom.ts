@@ -9,6 +9,8 @@ export type ClassroomStatus =
 export type Classroom = {
   id: string;
   owner_id: string;
+  teacher_name?: string;
+  teacher_avatar?: string;
   name: string;
   section?: string;
   subject?: string;

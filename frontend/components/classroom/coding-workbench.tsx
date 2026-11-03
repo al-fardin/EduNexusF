@@ -3,6 +3,7 @@
 import { LocalTesterPanel } from "@/components/classroom/local-tester-panel";
 import type { TesterAttachment } from "@/services/question-testers";
 import dynamic from "next/dynamic";
+import { useTheme } from "next-themes";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ChevronDown, ChevronRight, Code2, FileCode2, FilePlus2, Folder, FolderOpen,
@@ -22,15 +23,15 @@ import { loader, type OnMount } from "@monaco-editor/react";
 loader.config({ paths: { vs: "/monaco/vs" } });
 
 // The same Monaco editor engine used in VS Code, with EduNexus-specific colors.
-const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false, loading: () => <div className="flex h-full items-center justify-center animate-pulse text-sm text-[#637466]">Loading editor…</div> });
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false, loading: () => <div className="flex h-full items-center justify-center animate-pulse text-sm text-muted-foreground">Loading editor…</div> });
 
 type Props = { tester?: TesterAttachment; classroomId: string; examId: string; questionId: string; language: string; code: string; onChange: (next: string) => void };
 const maxWorkspaceBytes = 19500; // Existing exam answers cap each coding response at 20,000 bytes.
 const filePathPattern = /^[A-Za-z0-9_./-]+$/;
-const light = "#FBFAF6";
-const ink = "#202C24";
-const buttonClass = "inline-flex items-center gap-2 rounded-[12px_7px_11px_8px] border border-[#CBD4C9] px-3 py-2 text-xs font-semibold transition hover:bg-[#E2E9DD] disabled:opacity-40";
-const iconButton = "rounded-md p-1.5 text-[#68786A] transition hover:bg-[#DDE7D9] hover:text-[#202C24]";
+const light = "#FCFAFF";
+const ink = "#251333";
+const buttonClass = "inline-flex items-center gap-2 rounded-[12px_7px_11px_8px] border border-border px-3 py-2 text-xs font-semibold transition hover:bg-secondary disabled:opacity-40";
+const iconButton = "rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-foreground";
 const monacoLanguage = (lang: string, filename: string) => {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
   return ({ py:"python",js:"javascript",mjs:"javascript",ts:"typescript",tsx:"typescript",java:"java",cpp:"cpp",cc:"cpp",cxx:"cpp",c:"c",h:"c",hpp:"cpp",go:"go",rs:"rust",rb:"ruby",php:"php",json:"json",md:"markdown" } as Record<string,string>)[ext] || lang || "plaintext";
@@ -57,6 +58,7 @@ function validateName(name: string) {
 }
 
 export function CodingWorkbench({ classroomId, examId, questionId, language, code, onChange, tester }: Props) {
+  const {resolvedTheme}=useTheme();
   const workspace = useMemo(() => parseWorkspace(code, language), [code, language]);
   const [current, setCurrent] = useState<string | null>(null);
   const [tabs, setTabs] = useState<string[]>([]);
@@ -176,80 +178,80 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
     finally{setRunning(false);}
   }
   const onMount:OnMount = (_editor, monaco) => {
-    monaco.editor.defineTheme("edunexus-olive",{
+    monaco.editor.defineTheme("edunexus-violet",{
       base:"vs",inherit:true,rules:[
-        {token:"comment",foreground:"829080"},{token:"keyword",foreground:"405F45",fontStyle:"bold"},
+        {token:"comment",foreground:"829080"},{token:"keyword",foreground:"7839B8",fontStyle:"bold"},
         {token:"string",foreground:"A16E39"},{token:"number",foreground:"875B9A"},
         {token:"type",foreground:"486B7B"},
-      ],colors:{"editor.background":light,"editor.foreground":ink,"editorLineNumber.foreground":"#9CA79D","editorLineNumber.activeForeground":"#526B55","editor.selectionBackground":"#D5E2CB","editor.lineHighlightBackground":"#F0F2EA","editorCursor.foreground":"#506E50","editorIndentGuide.background1":"#E3E8DD"},
+      ],colors:{"editor.background":light,"editor.foreground":ink,"editorLineNumber.foreground":"#9CA79D","editorLineNumber.activeForeground":"#526B55","editor.selectionBackground":"#E8D6FA","editor.lineHighlightBackground":"#F7F3FB","editorCursor.foreground":"#7839B8","editorIndentGuide.background1":"#E4DAED"},
     });
-    monaco.editor.setTheme("edunexus-olive");
+    monaco.editor.setTheme(resolvedTheme==="dark"?"vs-dark":"edunexus-violet");
   };
-  return <div className={`${expanded?"fixed inset-3 z-[80] shadow-2xl":"relative"} overflow-hidden rounded-[22px_12px_19px_13px] border border-[#CAD4C8] bg-[#FBFAF6] text-[#202C24]`}>
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#C8D3C4] bg-[#E9EEE5] px-3 py-2.5">
-      <div className="flex items-center gap-2 text-xs font-semibold"><Code2 size={17} className="text-[#526E54]"/> EduNexus Code Studio <span className="rounded-md bg-[#DCE7D9] px-2 py-1 text-[10px] tracking-wide text-[#526A54]">{entryLanguage ? `${entryLanguage} · ${workspace.entry}` : "New workspace"}</span></div>
+  return <div className={`${expanded?"fixed inset-3 z-[80] shadow-2xl":"relative"} overflow-hidden rounded-[22px_12px_19px_13px] border border-border bg-card text-foreground`}>
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary px-3 py-2.5">
+      <div className="flex items-center gap-2 text-xs font-semibold"><Code2 size={17} className="text-muted-foreground"/> EduNexus Code Studio <span className="rounded-md bg-secondary px-2 py-1 text-[10px] tracking-wide text-muted-foreground">{entryLanguage ? `${entryLanguage} · ${workspace.entry}` : "New workspace"}</span></div>
       <div className="flex items-center gap-1.5">
         <button type="button" onClick={()=>setSidebar(v=>!v)} className={iconButton} title="Toggle file Explorer" aria-label="Toggle Explorer">{sidebar?<PanelLeftClose size={17}/>:<PanelLeftOpen size={17}/>}</button>
         <button type="button" onClick={()=>setExpanded(v=>!v)} className={iconButton} title={expanded?"Exit focus mode":"Expand editor"} aria-label="Toggle editor fullscreen">{expanded?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</button>
-        <button type="button" onClick={()=>requestRun()} disabled={running || !entryLanguage} className="ml-2 inline-flex items-center gap-2 rounded-[12px_7px_11px_8px] bg-[#2B342C] px-4 py-2 text-xs font-bold text-[#FBFAF6] transition hover:bg-[#485E4E] disabled:opacity-50">
+        <button type="button" onClick={()=>requestRun()} disabled={running || !entryLanguage} className="ml-2 inline-flex items-center gap-2 rounded-[12px_7px_11px_8px] bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition hover:bg-primary disabled:opacity-50">
           {running?<RefreshCw size={15} className="animate-spin"/>:<Play size={15} fill="currentColor"/>}{running?"Running…":"Run"}
         </button>
       </div>
     </div>
     <div className={`flex ${expanded?"h-[calc(100vh-125px)]":"h-[465px]"} min-h-0`}>
-      {sidebar&&<aside className="flex w-[215px] min-w-[150px] shrink-0 flex-col border-r border-[#D4DED1] bg-[#F0F2EB] text-xs">
-        <div className="flex items-center justify-between border-b border-[#D4DED1] px-3 py-2 font-bold uppercase tracking-[0.1em] text-[#647466]"><span>Explorer</span><div className="flex gap-0.5"><button type="button" className={iconButton} onClick={addFile} title="New file" aria-label="New file"><FilePlus2 size={16}/></button><button type="button" className={iconButton} onClick={addFolder} title="New folder" aria-label="New folder"><FolderPlus size={16}/></button></div></div>
+      {sidebar&&<aside className="flex w-[215px] min-w-[150px] shrink-0 flex-col border-r border-border bg-card text-xs">
+        <div className="flex items-center justify-between border-b border-border px-3 py-2 font-bold uppercase tracking-[0.1em] text-muted-foreground"><span>Explorer</span><div className="flex gap-0.5"><button type="button" className={iconButton} onClick={addFile} title="New file" aria-label="New file"><FilePlus2 size={16}/></button><button type="button" className={iconButton} onClick={addFolder} title="New folder" aria-label="New folder"><FolderPlus size={16}/></button></div></div>
         <div className="flex-1 overflow-y-auto py-2">
-          <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-[#8B9A8D]">Exam workspace</div>
-          {rows.map(row=><div key={row.full} className={`group flex items-center gap-1 py-1 pr-1 ${!row.isFolder&&row.full===activePath?"bg-[#DFE8DC] text-[#253F2C]":"hover:bg-[#E3EAE0]"}`} style={{paddingLeft:8+Math.min(row.depth,5)*12}}>
+          <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Exam workspace</div>
+          {rows.map(row=><div key={row.full} className={`group flex items-center gap-1 py-1 pr-1 ${!row.isFolder&&row.full===activePath?"bg-secondary text-foreground":"hover:bg-secondary"}`} style={{paddingLeft:8+Math.min(row.depth,5)*12}}>
             <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-left" title={row.full} onClick={()=>row.isFolder?setCollapsed(prev=>{const next=new Set(prev);if(next.has(row.full))next.delete(row.full);else next.add(row.full);return next;}):selectFile(row.full)}>
               {row.isFolder?(collapsed.has(row.full)?<ChevronRight size={12}/>:<ChevronDown size={12}/>):<span className="w-3"/>}
-              {row.isFolder?(collapsed.has(row.full)?<Folder size={15} className="shrink-0 text-[#A48243]"/>:<FolderOpen size={15} className="shrink-0 text-[#A48243]"/>):<FileCode2 size={14} className="shrink-0 text-[#607961]"/>}
+              {row.isFolder?(collapsed.has(row.full)?<Folder size={15} className="shrink-0 text-muted-foreground"/>:<FolderOpen size={15} className="shrink-0 text-muted-foreground"/>):<FileCode2 size={14} className="shrink-0 text-muted-foreground"/>}
               <span className="truncate">{row.name}</span>
             </button>
-            <button type="button" className="hidden rounded p-0.5 hover:bg-[#C9D9C8] group-hover:block" title={`Rename ${row.full}`} onClick={()=>renameRow(row)} aria-label={`Rename ${row.full}`}><Pencil size={12}/></button>
-            <button type="button" className="hidden rounded p-0.5 text-[#9A534B] hover:bg-[#F7E7E3] group-hover:block" title={`Delete ${row.full}`} onClick={()=>removeRow(row)} aria-label={`Delete ${row.full}`}><Trash2 size={12}/></button>
+            <button type="button" className="hidden rounded p-0.5 hover:bg-secondary group-hover:block" title={`Rename ${row.full}`} onClick={()=>renameRow(row)} aria-label={`Rename ${row.full}`}><Pencil size={12}/></button>
+            <button type="button" className="hidden rounded p-0.5 text-destructive hover:bg-destructive/10 group-hover:block" title={`Delete ${row.full}`} onClick={()=>removeRow(row)} aria-label={`Delete ${row.full}`}><Trash2 size={12}/></button>
           </div>)}
         </div>
-        <div className="border-t border-[#D4DED1] px-3 py-2 text-[10px] text-[#7B887C]">{workspace.files.length}/24 files · Private exam workspace</div>
+        <div className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">{workspace.files.length}/24 files · Private exam workspace</div>
       </aside>}
-      <div className="flex min-w-0 flex-1 flex-col bg-[#FBFAF6]">
-        <div className="flex min-h-[38px] items-center gap-0 overflow-x-auto border-b border-[#D4DED1] bg-[#EFF1EA]">
-          {opened.map(t=><div key={t} className={`inline-flex shrink-0 items-center gap-1 border-r border-[#D4DED1] px-2.5 py-2 text-xs ${t===activePath?"border-t-2 border-t-[#6A8A65] bg-[#FBFAF6] font-semibold":"text-[#778579]"}`}><button type="button" className="flex items-center gap-1.5" onClick={()=>selectFile(t)}><FileCode2 size={13}/>{t.split("/").at(-1)}</button><button type="button" title="Close tab" aria-label={`Close ${t} tab`} onClick={()=>{setTabs(old=>old.filter(x=>x!==t));if(t===activePath)setCurrent(workspace.entry)}} className="ml-1 hover:text-[#9A534B]"><X size={12}/></button></div>)}
+      <div className="flex min-w-0 flex-1 flex-col bg-card">
+        <div className="flex min-h-[38px] items-center gap-0 overflow-x-auto border-b border-border bg-card">
+          {opened.map(t=><div key={t} className={`inline-flex shrink-0 items-center gap-1 border-r border-border px-2.5 py-2 text-xs ${t===activePath?"border-t-2 border-t-primary bg-card font-semibold":"text-muted-foreground"}`}><button type="button" className="flex items-center gap-1.5" onClick={()=>selectFile(t)}><FileCode2 size={13}/>{t.split("/").at(-1)}</button><button type="button" title="Close tab" aria-label={`Close ${t} tab`} onClick={()=>{setTabs(old=>old.filter(x=>x!==t));if(t===activePath)setCurrent(workspace.entry)}} className="ml-1 hover:text-destructive"><X size={12}/></button></div>)}
         </div>
-        <div className="flex items-center justify-between gap-2 border-b border-[#E2E8DF] px-3 py-1 text-[10px] text-[#7B887C]"><span className="truncate">{activePath ? `workspace / ${activePath}` : "Empty workspace"}</span><span className="shrink-0">{activeFile ? `${activeFile.content.split("\n").length} lines` : "Create a file to begin"}</span></div>
+        <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1 text-[10px] text-muted-foreground"><span className="truncate">{activePath ? `workspace / ${activePath}` : "Empty workspace"}</span><span className="shrink-0">{activeFile ? `${activeFile.content.split("\n").length} lines` : "Create a file to begin"}</span></div>
         <div className="min-h-0 flex-1" onPasteCapture={e=>{const n=e.clipboardData?.getData("text")?.length??0;if(n)record({kind:"paste",question_id:questionId,magnitude:Math.min(n,20000)});}}>
-          {activeFile ? <MonacoEditor key={activePath} path={activePath} height="100%" value={activeFile.content} language={monacoLanguage(activeLanguage || language,activePath)} theme="edunexus-olive" onMount={onMount} onChange={(value: string | undefined)=>editFile(value??"")} options={{fontSize,fontFamily:"Consolas, 'Cascadia Code', 'Fira Code', monospace",fontLigatures:true,minimap:{enabled:true},automaticLayout:true,scrollBeyondLastLine:false,tabSize:4,insertSpaces:true,wordWrap:wordWrap?"on":"off",lineNumbers:"on",renderWhitespace:"selection",bracketPairColorization:{enabled:true},suggestOnTriggerCharacters:true,quickSuggestions:true,padding:{top:14,bottom:14}}}/> :
-          <div className="flex h-full flex-col items-center justify-center gap-4 px-5 text-center text-[#68786A]"><FilePlus2 size={36} strokeWidth={1.5}/><div><div className="font-semibold text-[#27372C]">Create your first source file</div><p className="mt-1 text-xs">Choose any supported extension. The compiler follows your filename.</p></div><button type="button" className={buttonClass} onClick={addFile}>+ New file</button></div>}
+          {activeFile ? <MonacoEditor key={activePath} path={activePath} height="100%" value={activeFile.content} language={monacoLanguage(activeLanguage || language,activePath)} theme={resolvedTheme==="dark"?"vs-dark":"edunexus-violet"} onMount={onMount} onChange={(value: string | undefined)=>editFile(value??"")} options={{fontSize,fontFamily:"Consolas, 'Cascadia Code', 'Fira Code', monospace",fontLigatures:true,minimap:{enabled:true},automaticLayout:true,scrollBeyondLastLine:false,tabSize:4,insertSpaces:true,wordWrap:wordWrap?"on":"off",lineNumbers:"on",renderWhitespace:"selection",bracketPairColorization:{enabled:true},suggestOnTriggerCharacters:true,quickSuggestions:true,padding:{top:14,bottom:14}}}/> :
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-5 text-center text-muted-foreground"><FilePlus2 size={36} strokeWidth={1.5}/><div><div className="font-semibold text-foreground">Create your first source file</div><p className="mt-1 text-xs">Choose any supported extension. The compiler follows your filename.</p></div><button type="button" className={buttonClass} onClick={addFile}>+ New file</button></div>}
         </div>
-        <div className="flex flex-wrap items-center justify-between border-t border-[#CBD8C9] bg-[#E8EEE5] px-2.5 py-1.5 text-[10px] text-[#586D5D]"><div className="flex items-center gap-3"><span>{activePath}</span><span>UTF-8</span><span>{activeLanguage || "plain text"}</span></div><div className="flex items-center gap-2"><button type="button" className="hover:underline" onClick={()=>setWordWrap(v=>!v)}>Wrap: {wordWrap?"on":"off"}</button><button type="button" className="hover:underline" onClick={()=>setFontSize(v=>Math.max(11,v-1))}>A−</button><span>{fontSize}px</span><button type="button" className="hover:underline" onClick={()=>setFontSize(v=>Math.min(19,v+1))}>A+</button></div></div>
+        <div className="flex flex-wrap items-center justify-between border-t border-border bg-secondary px-2.5 py-1.5 text-[10px] text-muted-foreground"><div className="flex items-center gap-3"><span>{activePath}</span><span>UTF-8</span><span>{activeLanguage || "plain text"}</span></div><div className="flex items-center gap-2"><button type="button" className="hover:underline" onClick={()=>setWordWrap(v=>!v)}>Wrap: {wordWrap?"on":"off"}</button><button type="button" className="hover:underline" onClick={()=>setFontSize(v=>Math.max(11,v-1))}>A−</button><span>{fontSize}px</span><button type="button" className="hover:underline" onClick={()=>setFontSize(v=>Math.min(19,v+1))}>A+</button></div></div>
       </div>
     </div>
-    <div className="flex flex-wrap items-center gap-2 border-t border-[#CBD8C9] bg-[#F0F2EB] px-3 py-2 text-xs">
+    <div className="flex flex-wrap items-center gap-2 border-t border-border bg-card px-3 py-2 text-xs">
       <span className="font-semibold">Run entry</span>
-      <select aria-label="Select main entry file" className="max-w-[220px] rounded-md border border-[#CAD5C8] bg-[#FBFAF6] px-2 py-1.5 text-xs" value={workspace.entry} onChange={e=>selectFile(e.target.value)}>
+      <select aria-label="Select main entry file" className="max-w-[220px] rounded-md border border-border bg-card px-2 py-1.5 text-xs" value={workspace.entry} onChange={e=>selectFile(e.target.value)}>
         {!entryLanguage && <option value="">Choose a runnable file</option>}
         {workspace.files.filter(f=>detectFileLanguage(f.path)).map(f=><option key={f.path} value={f.path}>{f.path} · {detectFileLanguage(f.path)}</option>)}
       </select>
       <button type="button" className={`${buttonClass} ml-auto`} onClick={()=>requestRun(true)} disabled={running || !entryLanguage} title="Provide standard input manually for dynamic or conditional programs"><TerminalSquare size={14}/>Run with input…</button>
       <button type="button" className={buttonClass} onClick={()=>setShowTerminal(v=>!v)}><TerminalSquare size={14}/>{showTerminal?"Hide terminal":"Show terminal"}</button>
     </div>
-    {showTerminal && <div className="border-t border-[#CBD8C9] bg-[#F7F8F4] px-3 pb-3 pt-2 text-xs">
-      <div className="mt-2 flex items-center gap-2 font-semibold text-[#415D46]"><TerminalSquare size={14}/> OUTPUT / TERMINAL {output&&<span className="ml-auto text-[10px] font-normal">{output.status} · {output.duration_ms} ms</span>}</div>
-      <pre role="status" className="mt-1 max-h-48 min-h-16 overflow-auto whitespace-pre-wrap break-words rounded-md border border-[#DFE5DC] bg-[#FBFAF6] p-3 font-mono text-xs leading-5 text-[#273629]">{running?"Compiling and running in isolated Docker…":output?(output.stdout||"")+(output.stderr?"\n"+output.stderr:"") || "Process finished (no output).":"Terminal ready · Choose an entry file and press Run."}</pre>
-      {output?.truncated&&<p className="mt-1 text-[#9B703C]">Output truncated at the server limit.</p>}
+    {showTerminal && <div className="border-t border-border bg-card px-3 pb-3 pt-2 text-xs">
+      <div className="mt-2 flex items-center gap-2 font-semibold text-muted-foreground"><TerminalSquare size={14}/> OUTPUT / TERMINAL {output&&<span className="ml-auto text-[10px] font-normal">{output.status} · {output.duration_ms} ms</span>}</div>
+      <pre role="status" className="mt-1 max-h-48 min-h-16 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-card p-3 font-mono text-xs leading-5 text-foreground">{running?"Compiling and running in isolated Docker…":output?(output.stdout||"")+(output.stderr?"\n"+output.stderr:"") || "Process finished (no output).":"Terminal ready · Choose an entry file and press Run."}</pre>
+      {output?.truncated&&<p className="mt-1 text-muted-foreground">Output truncated at the server limit.</p>}
     </div>}
     {tester && <LocalTesterPanel classroomId={classroomId} examId={examId} questionId={questionId} tester={tester} workspace={workspace} language={entryLanguage || language} />}
-    {showInputDialog && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#101810]/55 p-4" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setShowInputDialog(false)}}>
-      <div role="dialog" aria-modal="true" aria-label="Run program input" className="w-full max-w-xl rounded-[23px_13px_21px_16px] border border-[#BFCBB9] bg-[#FBFAF6] p-5 shadow-2xl">
-        <div className="flex items-center gap-2 font-semibold text-[#2B342C]"><TerminalSquare size={18}/> Run {workspace.entry}</div>
-        <p className="mt-2 text-xs text-[#68786A]">Compiler: {entryLanguage}. Input-reading code was detected. Enter standard input (optional if this path does not need it).</p>
-        <textarea autoFocus rows={6} maxLength={4096} value={stdin} onChange={e=>setStdin(e.target.value)} placeholder="Program input, for example: 5" className="mt-3 w-full rounded-lg border border-[#C7D3C4] bg-white p-3 font-mono text-sm text-[#25382A] focus:outline-[#617B61]" onKeyDown={e=>{if(e.key==="Escape")setShowInputDialog(false); if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))void execute(stdin);}}/>
-        <div className="mt-3 flex justify-end gap-2"><button type="button" className={buttonClass} onClick={()=>setShowInputDialog(false)}>Cancel</button><button type="button" className={buttonClass} onClick={()=>void execute("")} title="Run with empty standard input (EOF)">Run without input</button><button type="button" className="rounded-lg bg-[#2B342C] px-5 py-2 text-sm font-semibold text-white" onClick={()=>void execute(stdin)}>OK · Run</button></div>
+    {showInputDialog && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 p-4" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setShowInputDialog(false)}}>
+      <div role="dialog" aria-modal="true" aria-label="Run program input" className="w-full max-w-xl rounded-[23px_13px_21px_16px] border border-border bg-card p-5 shadow-2xl">
+        <div className="flex items-center gap-2 font-semibold text-foreground"><TerminalSquare size={18}/> Run {workspace.entry}</div>
+        <p className="mt-2 text-xs text-muted-foreground">Compiler: {entryLanguage}. Input-reading code was detected. Enter standard input (optional if this path does not need it).</p>
+        <textarea autoFocus rows={6} maxLength={4096} value={stdin} onChange={e=>setStdin(e.target.value)} placeholder="Program input, for example: 5" className="mt-3 w-full rounded-lg border border-border bg-card p-3 font-mono text-sm text-foreground focus:outline-[#617B61]" onKeyDown={e=>{if(e.key==="Escape")setShowInputDialog(false); if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))void execute(stdin);}}/>
+        <div className="mt-3 flex justify-end gap-2"><button type="button" className={buttonClass} onClick={()=>setShowInputDialog(false)}>Cancel</button><button type="button" className={buttonClass} onClick={()=>void execute("")} title="Run with empty standard input (EOF)">Run without input</button><button type="button" className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground" onClick={()=>void execute(stdin)}>OK · Run</button></div>
       </div>
     </div>}
-    {error&&<div role="alert" className="mx-3 my-2 rounded-lg bg-[#F8E8E5] px-3 py-2 text-xs text-[#9B433F]">{error}</div>}
-    {notice&&<p className="mx-3 my-2 text-xs text-[#526950]">{notice}</p>}
-    <div className="border-t border-[#D7DED3] bg-[#F1F4EE] px-3 py-2 text-[11px] text-[#657667]">Folder files, code edits, paste sizes and run attempts remain tied to this exam. Click <strong>Save progress</strong> on the exam or wait for autosave. Running code does not submit answers.</div>
+    {error&&<div role="alert" className="mx-3 my-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>}
+    {notice&&<p className="mx-3 my-2 text-xs text-muted-foreground">{notice}</p>}
+    <div className="border-t border-border bg-card px-3 py-2 text-[11px] text-muted-foreground">Folder files, code edits, paste sizes and run attempts remain tied to this exam. Click <strong>Save progress</strong> on the exam or wait for autosave. Running code does not submit answers.</div>
   </div>;
 }

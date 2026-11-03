@@ -16,7 +16,7 @@ export function ExamResults({ classroomId, canManage }: { classroomId: string; c
   return <section className="space-y-5 text-foreground">
     <div><h2 className="text-2xl font-bold">Published examination results</h2><p className="mt-1 text-sm text-muted-foreground">Everyone in the class can see published total marks. Question feedback stays private to each student.</p></div>
     {listing.isPending && <div className="space-y-3" aria-label="Loading published results">{[1,2,3].map(i=><div className="h-20 animate-pulse rounded-2xl bg-secondary" key={i}/>)}</div>}
-    {listing.isError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{examError(listing.error)}</p>}
+    {listing.isError && <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{examError(listing.error)}</p>}
     {listing.data?.length===0 && <div className="rounded-2xl border border-border bg-card p-6 text-sm">No results published yet. Exams ending does not automatically reveal unreviewed marks.</div>}
     {[...exams].map(([id,title]) => <article key={id} className="space-y-3 rounded-3xl border border-border bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold">{title}</h3><button type="button" disabled={!!downloading} onClick={async()=>{setDownloading(id);try{await examManagement.downloadPDF(classroomId,id)}catch(e){alert(examError(e))}finally{setDownloading("")}}} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-semibold hover:bg-secondary disabled:opacity-50">{downloading===id?<LoaderCircle className="animate-spin" size={16}/>:<Download size={16}/>} Public marksheet PDF</button></div>

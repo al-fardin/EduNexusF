@@ -1,16 +1,17 @@
-# EduNexus Frontend · Vintage Ticket V7
+# EduNexus Frontend
 
-A redesigned Next.js + React + TypeScript frontend using the supplied Vintage Ticket / Organic Wave HTML as **visual inspiration only**, retaining the existing app's API integrations.
+Next.js, React and TypeScript interface with a violet light/dark theme, responsive sidebar, mobile navigation and class-scoped messaging.
 
 ## Screens
 
-- `/preview` — backend-free interactive design preview with **clearly labeled sample data**.
-- `/` — authenticated dashboard. Created and joined classrooms are shown separately, without an account-level role selector.
-- `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email` — authentication and account recovery.
-- `/settings` — profile and password controls.
-- `/instructor/classrooms`, `/instructor/classrooms/create`, `/instructor/classrooms/[id]` — existing created classroom workflows.
-- `/student/classrooms`, `/student/classrooms/join`, `/student/classrooms/[id]` — existing joined classroom workflows.
-- Classroom details retain their Stream, People, Classwork, Attendance, Results, and Exam tabs. **Only functionality already supported by the backend is live**. Placeholders are not presented as completed modules.
+- `/` — home workspace with class cards, recent activity and upcoming coursework.
+- `/classrooms`, `/instructor/classrooms`, `/student/classrooms` — all, teaching and learning classes.
+- `/messages` — private teacher–student conversations grouped by class; optional `class` and `thread` URL parameters retain the selected conversation.
+- `/calendar`, `/files`, `/notifications` — published deadlines, shared material downloads and account notifications.
+- `/settings` — profile, verification, notification preferences and appearance.
+- Authentication and classroom routes retain their existing account, coursework and exam workflows. Classroom sections persist in the `tab` URL parameter.
+
+See [theme and messaging rollout](../VIOLET_MESSAGING.md). The old `/preview` route is a sample-data design archive; use the authenticated app to inspect the current interface.
 
 ## Quick start
 

@@ -63,9 +63,9 @@ func TestExistingDatabaseReadOnlyRoutes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		paths := []string{"/notifications", "/classrooms/joined", "/classrooms/mine"}
+		paths := []string{"/notifications", "/classrooms/joined", "/classrooms/mine", "/workspace", "/workspace/files", "/messaging/classes", "/messaging/unread"}
 		base := "/classrooms/" + m.class
-		for _, suffix := range []string{"/details", "/exams", "/assignments", "/analytics", "/tutor", "/tutor/sources", "/stream", "/materials"} {
+		for _, suffix := range []string{"/details", "/message-recipients", "/messaging-settings", "/conversations", "/exams", "/assignments", "/analytics", "/tutor", "/tutor/sources", "/stream", "/materials"} {
 			paths = append(paths, base+suffix)
 		}
 		if m.membership == "student" {

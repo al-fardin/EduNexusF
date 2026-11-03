@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS classroom_message_reactions,conversation_shared_message_themes,classroom_shared_message_themes;

@@ -203,7 +203,7 @@ export default function LoginPage() {
           {errorMessage && (
             <p
               role="alert"
-              className="rounded-lg bg-[#fff0ef] px-4 py-3 text-sm text-[#b34450]"
+              className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive"
             >
               {errorMessage}
             </p>
@@ -212,7 +212,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full touch-manipulation rounded-xl bg-primary px-4 py-3 font-medium text-white transition hover:bg-[#536058] disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full touch-manipulation rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading
               ? "Signing in..."

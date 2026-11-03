@@ -173,7 +173,7 @@ function ResetPasswordContent() {
         <div className="en-auth-art-ticket">✦ &nbsp; Learn together. Build better. &nbsp; ✦</div>
       </aside>
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-xl en-auth-form">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-[#2b342c]/15">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-foreground/15">
           <KeyRound className="h-7 w-7" />
         </div>
 
@@ -236,7 +236,7 @@ function ResetPasswordContent() {
           </div>
 
           {message && (
-            <p className="mt-5 rounded-xl border border-[#ffd0d0] bg-[#fff0ef] px-4 py-3 text-sm text-[#b34450]">
+            <p className="mt-5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {message}
             </p>
           )}
@@ -244,7 +244,7 @@ function ResetPasswordContent() {
           <button
             type="submit"
             disabled={status === "loading"}
-            className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-medium text-white shadow-lg shadow-[#2b342c]/10 transition hover:-translate-y-0.5 hover:bg-[#536058] disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground shadow-lg shadow-foreground/10 transition hover:-translate-y-0.5 hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
           >
             {status === "loading"
               ? "Resetting password..."
@@ -355,7 +355,7 @@ function PasswordStrength({
             className={`h-1.5 flex-1 rounded-full transition ${
               item <= score
                 ? score <= 1
-                  ? "bg-red-500"
+                  ? "bg-destructive/100"
                   : score <= 3
                     ? "bg-amber-500"
                     : "bg-green-500"
@@ -392,7 +392,7 @@ function StatusCard({
           className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
             type === "success"
               ? "bg-green-100 text-green-600"
-              : "bg-red-100 text-[#b34450]"
+              : "bg-red-100 text-destructive"
           }`}
         >
           {type === "success" ? (
@@ -412,7 +412,7 @@ function StatusCard({
 
         <Link
           href={buttonHref}
-          className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-white transition hover:bg-[#536058]"
+          className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground"
         >
           {buttonText}
         </Link>

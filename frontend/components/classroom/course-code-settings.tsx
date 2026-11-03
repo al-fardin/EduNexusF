@@ -25,9 +25,9 @@ export function CourseCodeSettings({ classroomId }: { classroomId: string }) {
     <div className="mb-3 flex items-center gap-2"><BookOpen size={19}/><h3 className="font-bold">Course code for result PDF</h3></div>
     <p className="mb-3 text-sm text-muted-foreground">Course name comes from the classroom name, and teacher name from the owner profile. Saving here also refreshes previously published marksheet PDFs.</p>
     <form onSubmit={submit} className="flex flex-wrap items-center gap-3"><input aria-label="Course code" maxLength={40} minLength={2} required value={value??lookup.data??""} onChange={e=>setValue(e.target.value)} placeholder="CSE 225" className="min-w-40 flex-1 rounded-xl border border-border bg-background p-3 text-sm"/>
-      <button disabled={mutation.isPending} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{mutation.isPending&&<LoaderCircle size={16} className="animate-spin"/>} Save course code</button>
+      <button disabled={mutation.isPending} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">{mutation.isPending&&<LoaderCircle size={16} className="animate-spin"/>} Save course code</button>
     </form>
     {mutation.isSuccess&&<p className="mt-2 text-sm text-green-700">Course code saved. Published marksheets have been refreshed.</p>}
-    {mutation.isError&&<p role="alert" className="mt-2 text-sm text-red-700">{getClassroomErrorMessage(mutation.error)}</p>}
+    {mutation.isError&&<p role="alert" className="mt-2 text-sm text-destructive">{getClassroomErrorMessage(mutation.error)}</p>}
   </section>;
 }

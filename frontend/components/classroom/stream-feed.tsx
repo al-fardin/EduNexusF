@@ -296,17 +296,17 @@ export function StreamFeed({
           )}
 
           {streamQuery.isError && (
-            <div className="rounded-2xl border border-[#ffd0d0] bg-[#fff0ef] p-6 text-center">
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-center">
               <AlertCircle
                 size={36}
-                className="mx-auto text-[#b34450]"
+                className="mx-auto text-destructive"
               />
 
-              <h3 className="mt-3 font-bold text-red-900">
+              <h3 className="mt-3 font-bold text-destructive">
                 Unable to load stream
               </h3>
 
-              <p className="mt-2 text-sm text-[#b34450]">
+              <p className="mt-2 text-sm text-destructive">
                 {getStreamErrorMessage(
                   streamQuery.error
                 )}
@@ -386,13 +386,13 @@ export function StreamFeed({
                       key={post.id}
                       className={`rounded-2xl border p-4 sm:p-5 ${
                         post.is_pinned
-                          ? "border-amber-300 bg-[#e9ede5]/60"
+                          ? "border-amber-300 bg-secondary/60"
                           : "border-border bg-card"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-start gap-3">
-                          <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                          <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                             {getInitials(
                               authorName
                             )}
@@ -529,7 +529,7 @@ export function StreamFeed({
                               .variables
                               ?.postId ===
                               post.id && (
-                              <div className="rounded-xl border border-[#ffd0d0] bg-[#fff0ef] px-4 py-3 text-sm text-[#b34450]">
+                              <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                                 {getStreamErrorMessage(
                                   updateMutation.error
                                 )}
@@ -557,7 +557,7 @@ export function StreamFeed({
                                 updating ||
                                 !editForm.content.trim()
                               }
-                              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {updating ? (
                                 <LoaderCircle
@@ -646,7 +646,7 @@ export function StreamFeed({
             deleteMutation.isError) && (
             <div
               role="alert"
-              className="mt-4 rounded-xl border border-[#ffd0d0] bg-[#fff0ef] px-4 py-3 text-sm text-[#b34450]"
+              className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
             >
               {getStreamErrorMessage(
                 togglePinMutation.error ??
@@ -783,7 +783,7 @@ function AnnouncementDetailsModal({
         </header>
 
         <div className="mt-6 flex items-center gap-3">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
             {getInitials(authorName)}
           </div>
 
@@ -852,7 +852,7 @@ function AnnouncementDetailsModal({
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#536058] sm:w-auto sm:min-w-32"
+            className="min-h-11 w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-muted-foreground sm:w-auto sm:min-w-32"
           >
             Close
           </button>

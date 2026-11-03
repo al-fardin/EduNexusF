@@ -33,6 +33,6 @@ export function QuestionTesterUpload({ classroomId, tester, onChange, onBusyChan
       <input ref={input} type="file" accept=".exe" aria-label="Upload optional question tester" className="hidden" disabled={disabled || busy} onChange={e => void select(e.target.files?.[0])} />
     </div>
     {tester && <div className="mt-3 flex items-center gap-2 rounded-lg bg-[#EDF2EB] px-3 py-2 text-xs text-[#243B2C]"><FileCheck2 size={16} /><span className="min-w-0 flex-1 truncate" title={tester.name}>{tester.name} · {(tester.size / 1024 / 1024).toFixed(2)} MB</span><button type="button" aria-label="Remove tester" disabled={disabled || busy} onClick={() => onChange(undefined)} className="rounded p-2 hover:bg-[#DCE6D9]"><X size={15} /></button></div>}
-    {error && <p role="alert" className="mt-2 text-xs text-red-700">{error}</p>}
+    {error && <p role="alert" className="mt-2 text-xs text-destructive">{error}</p>}
   </div>;
 }

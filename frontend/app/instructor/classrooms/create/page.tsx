@@ -85,7 +85,7 @@ export default function CreateClassroomPage() {
           </Link>
 
           <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-            <div className="border-b border-border bg-primary px-6 py-8 text-white sm:px-8">
+            <div className="border-b border-border bg-primary px-6 py-8 text-primary-foreground sm:px-8">
               <div className="mb-4 inline-flex rounded-2xl bg-card/10 p-3">
                 <School size={28} />
               </div>
@@ -112,7 +112,7 @@ export default function CreateClassroomPage() {
                   className="mb-2 block text-sm font-semibold"
                 >
                   Class name
-                  <span className="text-[#b34450]">
+                  <span className="text-destructive">
                     {" "}
                     *
                   </span>
@@ -237,7 +237,7 @@ export default function CreateClassroomPage() {
               </div>
 
               {createMutation.isError && (
-                <div className="rounded-xl border border-[#ffd0d0] bg-[#fff0ef] px-4 py-3 text-sm text-[#b34450]">
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                   {getClassroomErrorMessage(
                     createMutation.error
                   )}
@@ -257,7 +257,7 @@ export default function CreateClassroomPage() {
                   disabled={
                     createMutation.isPending
                   }
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#536058] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {createMutation.isPending ? (
                     <>

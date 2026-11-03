@@ -114,10 +114,10 @@ export default function StudentClassroomPage() {
     return (
       <AuthGuard>
         <main className="flex min-h-screen items-center justify-center bg-background px-4">
-          <div className="max-w-lg rounded-3xl border border-[#ffd0d0] bg-card p-8 text-center shadow-sm">
+          <div className="max-w-lg rounded-3xl border border-destructive/30 bg-card p-8 text-center shadow-sm">
             <ShieldAlert
               size={42}
-              className="mx-auto text-[#b34450]"
+              className="mx-auto text-destructive"
             />
 
             <h1 className="mt-4 text-2xl font-bold">
@@ -132,7 +132,7 @@ export default function StudentClassroomPage() {
 
             <Link
               href="/student/classrooms"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
             >
               <ArrowLeft size={18} />
               My classes
@@ -165,7 +165,7 @@ export default function StudentClassroomPage() {
                   }
                   className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
                     activeTab === tab.key
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-secondary"
                   }`}
                 >

@@ -43,26 +43,41 @@ public class MainActivity extends Activity {
  private static final int OPEN_FILE=101,SAVE_FILE=102;
  @Override public void onCreate(Bundle state){super.onCreate(state);
   workspace=Config.LOCAL_TEST?getPreferences(0).getString("workspace",Config.SERVER_URL):Config.SERVER_URL;
-  root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.rgb(244,245,239));setContentView(root);
+  root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.rgb(252,250,255));setContentView(root);applyAppearance(getPreferences(0).getBoolean("dark",false));
   root.setOnApplyWindowInsetsListener((v,insets)->{int top=insets.getSystemWindowInsetTop(),bottom=insets.getSystemWindowInsetBottom();boolean keyboard=false;
    if(Build.VERSION.SDK_INT>=30){android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars());android.graphics.Insets ime=insets.getInsets(WindowInsets.Type.ime());top=bars.top;bottom=Math.max(bars.bottom,ime.bottom);keyboard=insets.isVisible(WindowInsets.Type.ime());}
    root.setPadding(insets.getSystemWindowInsetLeft(),top,insets.getSystemWindowInsetRight(),bottom);
    if(web!=null)web.evaluateJavascript("document.documentElement.classList.toggle('en-keyboard-open',"+keyboard+")",null);return Build.VERSION.SDK_INT>=30?WindowInsets.CONSUMED:insets.consumeSystemWindowInsets();});
   if(validWorkspace(workspace))openWorkspace();else connectDialog();
  }
+ private void applyAppearance(boolean dark){
+  int background=Color.parseColor(dark?"#14111B":"#FCFAFF");
+  root.setBackgroundColor(background);
+  if(web!=null)web.setBackgroundColor(background);
+  getWindow().setStatusBarColor(background);getWindow().setNavigationBarColor(background);
+  int flags=getWindow().getDecorView().getSystemUiVisibility();
+  if(dark)flags&=~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;else flags|=View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+  if(Build.VERSION.SDK_INT>=26){if(dark)flags&=~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;else flags|=View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;}
+  getWindow().getDecorView().setSystemUiVisibility(flags);
+ }
+ private final class AppearanceBridge {
+  @JavascriptInterface public void setDark(boolean dark){runOnUiThread(()->{if(web==null||!sameOrigin(web.getUrl()))return;getPreferences(0).edit().putBoolean("dark",dark).apply();applyAppearance(dark);});}
+ }
+ private void installAppearanceBridge(){web.evaluateJavascript("(function(){if(window.edunexusThemeObserver)return;function update(){EduNexusAppearance.setDark(document.documentElement.classList.contains('dark'));}window.edunexusThemeObserver=new MutationObserver(update);window.edunexusThemeObserver.observe(document.documentElement,{attributes:true,attributeFilter:['class']});update();})()",null);}
  private boolean validWorkspace(String value){try{Uri uri=Uri.parse(value);if(uri.getHost()==null||uri.getUserInfo()!=null||uri.getQuery()!=null||uri.getFragment()!=null)return false;String path=uri.getPath();if(path!=null&&!path.isEmpty()&&!path.equals("/"))return false;if("https".equals(uri.getScheme()))return true;if(!Config.LOCAL_TEST||!"http".equals(uri.getScheme()))return false;String host=uri.getHost();if(host.equals("localhost"))return true;String[] parts=host.split("\\.");if(parts.length!=4)return false;int[] octets=new int[4];for(int i=0;i<4;i++){if(!parts[i].matches("[0-9]{1,3}"))return false;octets[i]=Integer.parseInt(parts[i]);if(octets[i]>255)return false;}return octets[0]==127||octets[0]==10||(octets[0]==192&&octets[1]==168)||(octets[0]==172&&octets[1]>=16&&octets[1]<=31);}catch(Exception e){return false;}}
  private boolean sameOrigin(String value){try{Uri a=Uri.parse(value),b=Uri.parse(workspace);return a.getScheme().equals(b.getScheme())&&a.getHost().equalsIgnoreCase(b.getHost())&&a.getPort()==b.getPort();}catch(Exception e){return false;}}
  private void connectDialog(){EditText input=new EditText(this);input.setSingleLine(true);input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);input.setText(workspace);input.setPadding(32,20,32,20);AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Connect to EduNexus").setMessage("Enter your workspace address.").setView(input).setPositiveButton("Connect",null).setNegativeButton("Cancel",(d,w)->{if(web==null)finish();}).create();dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{String value=input.getText().toString().trim().replaceAll("/+$","");if(!validWorkspace(value)){input.setError("Use HTTPS or a local network address");return;}workspace=value;getPreferences(0).edit().putString("workspace",value).apply();dialog.dismiss();openWorkspace();}));dialog.show();}
- private void openWorkspace(){if(web!=null){web.removeJavascriptInterface("EduNexusDownloads");web.destroy();}root.removeAllViews();failed=false;
+ private void openWorkspace(){if(web!=null){web.removeJavascriptInterface("EduNexusDownloads");web.removeJavascriptInterface("EduNexusAppearance");web.destroy();}root.removeAllViews();failed=false;
   progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);progress.setMax(100);root.addView(progress,new LinearLayout.LayoutParams(-1,6));
-  web=new WebView(this);web.setBackgroundColor(Color.rgb(244,245,239));root.addView(web,new LinearLayout.LayoutParams(-1,0,1));WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(true);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);settings.setSupportZoom(false);settings.setUserAgentString(settings.getUserAgentString()+" EduNexusAndroid/1.0");CookieManager.getInstance().setAcceptThirdPartyCookies(web,false);
+  web=new WebView(this);web.setBackgroundColor(Color.rgb(252,250,255));root.addView(web,new LinearLayout.LayoutParams(-1,0,1));WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(true);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);settings.setSupportZoom(false);settings.setUserAgentString(settings.getUserAgentString()+" EduNexusAndroid/1.1");CookieManager.getInstance().setAcceptThirdPartyCookies(web,false);
   web.addJavascriptInterface(new DownloadBridge(),"EduNexusDownloads");
+  web.addJavascriptInterface(new AppearanceBridge(),"EduNexusAppearance");
   web.setWebViewClient(new WebViewClient(){
    @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){String value=request.getUrl().toString();if(sameOrigin(value))return false;String scheme=request.getUrl().getScheme();if("https".equals(scheme)||"mailto".equals(scheme)){try{startActivity(new Intent(Intent.ACTION_VIEW,request.getUrl()));}catch(Exception ignored){}}return true;}
    @Override public void onPageStarted(WebView view,String url,android.graphics.Bitmap icon){failed=false;progress.setVisibility(View.VISIBLE);}
    @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error){if(request.isForMainFrame())showConnectionError();}
    @Override public void onReceivedSslError(WebView view,SslErrorHandler handler,SslError error){handler.cancel();showConnectionError();}
-   @Override public void onPageFinished(WebView view,String url){progress.setVisibility(View.GONE);CookieManager.getInstance().flush();if(!failed&&sameOrigin(url))installDownloadBridge();}
+   @Override public void onPageFinished(WebView view,String url){progress.setVisibility(View.GONE);CookieManager.getInstance().flush();if(!failed&&sameOrigin(url)){installDownloadBridge();installAppearanceBridge();}}
   });
   web.setWebChromeClient(new WebChromeClient(){@Override public void onProgressChanged(WebView v,int value){progress.setProgress(value);if(value==100)progress.setVisibility(View.GONE);}
    @Override public boolean onShowFileChooser(WebView v,ValueCallback<Uri[]> callback,FileChooserParams params){if(chooser!=null)chooser.onReceiveValue(null);chooser=callback;try{startActivityForResult(params.createIntent(),OPEN_FILE);}catch(Exception e){chooser.onReceiveValue(null);chooser=null;return false;}return true;}});
@@ -75,5 +90,5 @@ public class MainActivity extends Activity {
  private void toast(String text){android.widget.Toast.makeText(this,text,android.widget.Toast.LENGTH_SHORT).show();}
  @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){super.onActivityResult(requestCode,resultCode,data);if(requestCode==OPEN_FILE&&chooser!=null){chooser.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode,data));chooser=null;}if(requestCode==SAVE_FILE){if(resultCode==RESULT_OK&&data!=null&&pendingDownload!=null){try(OutputStream output=getContentResolver().openOutputStream(data.getData())){output.write(pendingDownload);toast("File saved");}catch(Exception e){toast("File could not be saved");}}pendingDownload=null;}}
  @Override public void onBackPressed(){if(web!=null&&web.canGoBack())web.goBack();else super.onBackPressed();}
- @Override protected void onDestroy(){if(chooser!=null)chooser.onReceiveValue(null);if(web!=null){web.removeJavascriptInterface("EduNexusDownloads");web.destroy();}super.onDestroy();}
+ @Override protected void onDestroy(){if(chooser!=null)chooser.onReceiveValue(null);if(web!=null){web.removeJavascriptInterface("EduNexusDownloads");web.removeJavascriptInterface("EduNexusAppearance");web.destroy();}super.onDestroy();}
 }

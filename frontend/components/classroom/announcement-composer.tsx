@@ -102,7 +102,7 @@ export function AnnouncementComposer({
   return (
     <section className="rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
       <div className="flex items-start gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-white">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
           <Megaphone size={21} />
         </div>
 
@@ -182,7 +182,7 @@ export function AnnouncementComposer({
         {createMutation.isError && (
           <div
             role="alert"
-            className="rounded-xl border border-[#ffd0d0] bg-[#fff0ef] px-4 py-3 text-sm text-[#b34450]"
+            className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           >
             {getStreamErrorMessage(
               createMutation.error
@@ -197,7 +197,7 @@ export function AnnouncementComposer({
               !form.content.trim() ||
               createMutation.isPending
             }
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#536058] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {createMutation.isPending ? (
               <>

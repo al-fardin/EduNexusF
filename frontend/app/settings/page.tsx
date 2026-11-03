@@ -1,6 +1,7 @@
 "use client";
 
 import axios from "axios";
+import {ThemeToggle} from "@/components/layout/theme-toggle";
 import { ProfileAccount } from "@/components/auth/profile-account";
 import {
   ArrowLeft,
@@ -469,7 +470,7 @@ function SettingsContent() {
               className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm"
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary font-semibold text-white shadow-lg shadow-[#2b342c]/10">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary font-semibold text-primary-foreground shadow-lg shadow-foreground/10">
                   {getInitials(user)}
                 </div>
 
@@ -485,13 +486,13 @@ function SettingsContent() {
                   </p>
                 </div>
 
-                <div className="ml-auto hidden rounded-full border border-[#b8d3b6] bg-[#e9ede5] px-3 py-1 text-xs font-medium text-[#5f7358] sm:block">
+                <div className="ml-auto hidden rounded-full border border-[#b8d3b6] bg-secondary px-3 py-1 text-xs font-medium text-primary sm:block">
                   Account active
                 </div>
               </div>
             </motion.section>
 
-            <ProfileAccount user={user}/>
+            <div className="my-5 max-w-sm"><ThemeToggle label/></div><ProfileAccount user={user}/>
             <motion.div
               initial="hidden"
               animate="visible"
@@ -623,7 +624,7 @@ function SettingsContent() {
                 <button
                   type="submit"
                   disabled={savingProfile}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-medium text-white shadow-lg shadow-[#2b342c]/10 transition hover:-translate-y-0.5 hover:bg-[#536058] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-medium text-primary-foreground shadow-lg shadow-foreground/10 transition hover:-translate-y-0.5 hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Save className="h-4 w-4" />
 
@@ -746,7 +747,7 @@ function SettingsContent() {
                 <button
                   type="submit"
                   disabled={changingPassword}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-medium text-white shadow-lg shadow-[#2b342c]/10 transition hover:-translate-y-0.5 hover:bg-[#536058] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-medium text-primary-foreground shadow-lg shadow-foreground/10 transition hover:-translate-y-0.5 hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <KeyRound className="h-4 w-4" />
 
@@ -803,13 +804,13 @@ function SettingsActionCard({
         scale: 0.985,
       }}
       onClick={onClick}
-      className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 text-left shadow-sm transition-shadow hover:border-primary hover:shadow-2xl hover:shadow-[#2b342c]/10"
+      className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 text-left shadow-sm transition-shadow hover:border-primary hover:shadow-2xl hover:shadow-foreground/10"
     >
       <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-background transition duration-500 group-hover:scale-150 group-hover:bg-accent/70" />
 
       <div className="relative">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-[#2b342c]/15 transition duration-300 group-hover:-rotate-3 group-hover:scale-105">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-foreground/15 transition duration-300 group-hover:-rotate-3 group-hover:scale-105">
             {icon}
           </div>
 
@@ -885,11 +886,11 @@ function SettingsModal({
         onMouseDown={(event) =>
           event.stopPropagation()
         }
-        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-white/60 bg-card shadow-2xl shadow-[#2b342c]/20"
+        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-white/60 bg-card shadow-2xl shadow-foreground/20"
       >
         <div className="flex items-start justify-between border-b border-border bg-secondary/80 px-6 py-5 sm:px-8">
           <div className="flex items-center gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-[#2b342c]/15">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-foreground/15">
               {icon}
             </div>
 
@@ -1072,7 +1073,7 @@ function PasswordStrength({
             className={`h-1.5 flex-1 rounded-full transition ${
               item <= score
                 ? score <= 1
-                  ? "bg-red-500"
+                  ? "bg-destructive/100"
                   : score <= 3
                     ? "bg-amber-500"
                     : "bg-green-500"
@@ -1140,8 +1141,8 @@ function Message({
       }}
       className={`mt-5 rounded-xl border px-4 py-3 text-sm ${
         type === "success"
-          ? "border-[#b8d3b6] bg-[#e9ede5] text-[#5f7358]"
-          : "border-[#ffd0d0] bg-[#fff0ef] text-[#b34450]"
+          ? "border-[#b8d3b6] bg-secondary text-primary"
+          : "border-destructive/30 bg-destructive/10 text-destructive"
       }`}
     >
       {text}

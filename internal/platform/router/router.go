@@ -16,6 +16,7 @@ import (
 
 	"github.com/edunexus/edunexus/internal/exam"
 	"github.com/edunexus/edunexus/internal/learning"
+	"github.com/edunexus/edunexus/internal/messaging"
 	"github.com/edunexus/edunexus/internal/notifications"
 	"github.com/edunexus/edunexus/internal/platform/config"
 	dbsqlc "github.com/edunexus/edunexus/internal/platform/database/sqlc"
@@ -176,6 +177,7 @@ func Register(
 
 	exam.Register(app, dbPool)
 	learning.Register(app, dbPool)
+	messaging.Register(app, dbPool)
 
 	classroomRoutes.Register(
 		app,

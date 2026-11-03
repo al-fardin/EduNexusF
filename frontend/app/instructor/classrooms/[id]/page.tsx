@@ -181,10 +181,10 @@ export default function ClassroomDetailsPage() {
     return (
       <AuthGuard>
         <main className="flex min-h-screen items-center justify-center bg-background px-4">
-          <div className="w-full max-w-lg rounded-3xl border border-[#ffd0d0] bg-card p-8 text-center shadow-sm">
+          <div className="w-full max-w-lg rounded-3xl border border-destructive/30 bg-card p-8 text-center shadow-sm">
             <ShieldAlert
               size={42}
-              className="mx-auto text-[#b34450]"
+              className="mx-auto text-destructive"
             />
 
             <h1 className="mt-4 text-2xl font-bold text-foreground">
@@ -199,7 +199,7 @@ export default function ClassroomDetailsPage() {
 
             <Link
               href="/instructor/classrooms"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
             >
               <ArrowLeft size={18} />
               Teaching classes
@@ -231,7 +231,7 @@ export default function ClassroomDetailsPage() {
                   }
                   className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
                     activeTab === tab.key
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }`}
                 >
@@ -376,12 +376,12 @@ function PeopleTab({
 
   if (isError) {
     return (
-      <div className="rounded-3xl border border-[#ffd0d0] bg-[#fff0ef] p-8 text-center">
-        <p className="font-semibold text-red-800">
+      <div className="rounded-3xl border border-destructive/30 bg-destructive/10 p-8 text-center">
+        <p className="font-semibold text-destructive">
           Unable to load classroom members.
         </p>
 
-        <p className="mt-2 text-sm text-[#b34450]">
+        <p className="mt-2 text-sm text-destructive">
           {getClassroomErrorMessage(error)}
         </p>
 
@@ -423,7 +423,7 @@ function PeopleTab({
       />
 
       {removeError != null && (
-        <div className="rounded-xl border border-[#ffd0d0] bg-[#fff0ef] px-4 py-3 text-sm text-[#b34450]">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {getClassroomErrorMessage(removeError)}
         </div>
       )}
@@ -487,7 +487,7 @@ function PeopleSection({
                 }
                 className="flex items-center gap-4 px-6 py-4"
               >
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                   {initials || "U"}
                 </div>
 
@@ -514,7 +514,7 @@ function PeopleSection({
                     onClick={() =>
                       onRemove(member)
                     }
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#ffd0d0] px-3 py-2 text-xs font-semibold text-[#b34450] transition hover:bg-[#fff0ef] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {removing ? (
                       <LoaderCircle

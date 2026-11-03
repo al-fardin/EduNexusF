@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import {MessagingLink} from "@/components/layout/messaging-link";
 import { ArrowLeft, Check, Copy, Info, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +27,6 @@ export function ClassroomHeader({ classroom, kind }: { classroom: Classroom; kin
   return <><header className="en-classroom-heading">
     <Link className="en-icon-button" href={kind==="teacher"?"/instructor/classrooms":"/student/classrooms"} aria-label="Back to classes"><ArrowLeft size={20}/></Link>
     <div className="min-w-0 flex-1"><h1>{classroom.name}</h1>{classroom.subject&&<p>{classroom.subject}{classroom.section ? ` · ${classroom.section}` : ""}</p>}</div>
-    <DropdownMenu><DropdownMenuTrigger className="en-icon-button" aria-label="Classroom options"><MoreHorizontal size={22}/></DropdownMenuTrigger><DropdownMenuContent align="end" className="en-action-menu w-52"><DropdownMenuItem onClick={()=>setDetails(true)}><Info/>Class & teacher details</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+    <MessagingLink classroomId={classroom.id}/><DropdownMenu><DropdownMenuTrigger className="en-icon-button" aria-label="Classroom options"><MoreHorizontal size={22}/></DropdownMenuTrigger><DropdownMenuContent align="end" className="en-action-menu w-52"><DropdownMenuItem onClick={()=>setDetails(true)}><Info/>Class & teacher details</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
   </header><ClassroomDetailsDialog classroom={classroom} open={details} onOpenChange={setDetails}/></>;
 }
