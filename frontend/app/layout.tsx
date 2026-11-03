@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./mobile.css";
+import "./workspace.css";
 import { QueryProvider } from "@/providers/query-provider";
 import { SiteChrome } from "@/components/layout/site-chrome";
 import { NetworkFeedback } from "@/components/ui/network-feedback";

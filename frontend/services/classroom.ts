@@ -76,6 +76,8 @@ type ApiResponse<T> = {
 };
 
 export const classroomService = {
+  async details(id:string):Promise<{teachers:Array<{id:string;name:string}>}>{return (await api.get(`/classrooms/${id}/details`)).data.data;},
+  async leave(id:string):Promise<void>{await api.post(`/classrooms/${id}/leave`);},
   async create(
     input: CreateClassroomInput
   ): Promise<Classroom> {

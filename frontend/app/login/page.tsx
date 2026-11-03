@@ -82,6 +82,7 @@ export default function LoginPage() {
         );
       }
 
+      useAuthStore.getState().setUser(null);
       setAccessToken(accessToken);
 
       window.localStorage.setItem(
@@ -94,6 +95,7 @@ export default function LoginPage() {
         refreshToken
       );
 
+      try { window.sessionStorage.setItem("en-verification-pending","1"); } catch { /* Login works without session storage. */ }
       router.replace("/");
     } catch (error: unknown) {
       if (

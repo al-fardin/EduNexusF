@@ -1,6 +1,7 @@
 "use client";
 
 import axios from "axios";
+import { ProfileAccount } from "@/components/auth/profile-account";
 import {
   ArrowLeft,
   ChevronRight,
@@ -490,6 +491,7 @@ function SettingsContent() {
               </div>
             </motion.section>
 
+            <ProfileAccount user={user}/>
             <motion.div
               initial="hidden"
               animate="visible"

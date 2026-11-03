@@ -1,4 +1,7 @@
 "use client";
+import { useClassroomComposer } from "@/lib/classroom-composer";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ArrowLeft, FileUp, MoreHorizontal } from "lucide-react";
 import { ExamMarksheetDownload } from "@/components/classroom/exam-marksheet-download";
 
 import {
@@ -60,6 +63,7 @@ export function StreamFeed({
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
+  const [composer,setComposer]=useClassroomComposer();
 
   const [
     selectedPost,
@@ -245,16 +249,12 @@ export function StreamFeed({
     deleteMutation.mutate(post.id);
   }
 
+  if(canManage&&(composer==="announcement"||composer==="material"))return <div className="en-composer-view"><button className="en-composer-back" onClick={()=>setComposer(null)}><ArrowLeft size={17}/>Back to stream</button>{composer==="announcement"?<AnnouncementComposer classroomId={classroomId} onCreated={()=>{setPage(1);setComposer(null)}}/>:<MaterialUploadForm classroomId={classroomId} onUploaded={()=>{setPage(1);setComposer(null)}}/>}</div>;
   return (
     <div className="space-y-5">
-      {canManage && (
-        <>
-          <AnnouncementComposer classroomId={classroomId} onCreated={() => setPage(1)} />
-          <MaterialUploadForm classroomId={classroomId} compact />
-        </>
-      )}
+      {canManage&&<div className="en-stream-compose-bar"><button className="en-stream-compose-prompt" onClick={()=>setComposer("announcement")}><span><Pencil size={17}/></span>Post an update</button><button className="en-outline-button" onClick={()=>setComposer("material")}><FileUp size={16}/>Material</button></div>}
 
-      <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+      <section className="en-stream-panel overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
         <header className="flex flex-col gap-4 border-b border-border px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <h2 className="text-xl font-bold text-foreground">
@@ -390,7 +390,7 @@ export function StreamFeed({
                           : "border-border bg-card"
                       }`}
                     >
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-start gap-3">
                           <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
                             {getInitials(
@@ -434,100 +434,7 @@ export function StreamFeed({
                           </div>
                         </div>
 
-                        {canManage && (
-                          <div className="grid grid-cols-3 gap-2 sm:flex">
-                            <button
-                              type="button"
-                              disabled={
-                                isBusy
-                              }
-                              onClick={() =>
-                                togglePinMutation.mutate(
-                                  post
-                                )
-                              }
-                              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {pinning ? (
-                                <LoaderCircle
-                                  size={
-                                    15
-                                  }
-                                  className="animate-spin"
-                                />
-                              ) : post.is_pinned ? (
-                                <PinOff
-                                  size={
-                                    15
-                                  }
-                                />
-                              ) : (
-                                <Pin
-                                  size={
-                                    15
-                                  }
-                                />
-                              )}
-
-                              {post.is_pinned
-                                ? "Unpin"
-                                : "Pin"}
-                            </button>
-
-                            {post.post_type ===
-                              "announcement" && (
-                              <button
-                                type="button"
-                                disabled={
-                                  isBusy
-                                }
-                                onClick={() =>
-                                  beginEditing(
-                                    post
-                                  )
-                                }
-                                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                <Pencil
-                                  size={
-                                    15
-                                  }
-                                />
-                                Edit
-                              </button>
-                            )}
-
-                            {post.post_type !== "material" && <button
-                              type="button"
-                              disabled={
-                                isBusy
-                              }
-                              onClick={() =>
-                                removePost(
-                                  post
-                                )
-                              }
-                              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-[#ffd0d0] px-3 py-2 text-xs font-semibold text-[#b34450] transition hover:bg-[#fff0ef] disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {deleting ? (
-                                <LoaderCircle
-                                  size={
-                                    15
-                                  }
-                                  className="animate-spin"
-                                />
-                              ) : (
-                                <Trash2
-                                  size={
-                                    15
-                                  }
-                                />
-                              )}
-
-                              Delete
-                            </button>}
-                          </div>
-                        )}
+                        {canManage&&<DropdownMenu><DropdownMenuTrigger className="en-icon-button" aria-label={`Post options for ${post.title||"announcement"}`} disabled={isBusy}><MoreHorizontal size={20}/></DropdownMenuTrigger><DropdownMenuContent align="end" className="en-action-menu w-44"><DropdownMenuItem onClick={()=>togglePinMutation.mutate(post)}>{post.is_pinned?<PinOff/>:<Pin/>}{post.is_pinned?"Unpin post":"Pin post"}</DropdownMenuItem>{post.post_type==="announcement"&&<DropdownMenuItem onClick={()=>beginEditing(post)}><Pencil/>Edit post</DropdownMenuItem>}<DropdownMenuSeparator/><DropdownMenuItem variant="destructive" onClick={()=>removePost(post)}><Trash2/>Delete post</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
                       </div>
 
                       {editingPostId ===
@@ -749,7 +656,7 @@ export function StreamFeed({
           )}
 
           {!streamQuery.isPending &&
-            !streamQuery.isError && (
+            !streamQuery.isError && (page>1||canGoNext) && (
               <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-5">
                 <button
                   type="button"

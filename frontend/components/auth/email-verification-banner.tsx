@@ -73,11 +73,11 @@ export function EmailVerificationBanner({
             </h2>
 
             <p className="mt-1 text-sm text-amber-800">
-              We sent a verification link to{" "}
+              Confirm the email address{" "}
               <span className="font-medium">
                 {email}
               </span>
-              .
+              {" to complete verification."}
             </p>
           </div>
         </div>

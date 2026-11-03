@@ -7,6 +7,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
+import { VerificationPrompt } from "@/components/auth/verification-prompt";
 import { authService } from "@/services/auth";
 import { useAuthStore, type AuthUser } from "@/store/auth-store";
 
@@ -83,5 +84,5 @@ export function AuthGuard({
     );
   }
 
-  return <>{children}</>;
+  return <><VerificationPrompt key={user.id}/>{children}</>;
 }

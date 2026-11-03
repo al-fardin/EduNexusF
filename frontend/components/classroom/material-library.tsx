@@ -1,5 +1,7 @@
 "use client";
 
+import { useClassroomComposer } from "@/lib/classroom-composer";
+import { ArrowLeft, Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Download, FileUp, LoaderCircle, Paperclip, RefreshCw, Trash2 } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useState } from "react";
@@ -9,7 +11,7 @@ import { materialService, type ClassroomMaterial } from "@/services/materials";
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const ACCEPTED = ".pdf,.txt,.md,.csv,.png,.jpg,.jpeg,.webp,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip";
 
-export function MaterialUploadForm({ classroomId, compact = false }: { classroomId: string; compact?: boolean }) {
+export function MaterialUploadForm({ classroomId, compact = false, onUploaded }: { classroomId: string; compact?: boolean; onUploaded?:()=>void }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -27,6 +29,7 @@ export function MaterialUploadForm({ classroomId, compact = false }: { classroom
         queryClient.invalidateQueries({ queryKey: ["materials", classroomId] }),
         queryClient.invalidateQueries({ queryKey: ["classrooms", "stream", classroomId] }),
       ]);
+      onUploaded?.();
     },
   });
 
@@ -93,6 +96,7 @@ export function MaterialDownloadButton({ classroomId, materialId, filename, labe
 }
 
 export function MaterialLibrary({ classroomId, canManage }: { classroomId: string; canManage: boolean }) {
+  const [composer,setComposer]=useClassroomComposer();
   const materials = useQuery({ queryKey: ["materials", classroomId], queryFn: () => materialService.list(classroomId), enabled: Boolean(classroomId) });
   const queryClient = useQueryClient();
   const remove = useMutation({
@@ -104,19 +108,19 @@ export function MaterialLibrary({ classroomId, canManage }: { classroomId: strin
       ]);
     },
   });
+  if(canManage&&composer==="material")return <div className="en-composer-view"><button className="en-composer-back" onClick={()=>setComposer(null)}><ArrowLeft size={17}/>Back to classwork</button><MaterialUploadForm classroomId={classroomId} onUploaded={()=>setComposer(null)}/></div>;
   return <div className="space-y-5">
-    {canManage && <MaterialUploadForm classroomId={classroomId} />}
     <section className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
       <div className="mb-5 flex items-center justify-between gap-2">
-        <div><h2 className="flex items-center gap-2 text-xl font-bold"><BookOpen size={20} /> Class materials</h2><p className="mt-1 text-sm text-muted-foreground">Shared lecture notes, slides, readings and resources.</p></div>
-        <button type="button" onClick={() => void materials.refetch()} disabled={materials.isFetching} className="rounded-xl border border-border p-3 disabled:opacity-60" aria-label="Refresh materials"><RefreshCw size={18} className={materials.isFetching ? "animate-spin" : ""} /></button>
+        <div><h2 className="flex items-center gap-2 text-xl font-bold"><BookOpen size={20} /> Class materials</h2><p className="mt-1 text-sm text-muted-foreground">Files shared with your class.</p></div>
+        <div className="flex items-center gap-2">{canManage&&<button className="en-outline-button" onClick={()=>setComposer("material")}><Plus size={16}/>Add material</button>}<button type="button" onClick={() => void materials.refetch()} disabled={materials.isFetching} className="rounded-xl border border-border p-3 disabled:opacity-60" aria-label="Refresh materials"><RefreshCw size={18} className={materials.isFetching ? "animate-spin" : ""} /></button></div>
       </div>
       {materials.isPending && <div className="space-y-3" role="status" aria-label="Loading materials">
         {[0,1,2].map(i=><div key={i} className="rounded-2xl border border-[#ded2c2] bg-[#f3f1ea] p-4"><div className="en-skeleton mb-3 h-5 w-2/5 rounded-lg"/><div className="en-skeleton mb-3 h-3 w-4/5 rounded-lg"/><div className="en-skeleton h-9 w-32 rounded-xl"/></div>)}
       </div>}
       {remove.isError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{getStreamErrorMessage(remove.error)}</p>}
       {materials.isError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{getStreamErrorMessage(materials.error)}</p>}
-      {materials.isSuccess && materials.data.length === 0 && <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No materials shared yet.</p>}
+      {materials.isSuccess && materials.data.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">No materials shared yet.</p>}
       {materials.isSuccess && <div className="space-y-3">{materials.data.map((item: ClassroomMaterial) => <article key={item.id} className="rounded-2xl border border-border bg-background p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1"><h3 className="font-semibold text-foreground">{item.title}</h3>

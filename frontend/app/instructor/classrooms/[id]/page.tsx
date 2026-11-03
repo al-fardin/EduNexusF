@@ -1,5 +1,6 @@
 "use client";
-import { copyText } from "@/lib/clipboard";
+import { useClassroomTab } from "@/lib/classroom-tab";
+import { ClassroomHeader } from "@/components/classroom/classroom-header";
 import { ExamResults } from "@/components/classroom/exam-results";
 import { CourseCodeSettings } from "@/components/classroom/course-code-settings";
 import { ExamManagement } from "@/components/classroom/exam-management";
@@ -13,31 +14,24 @@ import {
 } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  BookOpen,
   ClipboardCheck,
   Code2,
-  Copy,
   FileText,
   GraduationCap,
   LoaderCircle,
-  MapPin,
   Megaphone,
-  School,
   ShieldAlert,
   Trash2,
-  Trophy,
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
-import { useEffect,useState } from "react";
+import { useParams } from "next/navigation";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { StreamFeed } from "@/components/classroom/stream-feed";
 import { AITutor } from "@/components/classroom/ai-tutor";
 import { LearningAnalytics } from "@/components/classroom/learning-analytics";
-import { AssignmentBoard } from "@/components/classroom/assignments";
-import { MaterialLibrary } from "@/components/classroom/material-library";
+import { ClassworkBoard } from "@/components/classroom/classwork-board";
 import {
   ClassroomMember,
   classroomService,
@@ -90,14 +84,7 @@ export default function ClassroomDetailsPage() {
   const queryClient = useQueryClient();
 
   const classroomId = params.id ?? "";
-  const requestedTab=useSearchParams().get("tab");
-
-  const [activeTab, setActiveTab] =
-    useState<ClassroomTab>("stream");
-
-  useEffect(()=>{const requested=requestedTab;if(tabs.some(t=>t.key===requested))setActiveTab(requested as ClassroomTab)},[classroomId,requestedTab]);
-  const [copied, setCopied] =
-    useState(false);
+  const [activeTab,setActiveTab]=useClassroomTab(tabs.map(t=>t.key),"stream");
 
   const classroomQuery = useQuery({
     queryKey: [
@@ -154,25 +141,6 @@ export default function ClassroomDetailsPage() {
       },
     });
 
-  async function copyClassCode() {
-    const code =
-      classroomQuery.data?.class_code;
-
-    if (!code) {
-      return;
-    }
-
-    await copyText(
-      code
-    );
-
-    setCopied(true);
-
-    window.setTimeout(() => {
-      setCopied(false);
-    }, 1500);
-  }
-
   function removeStudent(
     member: ClassroomMember
   ) {
@@ -194,7 +162,7 @@ export default function ClassroomDetailsPage() {
     return (
       <AuthGuard>
         <main className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
+          <div className="en-workspace-container">
             <div className="h-56 animate-pulse rounded-3xl bg-accent" />
 
             <div className="mt-6 h-20 animate-pulse rounded-2xl bg-accent" />
@@ -247,92 +215,9 @@ export default function ClassroomDetailsPage() {
 
   return (
     <AuthGuard>
-      <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <Link
-            href="/instructor/classrooms"
-            className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-          >
-            <ArrowLeft size={18} />
-            Teaching classes
-          </Link>
-
-          <section className="en-class-hero overflow-hidden rounded-3xl bg-primary text-white shadow-lg">
-            <div className="p-6 sm:p-8">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <div className="mb-4 inline-flex rounded-2xl bg-card/10 p-3">
-                    <School size={28} />
-                  </div>
-
-                  <h1 className="max-w-3xl text-3xl font-bold sm:text-4xl">
-                    {classroom.name}
-                  </h1>
-
-                  <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-300">
-                    {classroom.subject && (
-                      <span className="inline-flex items-center gap-2">
-                        <BookOpen
-                          size={17}
-                        />
-                        {classroom.subject}
-                      </span>
-                    )}
-
-                    {classroom.section && (
-                      <span>
-                        {classroom.section}
-                      </span>
-                    )}
-
-                    {classroom.room && (
-                      <span className="inline-flex items-center gap-2">
-                        <MapPin
-                          size={17}
-                        />
-                        {classroom.room}
-                      </span>
-                    )}
-                  </div>
-
-                  {classroom.description && (
-                    <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300">
-                      {
-                        classroom.description
-                      }
-                    </p>
-                  )}
-                </div>
-
-                <div className="w-full rounded-2xl bg-card p-5 text-foreground lg:w-64">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Class code
-                  </p>
-
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <code className="text-2xl font-bold tracking-[0.2em]">
-                      {classroom.class_code}
-                    </code>
-
-                    <button
-                      type="button"
-                      onClick={copyClassCode}
-                      className="rounded-xl border border-border p-2.5 transition hover:bg-secondary"
-                      aria-label="Copy class code"
-                    >
-                      <Copy size={18} />
-                    </button>
-                  </div>
-
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {copied
-                      ? "Class code copied."
-                      : "Share this code with students."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+      <main className="en-workspace-page en-classroom-page">
+        <div className="en-workspace-container">
+          <ClassroomHeader classroom={classroom} kind="teacher"/>
 
           <nav aria-label="Classroom sections" className="en-class-tabs mt-6 overflow-x-auto rounded-2xl border border-border bg-card p-2 shadow-sm">
             <div className="flex min-w-max gap-1">
@@ -367,7 +252,7 @@ export default function ClassroomDetailsPage() {
             {activeTab === "tutor" && <AITutor classroomId={classroomId} canManage={true}/>}
             {activeTab === "analytics" && <LearningAnalytics classroomId={classroomId}/>}
             {activeTab === "classwork" && (
-              <><MaterialLibrary classroomId={classroomId} canManage={true} /><AssignmentBoard classroomId={classroomId} canManage={true}/></>
+              <ClassworkBoard classroomId={classroomId} canManage={true}/>
             )}
 
             {activeTab === "people" && (
@@ -411,11 +296,11 @@ export default function ClassroomDetailsPage() {
               />
             )}
 
-            {activeTab === "results" && <><CourseCodeSettings classroomId={classroomId} /><ExamResults classroomId={classroomId} canManage={true} /></>}
+            {activeTab === "results" && <><details className="mb-4 rounded-xl border border-border bg-card p-4"><summary className="cursor-pointer text-sm font-semibold">Course settings</summary><CourseCodeSettings classroomId={classroomId} /></details><ExamResults classroomId={classroomId} canManage={true} /></>}
 
             {activeTab === "exam" && (
               <><ExamBoard classroomId={classroomId} canManage={true} />
-<ExamManagement classroomId={classroomId} /></>
+<details className="mt-6 rounded-xl border border-border bg-card p-4"><summary className="cursor-pointer text-sm font-semibold">Manage exams</summary><ExamManagement classroomId={classroomId} /></details></>
             )}
           </section>
         </div>

@@ -40,3 +40,6 @@ android-app/.keys/
 *.jks
 
 frontend/public/downloads/*.apk
+
+# Isolated frontend verification builds
+frontend/.next-*/

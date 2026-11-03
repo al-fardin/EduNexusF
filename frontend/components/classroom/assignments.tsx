@@ -1,4 +1,5 @@
 "use client";
+import { ArrowLeft } from "lucide-react";
 import { clientId } from "@/lib/client-id";
 import {ContentSkeleton} from "@/components/ui/content-skeleton";
 import {useRef,useState} from "react";
@@ -13,8 +14,9 @@ export function AssignmentBoard({classroomId,canManage}:{classroomId:string;canM
  const listing=useQuery({queryKey:["assignments",classroomId],queryFn:()=>assignments.list(classroomId)});
  const refresh=()=>client.invalidateQueries({queryKey:["assignments",classroomId]});
  async function publish(id:string){setBusy(true);setError("");try{await assignments.publish(classroomId,id);await refresh()}catch(e){setError(examError(e))}finally{setBusy(false)}}
- return <section className="mt-6 space-y-4 rounded-2xl border border-border bg-card p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Assignments</h2><p className="mt-1 text-sm text-muted-foreground">Coursework, submissions and feedback.</p></div>{canManage&&<button className={btn} onClick={()=>setEditing({allow_resubmit:true,max_points:100})}>Create assignment</button>}</div>
- {editing&&<AssignmentEditor key={editing.id??"new"} value={editing} onCancel={()=>setEditing(null)} onSave={async value=>{await assignments.save(classroomId,value);await refresh();setEditing(null)}}/>}
+ if(editing)return <div className="en-composer-view"><button className="en-composer-back" onClick={()=>setEditing(null)}><ArrowLeft size={17}/>Back to assignments</button><AssignmentEditor key={editing.id??"new"} value={editing} onCancel={()=>setEditing(null)} onSave={async value=>{await assignments.save(classroomId,value);await refresh();setEditing(null)}}/></div>;
+ return <section className="space-y-4 rounded-2xl border border-border bg-card p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Assignments</h2><p className="mt-1 text-sm text-muted-foreground">Coursework, submissions and feedback.</p></div>{canManage&&<button className={btn} onClick={()=>setEditing({allow_resubmit:true,max_points:100})}>Create assignment</button>}</div>
+
  {listing.isPending&&<ContentSkeleton rows={2}/>}{(error||listing.isError)&&<p role="alert" className="text-sm text-red-700">{error||examError(listing.error)}</p>}
  {listing.data?.length===0&&<p className="text-sm text-muted-foreground">No assignments yet.</p>}
  {listing.data?.map(a=><article key={a.id} className="rounded-xl border border-border p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-semibold">{a.title}</h3><p className="mt-1 text-xs text-muted-foreground">Due {date(a.due_at)} · {a.max_points} points · {a.status}{a.allow_late?" · Late work accepted":""}</p></div><div className="flex flex-wrap gap-2"><button className={btn} onClick={()=>setSelected(selected===a.id?null:a.id)}>{selected===a.id?"Close":"Open assignment"}</button>{canManage&&<><button className={btn} onClick={()=>setEditing(a)}>Edit</button>{a.status==="draft"&&<button className={btn} disabled={busy} onClick={()=>void publish(a.id)}>Publish</button>}</>}</div></div>{selected===a.id&&<AssignmentDetails classroomId={classroomId} assignment={a} canManage={canManage}/>}</article>)}

@@ -1,7 +1,9 @@
 "use client";
+import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { readActiveExam } from "@/lib/exam-resume";
-import { useEffect as useExamResumeEffect } from "react";
+import { useClassroomTab } from "@/lib/classroom-tab";
+import { ClassroomHeader } from "@/components/classroom/classroom-header";
 import { ExamResults } from "@/components/classroom/exam-results";
 import { StudentRollGate } from "@/components/classroom/student-roll-gate";
 
@@ -10,29 +12,23 @@ import { ExamBoard } from "@/components/classroom/exam-board";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  BookOpen,
   ClipboardCheck,
   Code2,
   FileText,
   GraduationCap,
-  MapPin,
 
-  School,
   ShieldAlert,
-  Trophy,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { StreamFeed } from "@/components/classroom/stream-feed";
 import { AITutor } from "@/components/classroom/ai-tutor";
 import { LearningAnalytics } from "@/components/classroom/learning-analytics";
-import { AssignmentBoard } from "@/components/classroom/assignments";
-import { MaterialLibrary } from "@/components/classroom/material-library";
+import { ClassworkBoard } from "@/components/classroom/classwork-board";
 import {
   classroomService,
   getClassroomErrorMessage,
@@ -78,18 +74,9 @@ export default function StudentClassroomPage() {
   }>();
 
   const classroomId = params.id ?? "";
-  const resumeUserId=useAuthStore(s=>s.user?.id);
-  const requestedTab=useSearchParams().get("tab");
-
-  const [activeTab, setActiveTab] =
-    useState<StudentClassroomTab>(
-      "stream"
-    );
-  useExamResumeEffect(() => {
-    if(!resumeUserId)return;
-    const requested=requestedTab;
-    setActiveTab(readActiveExam(classroomId)?"exam":tabs.some(t=>t.key===requested)?requested as StudentClassroomTab:"stream");
-  }, [classroomId,resumeUserId,requestedTab]);
+  const [activeTab,setActiveTab]=useClassroomTab(tabs.map(t=>t.key),"stream");
+  const router=useRouter();const search=useSearchParams();const resumeUser=useAuthStore(s=>s.user?.id);
+  useEffect(()=>{if(resumeUser&&!search.has("tab")&&readActiveExam(classroomId))router.replace(`/student/classrooms/${classroomId}?tab=exam`,{scroll:false})},[classroomId,resumeUser,router,search]);
 
   const classroomQuery = useQuery({
     queryKey: [
@@ -110,7 +97,7 @@ export default function StudentClassroomPage() {
     return (
       <AuthGuard>
         <main className="min-h-screen bg-background px-4 py-8">
-          <div className="mx-auto max-w-7xl">
+          <div className="en-workspace-container">
             <div className="h-56 animate-pulse rounded-3xl bg-accent" />
             <div className="mt-6 h-20 animate-pulse rounded-2xl bg-accent" />
             <div className="mt-6 h-80 animate-pulse rounded-3xl bg-accent" />
@@ -162,53 +149,9 @@ export default function StudentClassroomPage() {
   return (
     <AuthGuard>
       <StudentRollGate classroomId={classroomId}>
-      <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <Link
-            href="/student/classrooms"
-            className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-          >
-            <ArrowLeft size={18} />
-            My classes
-          </Link>
-
-          <section className="en-class-hero overflow-hidden rounded-3xl bg-primary p-6 text-white shadow-lg sm:p-8">
-            <div className="mb-4 inline-flex rounded-2xl bg-card/10 p-3">
-              <School size={28} />
-            </div>
-
-            <h1 className="text-3xl font-bold sm:text-4xl">
-              {classroom.name}
-            </h1>
-
-            <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-300">
-              {classroom.subject && (
-                <span className="inline-flex items-center gap-2">
-                  <BookOpen size={17} />
-                  {classroom.subject}
-                </span>
-              )}
-
-              {classroom.section && (
-                <span>
-                  {classroom.section}
-                </span>
-              )}
-
-              {classroom.room && (
-                <span className="inline-flex items-center gap-2">
-                  <MapPin size={17} />
-                  {classroom.room}
-                </span>
-              )}
-            </div>
-
-            {classroom.description && (
-              <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300">
-                {classroom.description}
-              </p>
-            )}
-          </section>
+      <main className="en-workspace-page en-classroom-page">
+        <div className="en-workspace-container">
+          <ClassroomHeader classroom={classroom} kind="student"/>
 
           <nav aria-label="Classroom sections" className="en-class-tabs mt-6 overflow-x-auto rounded-2xl border border-border bg-card p-2 shadow-sm">
             <div className="flex min-w-max gap-1">
@@ -243,7 +186,7 @@ export default function StudentClassroomPage() {
             {activeTab === "tutor" && <AITutor classroomId={classroomId} canManage={false}/>}
             {activeTab === "analytics" && <LearningAnalytics classroomId={classroomId}/>}
             {activeTab === "classwork" && (
-              <><MaterialLibrary classroomId={classroomId} canManage={false} /><AssignmentBoard classroomId={classroomId} canManage={false}/></>
+              <ClassworkBoard classroomId={classroomId} canManage={false}/>
             )}
 
             {activeTab === "people" && (
