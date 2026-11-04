@@ -1,0 +1,11 @@
+{$DOMAIN} {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+	}
+	@socket path /messaging/socket
+	reverse_proxy @socket api:8080
+	reverse_proxy frontend:3000
+}

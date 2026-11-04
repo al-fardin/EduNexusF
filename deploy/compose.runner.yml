@@ -1,0 +1,12 @@
+# Optional: server-side coding execution on a dedicated Linux execution host.
+# The API already creates restricted per-run containers. The Docker daemon and
+# temporary workspace must refer to the same host filesystem paths.
+services:
+  api:
+    environment:
+      TMPDIR: ${RUNNER_WORK_DIR:?Set an absolute Linux runner workspace directory}
+    group_add:
+      - ${DOCKER_GID:?Set the Docker socket group ID}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${RUNNER_WORK_DIR}:${RUNNER_WORK_DIR}

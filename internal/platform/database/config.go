@@ -1,7 +1,7 @@
 package database
 
 import (
-	"fmt"
+	"net/url"
 
 	"github.com/edunexus/edunexus/internal/platform/config"
 )
@@ -27,13 +27,8 @@ func NewConfig(cfg *config.Config) Config {
 }
 
 func (c Config) DSN() string {
-	return fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		c.Host,
-		c.Port,
-		c.User,
-		c.Password,
-		c.Name,
-		c.SSLMode,
-	)
+	u := url.URL{Scheme: "postgres", Host: c.Host + ":" + c.Port, User: url.UserPassword(c.User, c.Password), Path: "/" + c.Name}
+	query := url.Values{"sslmode": {c.SSLMode}}
+	u.RawQuery = query.Encode()
+	return u.String()
 }

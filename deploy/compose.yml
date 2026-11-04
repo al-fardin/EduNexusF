@@ -1,0 +1,88 @@
+name: edunexus-release
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: edunexus
+      POSTGRES_USER: edunexus
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes: [database:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U edunexus -d edunexus"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  migrate:
+    image: postgres:17
+    environment:
+      PGHOST: postgres
+      PGUSER: edunexus
+      PGDATABASE: edunexus
+      PGPASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - ../database/migrations:/migrations:ro
+      - ./migrate.sh:/migrate.sh:ro
+    entrypoint: [sh, /migrate.sh]
+    depends_on:
+      postgres: {condition: service_healthy}
+  api:
+    build: {context: .., dockerfile: deploy/api.Dockerfile}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_ENV: production
+      APP_PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: edunexus
+      DB_NAME: edunexus
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      FRONTEND_URL: https://${DOMAIN:?Set DOMAIN}
+      REALTIME_PUBLIC_URL: wss://${DOMAIN}/messaging/socket
+    volumes:
+      - uploads:/app/uploads
+      - ./secrets:/run/secrets:ro
+      - ./releases:/app/releases:ro
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  frontend:
+    build: {context: .., dockerfile: deploy/frontend.Dockerfile}
+    restart: unless-stopped
+    environment:
+      BACKEND_API_URL: http://api:8080
+    volumes:
+      - ./releases/downloads:/app/public/downloads:ro
+    depends_on: [api]
+  edge:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend]
+  backup:
+    image: postgres:17
+    profiles: [tools]
+    environment:
+      PGHOST: postgres
+      PGUSER: edunexus
+      PGDATABASE: edunexus
+      PGPASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ./backups:/backups
+      - uploads:/uploads:ro
+    entrypoint: [sh, /backup.sh]
+    depends_on:
+      postgres: {condition: service_healthy}
+volumes:
+  database:
+  uploads:
+  caddy_data:
+  caddy_config:

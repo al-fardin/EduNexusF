@@ -10,7 +10,7 @@ Back up the database using your normal backup process, then run from the reposit
 powershell -File .\APPLY_LEARNING_FEATURES.ps1
 ```
 
-This applies migrations 21–33 once, under a transaction and advisory lock. A ledger allows safe reruns. It supports the existing `edunexus-postgres` Docker container. For another PostgreSQL server, supply `-PsqlPath` and `-DatabaseUrl`. `-SqlOnly` writes the SQL into ignored `release-builds/` for inspection without applying it. Existing base migrations 1–20 are required.
+This applies migrations 21–34 once, under a transaction and advisory lock. A ledger allows safe reruns. It supports the existing `edunexus-postgres` Docker container. For another PostgreSQL server, supply `-PsqlPath` and `-DatabaseUrl`. `-SqlOnly` writes the SQL into ignored `release-builds/` for inspection without applying it. Existing base migrations 1–20 are required.
 
 Restart the API and frontend after applying migrations.
 
@@ -67,3 +67,9 @@ The repository contains ignored historical backup folders; broad `go test ./...`
 Classwork topics group assignments and materials without moving their storage. Teachers manage topics and resource placement; students only see published resource associations. Removing a topic leaves coursework intact. Existing pinned announcements, assignment history and late-work policies remain available.
 
 Teachers can preview saved exams and unsaved drafts without creating student attempts, and write answer explanations on questions. Answer review is off by default. Enabling it releases expected answers and explanations only to the student’s own published result after the exam ends or is closed. Live question payloads exclude all marking keys and explanations.
+
+## Device notifications and release
+
+Opt-in browser Web Push and native Android FCM registrations are account-bound. Device bindings prevent a delayed logout from removing a newer registration. Push jobs recheck membership, account status, preferences and read state before delivery; expired registrations are removed. Browser push uses VAPID; Android requires matching Firebase client and server configuration. Unconfigured providers stay unavailable rather than reporting successful delivery.
+
+Protected PDF/image previews and upload progress/cancel are available in messages and coursework. Offline navigation offers retry without caching private academic data. See `deploy/README.md` for HTTPS deployment, the signed Android workflow, the optional Docker coding runner, backups and isolated restore verification.
