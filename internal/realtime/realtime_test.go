@@ -94,4 +94,8 @@ func TestWebsocketTicketsAndDelivery(t *testing.T) {
 	if e = socket.ReadJSON(&received); e != nil || received.Kind != "classroom_messages" || len(received.Users) != 0 {
 		t.Fatal("authorized invalidation delivery failed", e, received)
 	}
+	h.setAvailable(false)
+	if socket.ReadJSON(&received) == nil {
+		t.Fatal("listener outage did not trigger client reconnect")
+	}
 }

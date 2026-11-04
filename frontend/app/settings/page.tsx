@@ -1,6 +1,7 @@
 "use client";
 
 import axios from "axios";
+import {PushSettings} from "@/components/settings/push-settings";
 import {ThemeToggle} from "@/components/layout/theme-toggle";
 import { ProfileAccount } from "@/components/auth/profile-account";
 import {
@@ -492,7 +493,7 @@ function SettingsContent() {
               </div>
             </motion.section>
 
-            <div className="my-5 max-w-sm"><ThemeToggle label/></div><ProfileAccount user={user}/>
+            <div className="my-5 max-w-sm"><ThemeToggle label/></div><PushSettings/><ProfileAccount user={user}/>
             <motion.div
               initial="hidden"
               animate="visible"

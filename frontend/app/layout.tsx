@@ -4,6 +4,8 @@ import "./mobile.css";
 import "./workspace.css";
 import "./violet.css";
 import { AppThemeProvider } from "@/providers/theme-provider";
+import { PushProvider } from "@/providers/push-provider";
+import { AppUpdateProvider } from "@/providers/app-update-provider";
 import { RealtimeProvider } from "@/providers/realtime-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { SiteChrome } from "@/components/layout/site-chrome";
@@ -34,6 +36,8 @@ export default function RootLayout({
         <AppThemeProvider>
           <QueryProvider>
             <RealtimeProvider />
+            <PushProvider />
+            <AppUpdateProvider />
             <SiteChrome>{children}</SiteChrome>
             <NetworkFeedback />
           </QueryProvider>

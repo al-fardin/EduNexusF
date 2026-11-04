@@ -24,6 +24,7 @@ import (
 	"github.com/edunexus/edunexus/internal/platform/response"
 	"github.com/edunexus/edunexus/internal/platform/security"
 	"github.com/edunexus/edunexus/internal/realtime"
+	"github.com/edunexus/edunexus/internal/releases"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
@@ -36,6 +37,7 @@ func Register(
 	cfg *config.Config,
 	jwtService *security.JWTService,
 ) {
+	releases.Register(app)
 	app.Get(
 		"/health",
 		func(c *fiber.Ctx) error {

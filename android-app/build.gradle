@@ -1,0 +1,49 @@
+import groovy.json.JsonSlurper
+plugins { id 'com.android.application' version '9.0.1' }
+def workspace = providers.gradleProperty('workspaceUrl').orElse('http://127.0.0.1:3000').get()
+def localTesting = providers.gradleProperty('localTesting').orElse('true').get().toBoolean()
+def firebaseFile = file('google-services.json')
+def firebase = firebaseFile.exists() ? new JsonSlurper().parse(firebaseFile) : [:]
+def projectData = firebase.project_info ?: [:]
+def appData = firebase.client?.find { it.client_info?.android_client_info?.package_name == 'com.edunexus.mobile' } ?: [:]
+def firebaseId = appData.client_info?.mobilesdk_app_id ?: ''
+def firebaseKey = appData.api_key?.getAt(0)?.current_key ?: ''
+def firebaseProject = projectData.project_id ?: ''
+def firebaseSender = projectData.project_number ?: ''
+def configured = [firebaseId,firebaseKey,firebaseProject,firebaseSender].every { !it.isEmpty() }
+if(firebaseFile.exists() && !configured) throw new GradleException('Firebase config must contain the com.edunexus.mobile Android client.')
+def escaped = { value -> value.replace('\\','\\\\').replace('"','\\"') }
+def generatedConfig = layout.buildDirectory.dir('generated/edunexus')
+tasks.register('generateEduNexusConfig') {
+ outputs.dir(generatedConfig)
+ inputs.properties([workspace:workspace,localTesting:localTesting,firebaseId:firebaseId,firebaseKey:firebaseKey,firebaseProject:firebaseProject,firebaseSender:firebaseSender])
+ doLast {
+  def output = generatedConfig.get().file('com/edunexus/mobile/Config.java').asFile
+  output.parentFile.mkdirs()
+  output.text = """package com.edunexus.mobile; public final class Config {
+   public static final String SERVER_URL = "${escaped(workspace)}";
+   public static final boolean LOCAL_TEST = ${localTesting};
+   public static final int VERSION_CODE = 3;
+   public static final String VERSION_NAME = "1.2.0";
+   public static final boolean PUSH_CONFIGURED = ${configured};
+   public static final String FIREBASE_APP_ID = "${escaped(firebaseId)}";
+   public static final String FIREBASE_API_KEY = "${escaped(firebaseKey)}";
+   public static final String FIREBASE_PROJECT_ID = "${escaped(firebaseProject)}";
+   public static final String FIREBASE_SENDER_ID = "${escaped(firebaseSender)}";
+  }"""
+ }
+}
+android {
+ namespace 'com.edunexus.mobile'
+ compileSdk 35
+ defaultConfig { applicationId 'com.edunexus.mobile'; minSdk 24; targetSdk 35; versionCode 3; versionName '1.2.0' }
+ sourceSets { main { java.srcDirs = ['src','firebase-src',generatedConfig]; res.srcDirs = ['res']; manifest.srcFile 'FirebaseManifest.xml' } }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+ signingConfigs {
+  debug { storeFile file('.keys/debug.keystore'); storePassword 'android'; keyAlias 'edunexus'; keyPassword 'android' }
+  if(System.getenv('EDUNEXUS_ANDROID_KEYSTORE')) { release { storeFile file(System.getenv('EDUNEXUS_ANDROID_KEYSTORE')); storePassword System.getenv('EDUNEXUS_ANDROID_STOREPASS'); keyAlias System.getenv('EDUNEXUS_ANDROID_KEY_ALIAS') ?: 'edunexus'; keyPassword System.getenv('EDUNEXUS_ANDROID_KEYPASS') } }
+ }
+ buildTypes { debug { manifestPlaceholders = [cleartextTraffic:localTesting.toString()] }; release { minifyEnabled false; manifestPlaceholders = [cleartextTraffic:'false']; if(signingConfigs.findByName('release')) signingConfig signingConfigs.release } }
+}
+tasks.named('preBuild').configure { dependsOn 'generateEduNexusConfig' }
+dependencies { implementation platform('com.google.firebase:firebase-bom:34.10.0'); implementation 'com.google.firebase:firebase-messaging'; implementation 'androidx.work:work-runtime:2.10.1' }

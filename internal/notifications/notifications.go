@@ -25,6 +25,7 @@ type Handler struct {
 
 func Register(app *fiber.App, db *pgxpool.Pool, mailer mail.Mailer, emailConfigured bool) {
 	h := &Handler{db, mailer, emailConfigured}
+	registerPush(app, db)
 	g := app.Group("/notifications", authMiddleware.JWTProtected())
 	g.Get("/", h.List)
 	g.Get("/preferences", h.Preferences)

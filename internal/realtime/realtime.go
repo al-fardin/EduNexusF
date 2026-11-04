@@ -46,6 +46,7 @@ type Hub struct {
 	clients   map[*client]struct{}
 	ready     chan struct{}
 	readyOnce sync.Once
+	available bool
 }
 
 func Register(app *fiber.App, db *pgxpool.Pool) {
@@ -169,6 +170,11 @@ func (h *Hub) socket(conn *websocket.Conn) {
 	expiry, _ := conn.Locals("socket_expiry").(time.Time)
 	c := &client{user: user, events: make(chan Event, 32), done: make(chan struct{})}
 	h.mu.Lock()
+	if !h.available {
+		h.mu.Unlock()
+		conn.Close()
+		return
+	}
 	count := 0
 	for existing := range h.clients {
 		if existing.user == user {
@@ -243,6 +249,7 @@ func (h *Hub) listen(ctx context.Context) {
 		if err == nil {
 			_, err = conn.Exec(ctx, "LISTEN edunexus_events")
 			if err == nil {
+				h.setAvailable(true)
 				h.readyOnce.Do(func() { close(h.ready) })
 			}
 			for err == nil {
@@ -255,6 +262,7 @@ func (h *Hub) listen(ctx context.Context) {
 					}
 				}
 			}
+			h.setAvailable(false)
 			conn.Conn().Exec(context.Background(), "UNLISTEN edunexus_events")
 			conn.Release()
 		}
@@ -262,6 +270,19 @@ func (h *Hub) listen(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-time.After(time.Second):
+		}
+	}
+}
+
+// A broken listener must restore HTTP polling instead of leaving clients marked
+// connected while events are lost. Reconnect invalidates their cached queries.
+func (h *Hub) setAvailable(value bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.available = value
+	if !value {
+		for c := range h.clients {
+			c.close()
 		}
 	}
 }

@@ -43,3 +43,16 @@ frontend/public/downloads/*.apk
 
 # Isolated frontend verification builds
 frontend/.next-*/
+
+# Generated PDF.js assets, recreated by npm ci
+frontend/public/pdfjs/
+
+# Firebase client project config and local Android settings
+android-app/google-services.json
+android-app/local.properties
+android-app/.gradle/
+
+# Deployment credentials and published binaries
+deploy/secrets/
+deploy/releases/
+deploy/backups/
