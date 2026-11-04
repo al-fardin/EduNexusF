@@ -34,6 +34,8 @@ func Register(app *fiber.App, db *pgxpool.Pool) {
 	c.Put("/conversations/:threadID/theme", h.Theme)
 	c.Get("/conversations/:threadID/messages/:messageID/file", h.File)
 	c.Put("/conversations/:threadID/messages/:messageID/reaction", h.React)
+	c.Patch("/conversations/:threadID/messages/:messageID", h.ChangeMessage)
+	c.Delete("/conversations/:threadID/messages/:messageID", h.ChangeMessage)
 	c.Get("/conversations", h.Conversations)
 	c.Post("/conversations", h.Create)
 	c.Get("/conversations/:threadID/messages", h.History)
@@ -217,17 +219,30 @@ type Message struct {
 	Request    string      `json:"client_request_id"`
 	Reactions  []Reaction  `json:"reactions"`
 	Attachment *Attachment `json:"attachment,omitempty"`
+	Reply      *Reply      `json:"reply,omitempty"`
+	EditedAt   *time.Time  `json:"edited_at,omitempty"`
+	DeletedAt  *time.Time  `json:"deleted_at,omitempty"`
 	hash       string
+}
+
+type Reply struct {
+	ID      string `json:"id"`
+	Sender  string `json:"sender_id"`
+	Body    string `json:"body"`
+	Deleted bool   `json:"deleted"`
 }
 
 func scan(row pgx.Row) (Message, error) {
 	var m Message
 	var name, media string
-	var reactions []byte
+	var reactions, reply []byte
 	var size int64
-	err := row.Scan(&m.ID, &m.Sender, &m.Body, &m.At, &m.Request, &name, &size, &media, &m.hash, &reactions)
+	err := row.Scan(&m.ID, &m.Sender, &m.Body, &m.At, &m.Request, &name, &size, &media, &m.hash, &reactions, &reply, &m.EditedAt, &m.DeletedAt)
 	if err == nil {
 		err = json.Unmarshal(reactions, &m.Reactions)
+		if err == nil && len(reply) > 0 && string(reply) != "null" {
+			err = json.Unmarshal(reply, &m.Reply)
+		}
 	}
 	if name != "" {
 		m.Attachment = &Attachment{name, size, media}
@@ -235,11 +250,12 @@ func scan(row pgx.Row) (Message, error) {
 	return m, err
 }
 
-const columns = `id::text,sender_id::text,body,created_at,client_request_id::text,file_name,file_size,media_type,file_hash,COALESCE((SELECT json_agg(json_build_object('emoji',r.emoji,'user_id',r.user_id::text) ORDER BY r.user_id) FROM classroom_message_reactions r WHERE r.message_id=classroom_messages.id),'[]'::json)`
+const columns = `id::text,sender_id::text,body,created_at,client_request_id::text,file_name,file_size,media_type,file_hash,COALESCE((SELECT json_agg(json_build_object('emoji',r.emoji,'user_id',r.user_id::text) ORDER BY r.user_id) FROM classroom_message_reactions r WHERE r.message_id=classroom_messages.id),'[]'::json),(SELECT json_build_object('id',r.id::text,'sender_id',r.sender_id::text,'body',CASE WHEN r.deleted_at IS NOT NULL THEN 'Message deleted' ELSE left(COALESCE(NULLIF(r.body,''),r.file_name),200) END,'deleted',r.deleted_at IS NOT NULL) FROM classroom_messages r WHERE r.id=classroom_messages.reply_to_id AND r.conversation_id=classroom_messages.conversation_id),edited_at,deleted_at`
 
 func (h *Handler) History(c *fiber.Ctx) error {
-	if _, err := h.thread(c); err != nil {
-		return err
+	user, authErr := h.thread(c)
+	if authErr != nil {
+		return authErr
 	}
 	before := int64(9223372036854775807)
 	if raw := c.Query("before_id"); raw != "" {
@@ -249,7 +265,11 @@ func (h *Handler) History(c *fiber.Ctx) error {
 		}
 		before = n
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT `+columns+` FROM classroom_messages WHERE conversation_id=$1::uuid AND id<$2 ORDER BY classroom_messages.id DESC LIMIT 51`, c.Params("threadID"), before)
+	query := strings.TrimSpace(c.Query("q"))
+	if utf8.RuneCountInString(query) > 200 {
+		return fiber.NewError(400, "search must be at most 200 characters")
+	}
+	rows, err := h.db.Query(c.UserContext(), `SELECT `+columns+` FROM classroom_messages WHERE conversation_id=$1::uuid AND id<$2 AND ($3='' OR (deleted_at IS NULL AND strpos(lower(body||' '||file_name),lower($3))>0)) ORDER BY classroom_messages.id DESC LIMIT 51`, c.Params("threadID"), before, query)
 	if err != nil {
 		return err
 	}
@@ -272,7 +292,12 @@ func (h *Handler) History(c *fiber.Ctx) error {
 	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
 		out[i], out[j] = out[j], out[i]
 	}
-	return result(c, fiber.Map{"messages": out, "has_more": more})
+	var peerRead string
+	err = h.db.QueryRow(c.UserContext(), `SELECT CASE WHEN user_low=$1::uuid THEN high_last_read ELSE low_last_read END::text FROM classroom_conversations WHERE id=$2::uuid`, user, c.Params("threadID")).Scan(&peerRead)
+	if err != nil {
+		return err
+	}
+	return result(c, fiber.Map{"messages": out, "has_more": more, "peer_last_read": peerRead})
 }
 func (h *Handler) Send(c *fiber.Ctx) error {
 	user, err := h.thread(c)
@@ -304,7 +329,7 @@ func (h *Handler) Send(c *fiber.Ctx) error {
 		if err = tx.QueryRow(c.UserContext(), `SELECT conversation_id::text FROM classroom_messages WHERE id=$1::bigint`, existing.ID).Scan(&existingThread); err != nil {
 			return err
 		}
-		if existingThread != c.Params("threadID") || existing.Body != req.Body || existing.hash != req.hash || (existing.Attachment != nil && existing.Attachment.Name != req.name) {
+		if existingThread != c.Params("threadID") || (existing.Body != req.Body && existing.EditedAt == nil && existing.DeletedAt == nil) || replyID(existing.Reply) != req.Reply || existing.hash != req.hash || (existing.Attachment != nil && existing.Attachment.Name != req.name) {
 			return fiber.NewError(409, "message request ID already used")
 		}
 		return result(c, existing)
@@ -329,6 +354,22 @@ func (h *Handler) Send(c *fiber.Ctx) error {
 	if count >= 40 {
 		return fiber.NewError(429, "Too many messages. Try again in a minute.")
 	}
+	var reply any
+	if req.Reply != "" {
+		n, e := strconv.ParseInt(req.Reply, 10, 64)
+		if e != nil || n <= 0 {
+			return fiber.NewError(400, "invalid reply")
+		}
+		var exists bool
+		e = tx.QueryRow(c.UserContext(), `SELECT EXISTS(SELECT 1 FROM classroom_messages WHERE id=$1 AND conversation_id=$2::uuid AND deleted_at IS NULL)`, n, c.Params("threadID")).Scan(&exists)
+		if e != nil {
+			return e
+		}
+		if !exists {
+			return fiber.NewError(400, "reply must reference a message in this conversation")
+		}
+		reply = n
+	}
 	if len(req.file) > 0 {
 		var bytes int64
 		err = tx.QueryRow(c.UserContext(), `SELECT COALESCE(sum(file_size),0) FROM classroom_messages WHERE sender_id=$1::uuid AND created_at>now()-interval '24 hours'`, user).Scan(&bytes)
@@ -349,7 +390,7 @@ func (h *Handler) Send(c *fiber.Ctx) error {
 			os.Remove(filepath.Join(fileDirectory(), key))
 		}
 	}()
-	m, err := scan(tx.QueryRow(c.UserContext(), `INSERT INTO classroom_messages(conversation_id,sender_id,client_request_id,body,file_name,file_size,media_type,storage_key,file_hash) VALUES($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9) RETURNING `+columns, c.Params("threadID"), user, req.Request, req.Body, req.name, len(req.file), req.media, key, req.hash))
+	m, err := scan(tx.QueryRow(c.UserContext(), `INSERT INTO classroom_messages(conversation_id,sender_id,client_request_id,body,file_name,file_size,media_type,storage_key,file_hash,reply_to_id) VALUES($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10) RETURNING `+columns, c.Params("threadID"), user, req.Request, req.Body, req.name, len(req.file), req.media, key, req.hash, reply))
 	if err != nil {
 		return err
 	}
@@ -382,4 +423,11 @@ func (h *Handler) Read(c *fiber.Ctx) error {
 		return fiber.NewError(400, "message does not belong to this conversation")
 	}
 	return result(c, fiber.Map{"read": true})
+}
+
+func replyID(r *Reply) string {
+	if r == nil {
+		return ""
+	}
+	return r.ID
 }

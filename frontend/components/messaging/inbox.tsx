@@ -1,4 +1,9 @@
 "use client";
+import { sendTyping } from "@/store/realtime-store";
+import { MessageActions } from "./message-actions";
+import { MessageSearch } from "./message-search";
+import type { ChatMessage } from "@/services/messaging";
+import { useRealtimeStore } from "@/store/realtime-store";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -43,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 
 export function Inbox() {
+  const connected = useRealtimeStore((s) => s.connected);
   const user = useAuthStore((s) => s.user?.id);
   const router = useRouter();
   const path = usePathname();
@@ -55,7 +61,7 @@ export function Inbox() {
   const classes = useQuery({
     queryKey: ["message-classes", user],
     queryFn: messaging.classes,
-    refetchInterval: 10000,
+    refetchInterval: connected ? false : 10000,
     refetchIntervalInBackground: false,
   });
   const requested = search.get("class") ?? "";
@@ -69,7 +75,7 @@ export function Inbox() {
     queryKey: ["conversations", user, classId],
     queryFn: () => messaging.conversations(classId),
     enabled: !!classId,
-    refetchInterval: 5000,
+    refetchInterval: connected ? false : 5000,
     refetchIntervalInBackground: false,
   });
   const recipients = useQuery({
@@ -338,7 +344,50 @@ function ChatThread({
 }) {
   const user = useAuthStore((s) => s.user?.id);
   const client = useQueryClient();
-  const [draft, setDraft] = useState("");
+  const connected = useRealtimeStore((s) => s.connected);
+  const draftKey = `edunexus:message-draft:${user}:${classId}:${thread}`;
+  const [draft, setDraft] = useState(() => {
+    try {
+      return localStorage.getItem(draftKey)?.slice(0, 4000) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [reply, setReply] = useState<ChatMessage | null>(null);
+  const [typing, setTyping] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const uploadAbort = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        if (draft) localStorage.setItem(draftKey, draft);
+        else localStorage.removeItem(draftKey);
+      } catch {}
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [draft, draftKey]);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    function receive(event: Event) {
+      const e = (event as CustomEvent).detail;
+      if (e.conversation_id !== thread || e.user_id === user) return;
+      if (timer) clearTimeout(timer);
+      setTyping(!!e.typing);
+      if (e.typing) timer = setTimeout(() => setTyping(false), 4500);
+    }
+    window.addEventListener("edunexus:typing", receive);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("edunexus:typing", receive);
+      sendTyping(classId, thread, false);
+      uploadAbort.current?.abort();
+    };
+  }, [classId, thread, user]);
+  function beginReply(message: ChatMessage) {
+    setReply(message);
+    resetRequest();
+    requestAnimationFrame(() => textarea.current?.focus());
+  }
   const [file, setFile] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
@@ -346,7 +395,7 @@ function ChatThread({
   const override = useQuery({
     queryKey: ["message-theme", user, classId, thread],
     queryFn: () => messaging.theme(classId, thread),
-    refetchInterval: 5000,
+    refetchInterval: connected ? false : 5000,
     refetchIntervalInBackground: false,
   });
   const canSend = settings.data?.can_send ?? false;
@@ -354,6 +403,7 @@ function ChatThread({
   const [error, setError] = useState("");
   const [atBottom, setAtBottom] = useState(true);
   const request = useRef<string | null>(null);
+  function resetRequest(){request.current=null}
   const viewport = useRef<HTMLDivElement>(null);
   const read = useRef("");
   const key = ["messages", user, classId, thread];
@@ -363,7 +413,7 @@ function ChatThread({
     initialPageParam: "",
     getNextPageParam: (last) =>
       last.has_more ? last.messages[0]?.id : undefined,
-    refetchInterval: 5000,
+    refetchInterval: connected ? false : 5000,
     refetchIntervalInBackground: false,
   });
   const messages = useMemo(() => {
@@ -427,6 +477,8 @@ function ChatThread({
     if (busy || (!draft.trim() && !file) || !canSend) return;
     setBusy(true);
     setError("");
+    uploadAbort.current = new AbortController();
+    setUploadProgress(0);
     request.current ??= clientId();
     try {
       const sent = await messaging.send(
@@ -435,6 +487,17 @@ function ChatThread({
         draft.trim(),
         request.current,
         file,
+        reply?.id ?? "",
+        {
+          signal: uploadAbort.current.signal,
+          onUploadProgress: (e) =>
+            setUploadProgress(
+              Math.min(
+                100,
+                Math.round((e.loaded / (e.total || file?.size || 1)) * 100),
+              ),
+            ),
+        },
       );
       client.setQueryData<InfiniteData<MessagePage, string>>(key, (old) =>
         old
@@ -454,18 +517,25 @@ function ChatThread({
           : old,
       );
       setDraft("");
+      setReply(null);
+      sendTyping(classId, thread, false);
       setFile(null);
       if (fileInput.current) fileInput.current.value = "";
-      request.current = null;
+      resetRequest();
       setAtBottom(true);
       void client.invalidateQueries({ queryKey: key });
       void client.invalidateQueries({
         queryKey: ["conversations", user, classId],
       });
     } catch (e) {
-      setError(examError(e));
+      setError(
+        uploadAbort.current?.signal.aborted
+          ? "Upload canceled. Your draft is ready to retry."
+          : examError(e),
+      );
     } finally {
       setBusy(false);
+      uploadAbort.current = null;
     }
   }
   return (
@@ -489,6 +559,12 @@ function ChatThread({
           <h2>{peer?.name ?? "Conversation"}</h2>
           <p>{classroomName}</p>
         </div>
+        <MessageSearch
+          classId={classId}
+          thread={thread}
+          canSend={canSend}
+          onReply={beginReply}
+        />
         <MessageSettings
           classId={classId}
           thread={thread}
@@ -532,10 +608,24 @@ function ChatThread({
             </p>
           ) : (
             messages.map((m) => (
-              <article
+              <MessageActions
                 key={m.id}
-                className={`en-chat-bubble${m.sender_id === user ? " en-chat-own" : ""}`}
+                classId={classId}
+                thread={thread}
+                message={m}
+                canSend={canSend}
+                onReply={beginReply}
               >
+                {m.reply && (
+                  <blockquote className="en-chat-reply">
+                    <strong>
+                      {m.reply.sender_id === user
+                        ? "You"
+                        : peer?.name || "Class member"}
+                    </strong>
+                    <p>{m.reply.body}</p>
+                  </blockquote>
+                )}
                 {m.attachment && (
                   <MessageFile classId={classId} thread={thread} message={m} />
                 )}
@@ -547,14 +637,23 @@ function ChatThread({
                     hour: "numeric",
                     minute: "2-digit",
                   })}
+                  {m.edited_at && " · Edited"}
+                  {m.sender_id === user &&
+                    !m.deleted_at &&
+                    (BigInt(m.id) <=
+                    BigInt(query.data?.pages[0]?.peer_last_read || "0")
+                      ? " · Seen"
+                      : " · Sent")}
                 </time>
-                <MessageReactions
-                  classId={classId}
-                  thread={thread}
-                  message={m}
-                  disabled={!canSend}
-                />
-              </article>
+                {!m.deleted_at && (
+                  <MessageReactions
+                    classId={classId}
+                    thread={thread}
+                    message={m}
+                    disabled={!canSend}
+                  />
+                )}
+              </MessageActions>
             ))
           )}
         </div>
@@ -570,6 +669,12 @@ function ChatThread({
         >
           Latest messages ↓
         </button>
+      )}
+      {typing && (
+        <p className="en-chat-typing" role="status">
+          {peer?.name || "Class member"} is typing
+          <span aria-hidden="true">…</span>
+        </p>
       )}
       {error && (
         <p role="alert" className="en-chat-error">
@@ -587,6 +692,48 @@ function ChatThread({
           conversation.
         </p>
       )}
+      {reply && (
+        <div className="en-chat-reply-draft">
+          <div>
+            <strong>
+              Replying to{" "}
+              {reply.sender_id === user
+                ? "yourself"
+                : peer?.name || "class member"}
+            </strong>
+            <p>{reply.body || reply.attachment?.name}</p>
+          </div>
+          <button
+            type="button"
+            className="en-icon-button"
+            aria-label="Cancel reply"
+            disabled={busy}
+            onClick={() => {
+              setReply(null);
+              resetRequest();
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
+      {busy && file && (
+        <div className="en-chat-upload" role="status">
+          <progress max={100} value={uploadProgress} />
+          <span>
+            {uploadProgress < 100
+              ? `Uploading ${uploadProgress}%`
+              : "Confirming message…"}
+          </span>
+          <button
+            type="button"
+            className="en-outline-button"
+            onClick={() => uploadAbort.current?.abort()}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
       {file && (
         <div className="en-chat-file-draft">
           <Paperclip size={16} />
@@ -600,7 +747,7 @@ function ChatThread({
             disabled={busy}
             onClick={() => {
               setFile(null);
-              request.current = null;
+              resetRequest();
               if (fileInput.current) fileInput.current.value = "";
             }}
           >
@@ -624,7 +771,7 @@ function ChatThread({
               const next = draft.slice(0, start) + emoji + draft.slice(end);
               if (next.length > 4000) return;
               setDraft(next);
-              request.current = null;
+              resetRequest();
               requestAnimationFrame(() => {
                 textarea.current?.focus();
                 textarea.current?.setSelectionRange(
@@ -659,7 +806,7 @@ function ChatThread({
               }
               setError("");
               setFile(selected);
-              request.current = null;
+              resetRequest();
             }}
           />
         </div>
@@ -673,7 +820,8 @@ function ChatThread({
           disabled={busy || query.isError || !canSend}
           onChange={(e) => {
             setDraft(e.target.value);
-            request.current = null;
+            sendTyping(classId, thread, !!e.target.value.trim());
+            resetRequest();
           }}
         />
         <button

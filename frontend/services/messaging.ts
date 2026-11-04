@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import type { AxiosProgressEvent } from "axios";
 export type MessageClass = {
   id: string;
   name: string;
@@ -25,6 +26,9 @@ export type MessagingSettings = {
   students: { id: string; name: string; roll: string; can_message: boolean }[];
 };
 export type ChatMessage = {
+  reply?: { id: string; sender_id: string; body: string; deleted: boolean };
+  edited_at?: string;
+  deleted_at?: string;
   reactions: { emoji: string; user_id: string }[];
   attachment?: { name: string; size: number; type: string };
   id: string;
@@ -33,9 +37,21 @@ export type ChatMessage = {
   created_at: string;
   client_request_id: string;
 };
-export type MessagePage = { messages: ChatMessage[]; has_more: boolean };
+export type MessagePage = {
+  messages: ChatMessage[];
+  has_more: boolean;
+  peer_last_read: string;
+};
 const base = (id: string) => `/classrooms/${id}`;
 export const messaging = {
+  async edit(id: string, thread: string, message: string, body: string) {
+    await api.patch(`${base(id)}/conversations/${thread}/messages/${message}`, {
+      body,
+    });
+  },
+  async remove(id: string, thread: string, message: string) {
+    await api.delete(`${base(id)}/conversations/${thread}/messages/${message}`);
+  },
   async react(id: string, thread: string, message: string, emoji: string) {
     await api.put(
       `${base(id)}/conversations/${thread}/messages/${message}/reaction`,
@@ -99,10 +115,11 @@ export const messaging = {
     id: string,
     thread: string,
     before_id = "",
+    q = "",
   ): Promise<MessagePage> {
     return (
       await api.get(`${base(id)}/conversations/${thread}/messages`, {
-        params: before_id ? { before_id } : undefined,
+        params: { before_id: before_id || undefined, q: q || undefined },
       })
     ).data.data;
   },
@@ -112,23 +129,35 @@ export const messaging = {
     body: string,
     client_request_id: string,
     file?: File | null,
+    reply_to_id = "",
+    options?: {
+      signal?: AbortSignal;
+      onUploadProgress?: (event: AxiosProgressEvent) => void;
+    },
   ): Promise<ChatMessage> {
     if (file) {
       const form = new FormData();
       form.append("body", body);
+      form.append("reply_to_id", reply_to_id);
       form.append("client_request_id", client_request_id);
       form.append("file", file);
       return (
         await api.post(`${base(id)}/conversations/${thread}/messages`, form, {
           headers: { "Content-Type": undefined },
+          ...options,
         })
       ).data.data;
     }
     return (
-      await api.post(`${base(id)}/conversations/${thread}/messages`, {
-        body,
-        client_request_id,
-      })
+      await api.post(
+        `${base(id)}/conversations/${thread}/messages`,
+        {
+          body,
+          client_request_id,
+          reply_to_id,
+        },
+        options,
+      )
     ).data.data;
   },
   async read(id: string, thread: string, last_message_id: string) {

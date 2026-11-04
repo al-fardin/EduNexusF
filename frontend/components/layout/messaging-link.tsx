@@ -1,16 +1,18 @@
 "use client";
+import { useRealtimeStore } from "@/store/realtime-store";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { messaging } from "@/services/messaging";
 import { useAuthStore } from "@/store/auth-store";
 export function useUnreadMessages() {
+  const connected = useRealtimeStore((s) => s.connected);
   const user = useAuthStore((s) => s.user?.id);
   return useQuery({
     queryKey: ["message-unread", user],
     queryFn: messaging.unread,
     enabled: !!user,
-    refetchInterval: 10000,
+    refetchInterval: connected ? false : 10000,
     refetchIntervalInBackground: false,
   });
 }

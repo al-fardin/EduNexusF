@@ -1,4 +1,5 @@
 "use client";
+import { useRealtimeStore } from "@/store/realtime-store";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Palette, Search } from "lucide-react";
@@ -22,12 +23,13 @@ export const chatThemes: { id: ChatTheme; label: string; color: string }[] = [
   { id: "midnight", label: "Midnight", color: "#576787" },
 ];
 export function useMessageSettings(classId: string) {
+  const connected = useRealtimeStore((s) => s.connected);
   const user = useAuthStore((s) => s.user?.id);
   return useQuery({
     queryKey: ["messaging-settings", user, classId],
     queryFn: () => messaging.settings(classId),
     enabled: !!classId,
-    refetchInterval: 5000,
+    refetchInterval: connected ? false : 5000,
     refetchIntervalInBackground: false,
   });
 }
@@ -40,6 +42,7 @@ export function MessageSettings({
   thread?: string;
   peerId?: string;
 }) {
+  const connected = useRealtimeStore((s) => s.connected);
   const user = useAuthStore((s) => s.user?.id);
   const query = useMessageSettings(classId);
   const client = useQueryClient();
@@ -51,7 +54,7 @@ export function MessageSettings({
     queryKey: ["message-theme", user, classId, thread],
     queryFn: () => messaging.theme(classId, thread!),
     enabled: !!thread,
-    refetchInterval: 5000,
+    refetchInterval: connected ? false : 5000,
     refetchIntervalInBackground: false,
   });
   const selected = thread ? override.data?.theme : query.data?.theme;

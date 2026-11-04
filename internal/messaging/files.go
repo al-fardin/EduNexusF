@@ -25,6 +25,7 @@ type Attachment struct {
 	Type string `json:"type"`
 }
 type sendRequest struct {
+	Reply             string `json:"reply_to_id"`
 	Body              string `json:"body"`
 	Request           string `json:"client_request_id"`
 	file              []byte
@@ -34,6 +35,7 @@ type sendRequest struct {
 func parseMessage(c *fiber.Ctx) (sendRequest, error) {
 	var req sendRequest
 	if strings.HasPrefix(c.Get("Content-Type"), "multipart/form-data") {
+		req.Reply = c.FormValue("reply_to_id")
 		req.Body = c.FormValue("body")
 		req.Request = c.FormValue("client_request_id")
 		form, err := c.MultipartForm()

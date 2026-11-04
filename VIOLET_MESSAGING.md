@@ -8,7 +8,7 @@ Course covers are native SVG geometry. Home, Calendar and Files use actual, auth
 
 ## Database rollout
 
-Back up PostgreSQL, then run `./APPLY_LEARNING_FEATURES.ps1` to apply the migration ledger through `000030_shared_chat_themes_reactions`. Restart the API after building the new source. The migrations add conversation, message, background preference and teacher permission and reaction tables without changing existing exams or submissions. Back up `uploads/messages` along with PostgreSQL: attachment content is private filesystem storage, not part of a database-only dump.
+Back up PostgreSQL, then run `./APPLY_LEARNING_FEATURES.ps1` to apply the migration ledger through `000031_realtime_message_tools`. Restart the API after building the new source. The migrations add conversation, message, background preference and teacher permission and reaction tables without changing existing exams or submissions. Back up `uploads/messages` along with PostgreSQL: attachment content is private filesystem storage, not part of a database-only dump.
 
 ## Messaging rules
 
@@ -18,7 +18,9 @@ Message history loads 50 messages at a time. Each send requires a client-generat
 
 Messages support one file up to 10 MB each, with an aggregate 100 MB per sender over a rolling 24 hours. Private UUID storage names never appear in the API. Downloads require both active participant authorization and a matching message/conversation, with forced attachment disposition and no-store/nosniff headers. Retries verify file bytes as well as the message body. Back up the upload directory when moving the server.
 
-The inbox polls visible conversations and permissions every five seconds and global unread counts every ten seconds. WebSocket delivery and message email forwarding are not included.
+The inbox uses WebSocket invalidation events from PostgreSQL LISTEN/NOTIFY, including message, reaction, theme, permission and seen updates. The socket authenticates with a one-use ticket valid for 30 seconds; bearer tokens are never put in a socket URL. Origin checks and membership checks restrict access. Set `REALTIME_PUBLIC_URL` (a `wss://…/messaging/socket` address) and `FRONTEND_URL` for production. Local clients use API port 8080 by default. Polling remains a fallback when the socket disconnects. Typing events expire after a few seconds and contain no message text.
+
+Messages support same-conversation replies, editing/deleting your own messages, text/file-name search and seen status. Deletion removes attachment storage and redacts reply previews. Teacher restrictions also prevent edits and typing, while students can still delete their own messages. Message notifications link to the exact conversation.
 
 ## Verification
 

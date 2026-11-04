@@ -23,6 +23,7 @@ import (
 	"github.com/edunexus/edunexus/internal/platform/mail"
 	"github.com/edunexus/edunexus/internal/platform/response"
 	"github.com/edunexus/edunexus/internal/platform/security"
+	"github.com/edunexus/edunexus/internal/realtime"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
@@ -178,6 +179,7 @@ func Register(
 	exam.Register(app, dbPool)
 	learning.Register(app, dbPool)
 	messaging.Register(app, dbPool)
+	realtime.Register(app, dbPool)
 
 	classroomRoutes.Register(
 		app,

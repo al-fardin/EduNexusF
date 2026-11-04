@@ -1,0 +1,11 @@
+DROP TRIGGER IF EXISTS realtime_notifications ON user_notifications;
+DROP TRIGGER IF EXISTS realtime_reads ON classroom_conversations;
+DROP TRIGGER IF EXISTS realtime_student_policy ON classroom_messaging_restrictions;
+DROP TRIGGER IF EXISTS realtime_class_policy ON classroom_messaging_policy;
+DROP TRIGGER IF EXISTS realtime_class_theme ON classroom_shared_message_themes;
+DROP TRIGGER IF EXISTS realtime_conversation_theme ON conversation_shared_message_themes;
+DROP TRIGGER IF EXISTS realtime_reactions ON classroom_message_reactions;
+DROP TRIGGER IF EXISTS realtime_messages ON classroom_messages;
+DROP FUNCTION IF EXISTS edunexus_realtime_event();
+DROP TABLE IF EXISTS realtime_tickets;
+ALTER TABLE classroom_messages DROP COLUMN reply_to_id,DROP COLUMN edited_at,DROP COLUMN deleted_at;

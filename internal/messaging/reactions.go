@@ -48,7 +48,7 @@ func (h *Handler) React(c *fiber.Ctx) error {
 		return fiber.NewError(403, "Your teacher has paused your messages and reactions.")
 	}
 	var exists bool
-	err = tx.QueryRow(c.UserContext(), `SELECT EXISTS(SELECT 1 FROM classroom_messages WHERE id=$1 AND conversation_id=$2::uuid)`, id, c.Params("threadID")).Scan(&exists)
+	err = tx.QueryRow(c.UserContext(), `SELECT EXISTS(SELECT 1 FROM classroom_messages WHERE id=$1 AND conversation_id=$2::uuid AND deleted_at IS NULL)`, id, c.Params("threadID")).Scan(&exists)
 	if err != nil {
 		return err
 	}
