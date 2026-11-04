@@ -1,4 +1,5 @@
 "use client";
+import {useTopics,matchesTopic,ResourceTopicPicker} from "./classwork-topics";
 import { ArrowLeft } from "lucide-react";
 import { clientId } from "@/lib/client-id";
 import {ContentSkeleton} from "@/components/ui/content-skeleton";
@@ -9,7 +10,8 @@ import {examError} from "@/services/exams";
 const btn="rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-secondary disabled:opacity-50";
 const field="mt-1 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm";
 const date=(s:string)=>new Date(s).toLocaleString();
-export function AssignmentBoard({classroomId,canManage}:{classroomId:string;canManage:boolean}){
+export function AssignmentBoard({classroomId,canManage,topic=""}:{classroomId:string;canManage:boolean;topic?:string}){
+ const topicData=useTopics(classroomId);
  const client=useQueryClient();const [editing,setEditing]=useState<Partial<Assignment>|null>(null);const [selected,setSelected]=useState<string|null>(null);const [error,setError]=useState("");const [busy,setBusy]=useState(false);
  const listing=useQuery({queryKey:["assignments",classroomId],queryFn:()=>assignments.list(classroomId)});
  const refresh=()=>client.invalidateQueries({queryKey:["assignments",classroomId]});
@@ -18,8 +20,8 @@ export function AssignmentBoard({classroomId,canManage}:{classroomId:string;canM
  return <section className="space-y-4 rounded-2xl border border-border bg-card p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Assignments</h2><p className="mt-1 text-sm text-muted-foreground">Coursework, submissions and feedback.</p></div>{canManage&&<button className={btn} onClick={()=>setEditing({allow_resubmit:true,max_points:100})}>Create assignment</button>}</div>
 
  {listing.isPending&&<ContentSkeleton rows={2}/>}{(error||listing.isError)&&<p role="alert" className="text-sm text-destructive">{error||examError(listing.error)}</p>}
- {listing.data?.length===0&&<p className="text-sm text-muted-foreground">No assignments yet.</p>}
- {listing.data?.map(a=><article key={a.id} className="rounded-xl border border-border p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-semibold">{a.title}</h3><p className="mt-1 text-xs text-muted-foreground">Due {date(a.due_at)} · {a.max_points} points · {a.status}{a.allow_late?" · Late work accepted":""}</p></div><div className="flex flex-wrap gap-2"><button className={btn} onClick={()=>setSelected(selected===a.id?null:a.id)}>{selected===a.id?"Close":"Open assignment"}</button>{canManage&&<><button className={btn} onClick={()=>setEditing(a)}>Edit</button>{a.status==="draft"&&<button className={btn} disabled={busy} onClick={()=>void publish(a.id)}>Publish</button>}</>}</div></div>{selected===a.id&&<AssignmentDetails classroomId={classroomId} assignment={a} canManage={canManage}/>}</article>)}
+ {listing.data?.filter(a=>matchesTopic(topicData.data?.links,topic,"assignment",a.id)).length===0&&<p className="text-sm text-muted-foreground">{topic?"No assignments in this topic.":"No assignments yet."}</p>}
+ {listing.data?.filter(a=>matchesTopic(topicData.data?.links,topic,"assignment",a.id)).map(a=><article key={a.id} className="rounded-xl border border-border p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-semibold">{a.title}</h3>{canManage&&<ResourceTopicPicker classId={classroomId} kind="assignment" id={a.id}/>}<p className="mt-1 text-xs text-muted-foreground">Due {date(a.due_at)} · {a.max_points} points · {a.status}{a.allow_late?" · Late work accepted":""}</p></div><div className="flex flex-wrap gap-2"><button className={btn} onClick={()=>setSelected(selected===a.id?null:a.id)}>{selected===a.id?"Close":"Open assignment"}</button>{canManage&&<><button className={btn} onClick={()=>setEditing(a)}>Edit</button>{a.status==="draft"&&<button className={btn} disabled={busy} onClick={()=>void publish(a.id)}>Publish</button>}</>}</div></div>{selected===a.id&&<AssignmentDetails classroomId={classroomId} assignment={a} canManage={canManage}/>}</article>)}
  </section>;
 }
 function AssignmentEditor({value,onCancel,onSave}:{value:Partial<Assignment>;onCancel:()=>void;onSave:(a:Partial<Assignment>)=>Promise<void>}){

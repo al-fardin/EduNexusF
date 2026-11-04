@@ -18,6 +18,12 @@ type Handler struct {
 
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := &Handler{db: db}
+	topic := app.Group("/classrooms/:id/topics", authMiddleware.JWTProtected())
+	topic.Get("/", h.Topics)
+	topic.Post("/", h.SaveTopic)
+	topic.Patch("/:topicID", h.SaveTopic)
+	topic.Delete("/:topicID", h.SaveTopic)
+	topic.Put("/resources/:kind/:resourceID", h.MoveTopicResource)
 	registerTutor(app, h)
 	app.Get("/workspace", authMiddleware.JWTProtected(), h.Workspace)
 	app.Get("/workspace/files", authMiddleware.JWTProtected(), h.WorkspaceFiles)

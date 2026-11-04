@@ -1,5 +1,6 @@
 "use client";
 
+import {useTopics,matchesTopic,ResourceTopicPicker} from "./classwork-topics";
 import { useClassroomComposer } from "@/lib/classroom-composer";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -95,7 +96,8 @@ export function MaterialDownloadButton({ classroomId, materialId, filename, labe
   </div>;
 }
 
-export function MaterialLibrary({ classroomId, canManage }: { classroomId: string; canManage: boolean }) {
+export function MaterialLibrary({ classroomId, canManage, topic="" }: { classroomId: string; canManage: boolean;topic?:string }) {
+ const topicData=useTopics(classroomId);
   const [composer,setComposer]=useClassroomComposer();
   const materials = useQuery({ queryKey: ["materials", classroomId], queryFn: () => materialService.list(classroomId), enabled: Boolean(classroomId) });
   const queryClient = useQueryClient();
@@ -120,8 +122,8 @@ export function MaterialLibrary({ classroomId, canManage }: { classroomId: strin
       </div>}
       {remove.isError && <p role="alert" className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{getStreamErrorMessage(remove.error)}</p>}
       {materials.isError && <p role="alert" className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{getStreamErrorMessage(materials.error)}</p>}
-      {materials.isSuccess && materials.data.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">No materials shared yet.</p>}
-      {materials.isSuccess && <div className="space-y-3">{materials.data.map((item: ClassroomMaterial) => <article key={item.id} className="rounded-2xl border border-border bg-background p-4">
+      {materials.isSuccess && materials.data.filter(item=>matchesTopic(topicData.data?.links,topic,"material",item.id)).length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">{topic?"No materials in this topic.":"No materials shared yet."}</p>}
+      {materials.isSuccess && <div className="space-y-3">{materials.data.filter(item=>matchesTopic(topicData.data?.links,topic,"material",item.id)).map((item: ClassroomMaterial) => <article key={item.id} className="rounded-2xl border border-border bg-background p-4">{canManage&&<ResourceTopicPicker classId={classroomId} kind="material" id={item.id}/>}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1"><h3 className="font-semibold text-foreground">{item.title}</h3>
             {item.description && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{item.description}</p>}
