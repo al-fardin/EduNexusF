@@ -180,8 +180,10 @@ func Register(
 
 	exam.Register(app, dbPool)
 	learning.Register(app, dbPool)
-	messaging.Register(app, dbPool)
+	// Browser sockets authenticate with their one-use ticket, before the general
+	// /messaging JWT prefix middleware (browsers cannot add Authorization here).
 	realtime.Register(app, dbPool)
+	messaging.Register(app, dbPool)
 
 	classroomRoutes.Register(
 		app,
