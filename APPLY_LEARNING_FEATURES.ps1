@@ -14,7 +14,7 @@ $sql = [System.Text.StringBuilder]::new()
 [void]$sql.AppendLine('BEGIN;')
 [void]$sql.AppendLine("SELECT pg_advisory_xact_lock(hashtextextended('edunexus-learning-migrations',0));")
 [void]$sql.AppendLine('CREATE TABLE IF NOT EXISTS edunexus_feature_migrations(name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now());')
-foreach ($number in 21..32) {
+foreach ($number in 21..33) {
     $matches = @(Get-ChildItem -LiteralPath $migrationDirectory -Filter ($number.ToString('000000') + '_*.up.sql'))
     if ($matches.Count -ne 1) { throw "Expected one migration for $number" }
     $migration = $matches[0]

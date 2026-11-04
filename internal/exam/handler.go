@@ -97,6 +97,7 @@ func examID(c *fiber.Ctx) (string, error) {
 }
 
 type Question struct {
+	Explanation   string            `json:"explanation,omitempty"`
 	Topic         string            `json:"topic,omitempty"`
 	Tester        *TesterAttachment `json:"tester,omitempty"`
 	ID            string            `json:"id"`
@@ -146,6 +147,9 @@ func normalizeQuestions(questions []Question) (string, error) {
 		q := &questions[i]
 		q.ID = strings.TrimSpace(q.ID)
 		q.Prompt = strings.TrimSpace(q.Prompt)
+		if len(q.Explanation) > 16000 {
+			return "", errors.New("answer explanation is too long")
+		}
 		if len(q.Topic) > 120 {
 			return "", errors.New("question topic exceeds 120 characters")
 		}

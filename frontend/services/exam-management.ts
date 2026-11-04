@@ -16,8 +16,10 @@ export type StudentGrade = {
 };
 export type GradeSheet = { exam: ExamInfo; questions: ExamQuestion[]; attempts: StudentGrade[]; max_points: number };
 export type PublicMark = { exam_id: string; exam_title: string; attempt_id: string; student_name: string; student_roll: string; total: number; max_points: number; published_at: string };
-export type PrivateResult = { total: number; maximum: number; questions: { question_id: string; prompt: string; kind: string; awarded: number; maximum: number; feedback: string; answer: string }[] };
+export type PrivateResult = { total: number; maximum: number; questions: { question_id: string; prompt: string; kind: string; awarded: number; maximum: number; feedback: string; answer: string;answer_text?:string;correct_answer?:string;explanation?:string }[] };
 export const examManagement = {
+ async reviewSettings(classroom:string,id:string):Promise<{show_explanations:boolean}>{return(await api.get(`${base(classroom)}/${id}/review-settings`)).data.data},
+ async saveReviewSettings(classroom:string,id:string,show_explanations:boolean){await api.put(`${base(classroom)}/${id}/review-settings`,{show_explanations})},
   async edit(classroom: string, id: string, payload: NewExam) {
     await api.put(`${base(classroom)}/${id}/manage`, payload);
   },

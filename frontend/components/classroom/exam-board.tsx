@@ -1,4 +1,5 @@
 "use client";
+import {ExamDraftPreview,SavedExamPreview,AnswerReviewSettings} from "./exam-preview";
 import { clientId } from "@/lib/client-id";
 import { MobileExamOption } from "@/components/classroom/mobile-exam-option";
 import { useAuthStore } from "@/store/auth-store";
@@ -136,7 +137,7 @@ function ExamCard({exam,canManage,onPublish,onTake,onReview,busy,now}: {exam:Exa
     <div className="mb-3 flex items-center justify-between gap-2"><span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold capitalize text-foreground">{exam.status}</span><span className="text-xs text-muted-foreground">{exam.question_count} questions</span></div>
     <h3 className="text-lg font-bold">{exam.title}</h3><p className="mt-2 text-sm text-muted-foreground">{exam.description || "Classroom assessment"}</p>
     <div className="mt-4 space-y-1 text-xs text-muted-foreground"><p>Opens: {dateLabel(exam.starts_at)}</p><p>Closes: {dateLabel(exam.ends_at)}</p><p>Time limit: {exam.duration_minutes} minutes after joining</p></div>
-    <div className="mt-4 flex flex-wrap items-center gap-2">{canManage ? <><button type="button" className={outline} onClick={onReview}><Eye size={15}/> View submissions</button>{exam.status==="draft" && <button type="button" className={primary} onClick={onPublish} disabled={busy}>{busy ? <LoaderCircle size={15} className="animate-spin"/> : <Send size={15}/>} {busy ? "Publishing…" : "Publish exam"}</button>}</> : <button type="button" className={primary} onClick={onTake} disabled={!open}><Play size={15}/>{open?"Join / Resume":"Exam unavailable"}</button>}
+    <div className="mt-4 flex flex-wrap items-center gap-2">{canManage ? <><SavedExamPreview classroomId={exam.classroom_id} examId={exam.id}/><button type="button" className={outline} onClick={onReview}><Eye size={15}/> View submissions</button>{exam.status==="draft" && <button type="button" className={primary} onClick={onPublish} disabled={busy}>{busy ? <LoaderCircle size={15} className="animate-spin"/> : <Send size={15}/>} {busy ? "Publishing…" : "Publish exam"}</button>}</> : <button type="button" className={primary} onClick={onTake} disabled={!open}><Play size={15}/>{open?"Join / Resume":"Exam unavailable"}</button>}
       {!canManage && <span className="text-xs text-muted-foreground">{ended?"Window ended":waiting?"Not started":"Open now"}</span>}
     </div>
   </article>;
@@ -155,7 +156,7 @@ function ExamCreator({classroomId,onClose}:{classroomId:string;onClose:()=>void}
     const payload:NewExam={allow_mobile_mcq:allowPhone&&questions.every(q=>q.kind==="mcq"),title:title.trim(),description:description.trim(),starts_at:new Date(starts).toISOString(),ends_at:new Date(ends).toISOString(),duration_minutes:duration,questions:questions.map(q=>q.kind==="mcq"?{...q,options:q.options?.map(o=>o.trim()),sample_answer:""}:{...q,options:[],correct_option:undefined})};
     mutation.mutate(payload);
   }
-  return <section className={panel}><h3 className="mb-4 text-lg font-bold">Build an exam <span className="ml-2 text-sm font-normal text-muted-foreground">Private draft</span></h3>
+  return <section className={panel}><div className="flex items-center justify-between gap-3 mb-4"><ExamDraftPreview title={title} duration={duration} questions={questions}/></div><h3 className="mb-4 text-lg font-bold">Build an exam <span className="ml-2 text-sm font-normal text-muted-foreground">Private draft</span></h3>
     <div className="grid gap-4 md:grid-cols-2"><label className="space-y-2 text-sm font-semibold">Exam title<input className={field} maxLength={200} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Midterm practical"/></label>
       <label className="space-y-2 text-sm font-semibold">Duration (minutes)<input className={field} type="number" min={1} max={240} value={duration} onChange={e=>setDuration(Number(e.target.value))}/></label>
       <label className="space-y-2 text-sm font-semibold">Start (local time)<input className={field} type="datetime-local" value={starts} onChange={e=>setStarts(e.target.value)}/></label>
@@ -169,6 +170,7 @@ function ExamCreator({classroomId,onClose}:{classroomId:string;onClose:()=>void}
       <div className="grid gap-3 sm:grid-cols-2"><label className="space-y-1 text-sm">Type<select className={field} value={q.kind} onChange={e=>{const kind=e.target.value as QuestionKind;updateQuestion(i,{kind,tester:kind==="coding"?q.tester:undefined,options:kind==="mcq"?["",""]:[],correct_option:kind==="mcq"?0:undefined});}}><option value="mcq">MCQ</option><option value="theory">Theory</option><option value="coding">Coding</option></select></label>
         <label className="space-y-1 text-sm">Points<input className={field} type="number" min={1} max={100} value={q.points} onChange={e=>updateQuestion(i,{points:Number(e.target.value)})}/></label></div>
       <label className="mt-3 block space-y-1 text-sm">Question / problem statement<textarea className={field} rows={3} maxLength={10000} value={q.prompt} onChange={e=>updateQuestion(i,{prompt:e.target.value})}/></label>
+      <label className="mt-3 block text-sm">Answer explanation<textarea maxLength={4000} rows={2} className={field} value={q.explanation??""} onChange={e=>updateQuestion(i,{explanation:e.target.value})} placeholder="Explain the expected answer. Students see this only when answer review is released."/></label>
       {q.kind==="mcq"?<div className="mt-3 space-y-2"><p className="text-xs text-muted-foreground">Select the correct answer.</p>{q.options?.map((option,j)=><div key={j} className="flex items-center gap-2"><input aria-label={`Correct option ${j+1}`} type="radio" name={`correct-${q.id}`} checked={q.correct_option===j} onChange={()=>updateQuestion(i,{correct_option:j})}/><input aria-label={`Option ${j+1}`} className={field} value={option} onChange={e=>updateQuestion(i,{options:q.options?.map((o,k)=>k===j?e.target.value:o)})}/>{(q.options?.length??0)>2&&<button type="button" className="text-destructive" onClick={()=>updateQuestion(i,{options:q.options?.filter((_,k)=>k!==j),correct_option:0})}><Trash2 size={16}/></button>}</div>)}<button type="button" className={outline} disabled={(q.options?.length??0)>=6} onClick={()=>updateQuestion(i,{options:[...(q.options??[]),""]})}>Add option</button></div>:
         <div className="mt-3 grid gap-3"><label className="space-y-1 text-sm">Reference solution / marking notes (teacher only)<textarea className={field} rows={3} value={q.sample_answer??""} maxLength={15000} onChange={e=>updateQuestion(i,{sample_answer:e.target.value})}/></label>{q.kind==="coding"&&<label className="space-y-1 text-sm">Expected language<select className={field} value={q.language||"python"} onChange={e=>updateQuestion(i,{language:e.target.value})}><option value="python">Python</option><option value="go">Go</option><option value="cpp">C++</option><option value="java">Java</option><option value="javascript">JavaScript</option><option value="c">C</option><option value="typescript">TypeScript</option><option value="rust">Rust</option><option value="ruby">Ruby</option><option value="php">PHP</option><option value="other">Other (no compiler)</option></select></label>}</div>}
       <SaveBankQuestion classroomId={classroomId} question={q}/>
@@ -179,7 +181,7 @@ function ExamCreator({classroomId,onClose}:{classroomId:string;onClose:()=>void}
   </section>;
 }
 function TeacherReview({classroomId,examId,onClose}:{classroomId:string;examId:string;onClose:()=>void}) {
-  return <TeacherSubmissionExplorer classroomId={classroomId} examId={examId} onClose={onClose} />;
+  return <div className="space-y-4"><AnswerReviewSettings classroomId={classroomId} examId={examId}/><TeacherSubmissionExplorer classroomId={classroomId} examId={examId} onClose={onClose}/></div>;
 }
 function ExamTake({classroomId,examId,onClose}:{classroomId:string;examId:string;onClose:()=>void}) {
   const [live,setLive]=useState<LiveExam|null>(null);

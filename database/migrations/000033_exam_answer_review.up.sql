@@ -1,0 +1,1 @@
+CREATE TABLE classroom_exam_review_settings(exam_id UUID PRIMARY KEY REFERENCES classroom_exams(id) ON DELETE CASCADE,show_explanations BOOLEAN NOT NULL DEFAULT false,updated_by UUID REFERENCES users(id) ON DELETE SET NULL,updated_at TIMESTAMPTZ NOT NULL DEFAULT now());

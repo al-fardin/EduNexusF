@@ -18,6 +18,8 @@ import (
 // Phase 4 routes preserve existing exam endpoints and per-classroom membership checks.
 func RegisterPhase4(g fiber.Router, h *Handler) {
 	g.Put("/:examID/manage", h.EditExam)
+	g.Get("/:examID/review-settings", h.ReviewSettings)
+	g.Put("/:examID/review-settings", h.ReviewSettings)
 	g.Post("/:examID/close", h.CloseExam)
 	g.Get("/:examID/grades", h.Grades)
 	g.Put("/:examID/grades/:attemptID", h.SetGrade)
@@ -546,9 +548,10 @@ func (h *Handler) MyResult(c *fiber.Ctx) error {
 	user, _ := identity(c)
 	var aid string
 	var rawQ, rawAnswers []byte
-	err = h.db.QueryRow(c.UserContext(), `SELECT a.id::text,e.questions,a.answers FROM classroom_exam_result_publications p
+	var review bool
+	err = h.db.QueryRow(c.UserContext(), `SELECT a.id::text,e.questions,a.answers,COALESCE((SELECT show_explanations FROM classroom_exam_review_settings s WHERE s.exam_id=e.id),false) AND(e.ends_at<=now() OR e.closed_at IS NOT NULL) FROM classroom_exam_result_publications p
       JOIN classroom_exam_attempts a ON a.id=p.attempt_id JOIN classroom_exams e ON e.id=a.exam_id
-      WHERE e.id=$1::uuid AND e.classroom_id=$2::uuid AND a.student_id=$3::uuid`, exam, c.Params("id"), user).Scan(&aid, &rawQ, &rawAnswers)
+      WHERE e.id=$1::uuid AND e.classroom_id=$2::uuid AND a.student_id=$3::uuid`, exam, c.Params("id"), user).Scan(&aid, &rawQ, &rawAnswers, &review)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return failure(c, 404, "result not published for you")
 	}
@@ -587,7 +590,23 @@ func (h *Handler) MyResult(c *fiber.Ctx) error {
 		m := marks[q.ID]
 		total += m.Points
 		max += q.Points
-		detail = append(detail, fiber.Map{"question_id": q.ID, "prompt": q.Prompt, "kind": q.Kind, "awarded": m.Points, "maximum": q.Points, "answer": answers[q.ID], "feedback": m.Feedback})
+		item := fiber.Map{"question_id": q.ID, "prompt": q.Prompt, "kind": q.Kind, "awarded": m.Points, "maximum": q.Points, "answer": answers[q.ID], "feedback": m.Feedback}
+		if q.Kind == "mcq" {
+			answer, e := strconv.Atoi(answers[q.ID])
+			item["answer_text"] = "No response"
+			if e == nil && answer >= 0 && answer < len(q.Options) {
+				item["answer_text"] = q.Options[answer]
+			}
+		}
+		if review {
+			item["explanation"] = q.Explanation
+			if q.Kind == "mcq" && q.CorrectOption != nil && *q.CorrectOption >= 0 && *q.CorrectOption < len(q.Options) {
+				item["correct_answer"] = q.Options[*q.CorrectOption]
+			} else if q.Kind != "mcq" {
+				item["correct_answer"] = q.SampleAnswer
+			}
+		}
+		detail = append(detail, item)
 	}
 	return result(c, 200, fiber.Map{"total": total, "maximum": max, "questions": detail})
 }

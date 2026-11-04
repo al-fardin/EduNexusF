@@ -10,7 +10,7 @@ Back up the database using your normal backup process, then run from the reposit
 powershell -File .\APPLY_LEARNING_FEATURES.ps1
 ```
 
-This applies migrations 21–26 once, under a transaction and advisory lock. A ledger allows safe reruns. It supports the existing `edunexus-postgres` Docker container. For another PostgreSQL server, supply `-PsqlPath` and `-DatabaseUrl`. `-SqlOnly` writes the SQL into ignored `release-builds/` for inspection without applying it. Existing base migrations 1–20 are required.
+This applies migrations 21–33 once, under a transaction and advisory lock. A ledger allows safe reruns. It supports the existing `edunexus-postgres` Docker container. For another PostgreSQL server, supply `-PsqlPath` and `-DatabaseUrl`. `-SqlOnly` writes the SQL into ignored `release-builds/` for inspection without applying it. Existing base migrations 1–20 are required.
 
 Restart the API and frontend after applying migrations.
 
@@ -61,3 +61,9 @@ npm run build
 Database integration tests run only when `EDUNEXUS_TEST_DATABASE_URL` points to a dedicated database named `edunexus_features` with migrations applied. They use generated fixture accounts and do not use the production database. OpenAI tests use a local HTTP test server and email tests use an in-memory mail transport; these tests incur no API costs and send no emails.
 
 The repository contains ignored historical backup folders; broad `go test ./...` also discovers those incomplete snapshots. Use the scoped command above for current application packages. Pre-existing lint findings in older components remain separate from the checks for new components.
+
+## Classwork and exam review
+
+Classwork topics group assignments and materials without moving their storage. Teachers manage topics and resource placement; students only see published resource associations. Removing a topic leaves coursework intact. Existing pinned announcements, assignment history and late-work policies remain available.
+
+Teachers can preview saved exams and unsaved drafts without creating student attempts, and write answer explanations on questions. Answer review is off by default. Enabling it releases expected answers and explanations only to the student’s own published result after the exam ends or is closed. Live question payloads exclude all marking keys and explanations.
