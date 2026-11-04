@@ -275,10 +275,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     settleEduNexusUX(response.config as EduNexusTrackedConfig);
+    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent("edunexus:connection",{detail:{reachable:true}}));
     return response;
   },
   (error: unknown) => {
-    if (axios.isAxiosError(error)) settleEduNexusUX(error.config as EduNexusTrackedConfig | undefined);
+    if (axios.isAxiosError(error)){settleEduNexusUX(error.config as EduNexusTrackedConfig | undefined);if(typeof window!=="undefined"&&error.code!=="ERR_CANCELED"&&!error.response)window.dispatchEvent(new CustomEvent("edunexus:connection",{detail:{reachable:false}}));}
     return Promise.reject(error);
   },
 );

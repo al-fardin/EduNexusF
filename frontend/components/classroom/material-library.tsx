@@ -1,11 +1,12 @@
 "use client";
 
 import {useTopics,matchesTopic,ResourceTopicPicker} from "./classwork-topics";
+import {ProtectedFilePreview} from "@/components/files/protected-preview";
 import { useClassroomComposer } from "@/lib/classroom-composer";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Download, FileUp, LoaderCircle, Paperclip, RefreshCw, Trash2 } from "lucide-react";
-import { type ChangeEvent, type FormEvent, useState } from "react";
+import { type ChangeEvent, type FormEvent, useRef,useState } from "react";
 import { getStreamErrorMessage } from "@/services/stream";
 import { materialService, type ClassroomMaterial } from "@/services/materials";
 
@@ -15,12 +16,14 @@ const ACCEPTED = ".pdf,.txt,.md,.csv,.png,.jpg,.jpeg,.webp,.doc,.docx,.ppt,.pptx
 export function MaterialUploadForm({ classroomId, compact = false, onUploaded }: { classroomId: string; compact?: boolean; onUploaded?:()=>void }) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
+  const [progress,setProgress]=useState(0);const uploadAbort=useRef<AbortController|null>(null);
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [inputKey, setInputKey] = useState(0);
   const [validationError, setValidationError] = useState("");
   const mutation = useMutation({
-    mutationFn: materialService.upload.bind(null, classroomId),
+    mutationFn:(data:{title:string;description:string;file:File})=>{uploadAbort.current=new AbortController();setProgress(0);return materialService.upload(classroomId,data,{signal:uploadAbort.current.signal,onUploadProgress:e=>setProgress(Math.min(100,Math.round(e.loaded/(e.total||data.file.size)*100)))})},
+    onSettled:()=>{uploadAbort.current=null;void queryClient.invalidateQueries({queryKey:["materials",classroomId]});void queryClient.invalidateQueries({queryKey:["classrooms","stream",classroomId]})},
     onSuccess: async () => {
       setTitle("");
       setDescription("");
@@ -69,6 +72,7 @@ export function MaterialUploadForm({ classroomId, compact = false, onUploaded }:
           <textarea rows={compact ? 2 : 3} maxLength={5000} value={description} disabled={mutation.isPending} onChange={(e) => setDescription(e.target.value)} className="mt-1 block w-full resize-y rounded-xl border border-border bg-background p-3 outline-none focus:border-primary" placeholder="What should students read or prepare?" />
         </label>
         {(validationError || mutation.isError) && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{validationError || getStreamErrorMessage(mutation.error)}</p>}
+        {mutation.isPending&&<div className="en-chat-upload" role="status"><progress value={progress} max={100}/><span>{progress<100?`Uploading ${progress}%`:"Publishing…"}</span><button type="button" className="en-outline-button" disabled={progress>=100} onClick={()=>uploadAbort.current?.abort()}>Cancel upload</button></div>}
         <button type="submit" disabled={!file || !title.trim() || !!validationError || mutation.isPending} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {mutation.isPending ? <LoaderCircle size={17} className="animate-spin" /> : <FileUp size={17} />} {mutation.isPending ? "Uploading material…" : "Upload & publish to Stream"}
         </button>
@@ -130,7 +134,7 @@ export function MaterialLibrary({ classroomId, canManage, topic="" }: { classroo
             <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground"><Paperclip size={13} /> {item.file_name} · {formatSize(item.file_size)} · {new Date(item.created_at).toLocaleDateString()}</p>
           </div>
           <div className="flex flex-wrap items-start gap-2">
-            <MaterialDownloadButton classroomId={classroomId} materialId={item.id} filename={item.file_name} />
+            <ProtectedFilePreview path={`/classrooms/${classroomId}/materials/${item.id}/download`} filename={item.file_name}/><MaterialDownloadButton classroomId={classroomId} materialId={item.id} filename={item.file_name} />
             {canManage && <button type="button" disabled={remove.isPending} onClick={() => { if (window.confirm(`Delete ${item.title}?`)) remove.mutate(item.id); }} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-destructive/30 px-3 text-sm text-destructive disabled:opacity-50">{remove.isPending && remove.variables === item.id ? <LoaderCircle size={15} className="animate-spin"/> : <Trash2 size={15} />} {remove.isPending && remove.variables === item.id ? "Deleting…" : "Delete"}</button>}
           </div>
         </div>

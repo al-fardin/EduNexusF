@@ -1,3 +1,4 @@
+import type {AxiosProgressEvent} from "axios";
 import { api } from "@/lib/api";
 
 export type ClassroomMaterial = {
@@ -21,14 +22,14 @@ export const materialService = {
     return response.data.data;
   },
 
-  async upload(classroomId: string, data: { title: string; description: string; file: File }): Promise<ClassroomMaterial> {
+  async upload(classroomId: string, data: { title: string; description: string; file: File },options?:{signal?:AbortSignal;onUploadProgress?:(e:AxiosProgressEvent)=>void}): Promise<ClassroomMaterial> {
     const form = new FormData();
     form.append("title", data.title);
     form.append("description", data.description);
     form.append("file", data.file);
     const response = await api.post<Envelope<ClassroomMaterial>>(
       `/classrooms/${classroomId}/materials`, form,
-      { headers: { "Content-Type": undefined } }
+      { headers: { "Content-Type": undefined },...options }
     );
     return response.data.data;
   },

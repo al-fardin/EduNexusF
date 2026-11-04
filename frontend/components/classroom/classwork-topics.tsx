@@ -128,6 +128,7 @@ export function ClassworkTopics({
             />
             <button
               className="en-solid-button"
+              aria-label={editing ? "Save topic" : "Add topic"}
               disabled={busy || !title.trim()}
             >
               {editing ? "Save" : <Plus size={18} />}

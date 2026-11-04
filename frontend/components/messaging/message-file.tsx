@@ -1,4 +1,5 @@
 "use client";
+import {ProtectedFilePreview} from "@/components/files/protected-preview";
 import { useState } from "react";
 import { Download, FileText, LoaderCircle } from "lucide-react";
 import { messaging, type ChatMessage } from "@/services/messaging";
@@ -50,6 +51,7 @@ export function MessageFile({
           <Download size={18} />
         )}
       </button>
+      <ProtectedFilePreview path={`/classrooms/${classId}/conversations/${thread}/messages/${message.id}/file`} filename={file.name}/>
       {error && (
         <p role="alert" className="en-chat-error">
           {error}
