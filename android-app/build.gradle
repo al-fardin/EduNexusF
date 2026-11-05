@@ -23,8 +23,8 @@ tasks.register('generateEduNexusConfig') {
   output.text = """package com.edunexus.mobile; public final class Config {
    public static final String SERVER_URL = "${escaped(workspace)}";
    public static final boolean LOCAL_TEST = ${localTesting};
-   public static final int VERSION_CODE = 3;
-   public static final String VERSION_NAME = "1.2.0";
+   public static final int VERSION_CODE = 4;
+   public static final String VERSION_NAME = "1.3.0";
    public static final boolean PUSH_CONFIGURED = ${configured};
    public static final String FIREBASE_APP_ID = "${escaped(firebaseId)}";
    public static final String FIREBASE_API_KEY = "${escaped(firebaseKey)}";
@@ -36,7 +36,7 @@ tasks.register('generateEduNexusConfig') {
 android {
  namespace 'com.edunexus.mobile'
  compileSdk 35
- defaultConfig { applicationId 'com.edunexus.mobile'; minSdk 24; targetSdk 35; versionCode 3; versionName '1.2.0' }
+ defaultConfig { applicationId 'com.edunexus.mobile'; minSdk 24; targetSdk 35; versionCode 4; versionName '1.3.0' }
  sourceSets { main { java.srcDirs = ['src','firebase-src',generatedConfig]; res.srcDirs = ['res']; manifest.srcFile 'FirebaseManifest.xml' } }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
  signingConfigs {

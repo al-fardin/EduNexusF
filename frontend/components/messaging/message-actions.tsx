@@ -1,6 +1,13 @@
 "use client";
-import { useRef, useState, type ReactNode } from "react";
-import { MoreHorizontal, Pencil, Reply, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Reply,
+  Trash2,
+  Star,
+  Copy,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -19,6 +26,7 @@ export function MessageActions({
   canSend,
   onReply,
   children,
+  starred = false,
 }: {
   classId: string;
   thread: string;
@@ -26,6 +34,7 @@ export function MessageActions({
   canSend: boolean;
   onReply: (message: ChatMessage) => void;
   children: ReactNode;
+  starred?: boolean;
 }) {
   const user = useAuthStore((s) => s.user?.id);
   const client = useQueryClient();
@@ -37,6 +46,14 @@ export function MessageActions({
   const [error, setError] = useState("");
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
   const start = useRef({ x: 0, y: 0 });
+  const gesture = useRef(false);
+  const [drag, setDrag] = useState(0);
+  useEffect(
+    () => () => {
+      if (hold.current) clearTimeout(hold.current);
+    },
+    [],
+  );
   const own = message.sender_id === user;
   function clear() {
     if (hold.current) clearTimeout(hold.current);
@@ -54,6 +71,12 @@ export function MessageActions({
         client.invalidateQueries({
           queryKey: ["conversations", user, classId],
         }),
+        client.invalidateQueries({
+          queryKey: ["message-stars", user, classId, thread],
+        }),
+        client.invalidateQueries({
+          queryKey: ["starred-messages", user, classId, thread],
+        }),
       ]);
       setEdit(false);
       setRemove(false);
@@ -66,7 +89,8 @@ export function MessageActions({
   }
   return (
     <article
-      className={`en-chat-bubble${own ? " en-chat-own" : ""}${message.deleted_at ? " en-chat-deleted" : ""}`}
+      className={`en-chat-bubble${own ? " en-chat-own" : ""}${message.deleted_at ? " en-chat-deleted" : ""}${message.kind === "emoji" && !message.deleted_at ? " en-chat-emoji" : ""}${drag > 0 ? " en-chat-dragging" : ""}`}
+      style={{ transform: drag ? `translateX(${drag}px)` : undefined }}
       onContextMenu={(e) => {
         if (!message.deleted_at) {
           e.preventDefault();
@@ -74,22 +98,74 @@ export function MessageActions({
         }
       }}
       onPointerDown={(e) => {
-        if (e.pointerType !== "touch" || message.deleted_at) return;
+        if (
+          (e.pointerType !== "touch" && e.pointerType !== "pen") ||
+          message.deleted_at ||
+          (e.target as HTMLElement).closest("button,a,audio,video,input")
+        )
+          return;
         clear();
+        gesture.current = true;
         start.current = { x: e.clientX, y: e.clientY };
-        hold.current = setTimeout(() => setOpen(true), 500);
+        hold.current = setTimeout(() => {
+          gesture.current = false;
+          setDrag(0);
+          setOpen(true);
+        }, 500);
       }}
       onPointerMove={(e) => {
+        if (!gesture.current) return;
+        const dx = e.clientX - start.current.x,
+          dy = e.clientY - start.current.y;
+        if (Math.abs(dy) > 18 && Math.abs(dy) > Math.abs(dx)) {
+          gesture.current = false;
+          setDrag(0);
+          clear();
+          return;
+        }
+        if (canSend && dx > 12 && Math.abs(dx) > Math.abs(dy) * 1.4)
+          setDrag(Math.min(90, dx * 0.7));
         if (
           Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) >
           10
         )
           clear();
       }}
-      onPointerUp={clear}
-      onPointerCancel={clear}
+      onPointerUp={(e) => {
+        if (
+          gesture.current &&
+          canSend &&
+          e.clientX - start.current.x >= 72 &&
+          Math.abs(e.clientY - start.current.y) < 40
+        ) {
+          onReply(message);
+          navigator.vibrate?.(12);
+        }
+        gesture.current = false;
+        setDrag(0);
+        clear();
+      }}
+      onPointerCancel={() => {
+        gesture.current = false;
+        setDrag(0);
+        clear();
+      }}
     >
+      <span
+        className={`en-swipe-reply-indicator${drag >= 50 ? " is-ready" : ""}`}
+        aria-hidden="true"
+      >
+        <Reply size={21} />
+      </span>
       {children}
+      {starred && !message.deleted_at && (
+        <Star
+          className="en-message-star"
+          size={12}
+          fill="currentColor"
+          aria-label="Starred message"
+        />
+      )}
       {!message.deleted_at && (
         <button
           className="en-message-more"
@@ -119,21 +195,62 @@ export function MessageActions({
             <Reply size={18} />
             Reply
           </button>
+          <button
+            className="en-message-action-row"
+            disabled={busy}
+            onClick={() =>
+              void save(() =>
+                messaging.star(classId, thread, message.id, !starred),
+              )
+            }
+          >
+            <Star size={18} fill={starred ? "currentColor" : "none"} />
+            {starred ? "Unstar message" : "Star message"}
+          </button>
+          {!!message.body && (
+            <button
+              className="en-message-action-row"
+              onClick={async () => {
+                try {
+                  if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(message.body);
+                  } else {
+                    const element = document.createElement("textarea");
+                    element.value = message.body;
+                    document.body.appendChild(element);
+                    element.select();
+                    const copied = document.execCommand("copy");
+                    element.remove();
+                    if (!copied) throw Error("Copy unavailable");
+                  }
+                  setOpen(false);
+                } catch {
+                  setError("Could not copy this message.");
+                }
+              }}
+            >
+              <Copy size={18} />
+              Copy text
+            </button>
+          )}
+          {error && <p role="alert">{error}</p>}
           {own && (
             <>
-              <button
-                className="en-message-action-row"
-                disabled={!canSend}
-                onClick={() => {
-                  setBody(message.body);
-                  setOpen(false);
-                  setEdit(true);
-                  setError("");
-                }}
-              >
-                <Pencil size={18} />
-                Edit message
-              </button>
+              {message.kind !== "voice" && (
+                <button
+                  className="en-message-action-row"
+                  disabled={!canSend}
+                  onClick={() => {
+                    setBody(message.body);
+                    setOpen(false);
+                    setEdit(true);
+                    setError("");
+                  }}
+                >
+                  <Pencil size={18} />
+                  Edit message
+                </button>
+              )}
               <button
                 className="en-message-action-row text-destructive"
                 onClick={() => {

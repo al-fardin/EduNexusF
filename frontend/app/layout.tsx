@@ -3,9 +3,11 @@ import "./globals.css";
 import "./mobile.css";
 import "./workspace.css";
 import "./violet.css";
+import "./messaging-tools.css";
 import { AppThemeProvider } from "@/providers/theme-provider";
 import { PushProvider } from "@/providers/push-provider";
 import { AppUpdateProvider } from "@/providers/app-update-provider";
+import {CallProvider} from "@/providers/call-provider";
 import { RealtimeProvider } from "@/providers/realtime-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { SiteChrome } from "@/components/layout/site-chrome";
@@ -38,6 +40,7 @@ export default function RootLayout({
             <RealtimeProvider />
             <PushProvider />
             <AppUpdateProvider />
+            <CallProvider />
             <SiteChrome>{children}</SiteChrome>
             <NetworkFeedback />
           </QueryProvider>

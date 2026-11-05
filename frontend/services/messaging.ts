@@ -26,6 +26,9 @@ export type MessagingSettings = {
   students: { id: string; name: string; roll: string; can_message: boolean }[];
 };
 export type ChatMessage = {
+  kind: "text"|"emoji"|"voice";
+  emoji_size: number;
+  duration_ms: number;
   reply?: { id: string; sender_id: string; body: string; deleted: boolean };
   edited_at?: string;
   deleted_at?: string;
@@ -44,6 +47,8 @@ export type MessagePage = {
 };
 const base = (id: string) => `/classrooms/${id}`;
 export const messaging = {
+  async stars(id:string,thread:string):Promise<string[]>{return (await api.get(`${base(id)}/conversations/${thread}/stars`)).data.data},
+  async star(id:string,thread:string,message:string,starred:boolean){await api.put(`${base(id)}/conversations/${thread}/messages/${message}/star`,{starred})},
   async edit(id: string, thread: string, message: string, body: string) {
     await api.patch(`${base(id)}/conversations/${thread}/messages/${message}`, {
       body,
@@ -116,10 +121,11 @@ export const messaging = {
     thread: string,
     before_id = "",
     q = "",
+    starred = false,
   ): Promise<MessagePage> {
     return (
       await api.get(`${base(id)}/conversations/${thread}/messages`, {
-        params: { before_id: before_id || undefined, q: q || undefined },
+        params: { before_id: before_id || undefined, q: q || undefined,starred:starred?'1':undefined },
       })
     ).data.data;
   },
@@ -133,18 +139,21 @@ export const messaging = {
     options?: {
       signal?: AbortSignal;
       onUploadProgress?: (event: AxiosProgressEvent) => void;
+      message?: {kind:"text"|"emoji"|"voice";emoji_size?:number;duration_ms?:number};
     },
   ): Promise<ChatMessage> {
+    const {message,...transport}=options??{};
     if (file) {
       const form = new FormData();
       form.append("body", body);
       form.append("reply_to_id", reply_to_id);
       form.append("client_request_id", client_request_id);
       form.append("file", file);
+      if(message){form.append('kind',message.kind);form.append('emoji_size',String(message.emoji_size??1));form.append('duration_ms',String(message.duration_ms??0))}
       return (
         await api.post(`${base(id)}/conversations/${thread}/messages`, form, {
           headers: { "Content-Type": undefined },
-          ...options,
+          ...transport,
         })
       ).data.data;
     }
@@ -155,8 +164,9 @@ export const messaging = {
           body,
           client_request_id,
           reply_to_id,
+          ...message,
         },
-        options,
+        transport,
       )
     ).data.data;
   },

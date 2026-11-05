@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Download, FileText, LoaderCircle } from "lucide-react";
 import { messaging, type ChatMessage } from "@/services/messaging";
 import { examError } from "@/services/exams";
+import {VoiceMessage} from './voice-message';
 export function MessageFile({
   classId,
   thread,
@@ -17,6 +18,7 @@ export function MessageFile({
   const [error, setError] = useState("");
   const file = message.attachment;
   if (!file) return null;
+  if(message.kind==='voice')return <VoiceMessage path={`/classrooms/${classId}/conversations/${thread}/messages/${message.id}/file`} duration={message.duration_ms} type={file.type}/>;
   return (
     <>
       <button

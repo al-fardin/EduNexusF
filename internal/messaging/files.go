@@ -25,6 +25,9 @@ type Attachment struct {
 	Type string `json:"type"`
 }
 type sendRequest struct {
+	Kind              string `json:"kind"`
+	EmojiSize         int    `json:"emoji_size"`
+	Duration          int    `json:"duration_ms"`
 	Reply             string `json:"reply_to_id"`
 	Body              string `json:"body"`
 	Request           string `json:"client_request_id"`
@@ -38,6 +41,21 @@ func parseMessage(c *fiber.Ctx) (sendRequest, error) {
 		req.Reply = c.FormValue("reply_to_id")
 		req.Body = c.FormValue("body")
 		req.Request = c.FormValue("client_request_id")
+		req.Kind = c.FormValue("kind")
+		if value := c.FormValue("emoji_size"); value != "" {
+			var err error
+			req.EmojiSize, err = strconv.Atoi(value)
+			if err != nil {
+				return req, fiber.NewError(400, "invalid emoji size")
+			}
+		}
+		if value := c.FormValue("duration_ms"); value != "" {
+			var err error
+			req.Duration, err = strconv.Atoi(value)
+			if err != nil {
+				return req, fiber.NewError(400, "invalid voice duration")
+			}
+		}
 		form, err := c.MultipartForm()
 		if err != nil {
 			return req, fiber.NewError(400, "invalid file upload")

@@ -12,6 +12,8 @@ const roots = [
   "message-theme",
   "messaging-settings",
   "notifications",
+  "message-stars",
+  "starred-messages",
 ];
 export function RealtimeProvider() {
   const user = useAuthStore((s) => s.user?.id);
@@ -52,6 +54,7 @@ export function RealtimeProvider() {
         ws.onmessage = (event) => {
           try {
             const e = JSON.parse(event.data);
+            if(e.kind==="call"){window.dispatchEvent(new CustomEvent("edunexus:call",{detail:e}));return}
             if (e.kind === "typing") {
               window.dispatchEvent(
                 new CustomEvent("edunexus:typing", { detail: e }),

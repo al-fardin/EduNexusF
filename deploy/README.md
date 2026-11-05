@@ -43,7 +43,7 @@ must be checked when an account is selected; this setup does not promise free ho
 The migration service is idempotent for fresh installations and databases using
 the shared migration ledger. For importing an older database, back it up first
 and reconcile its already-applied schema with `edunexus_feature_migrations` before
-running migrations 1–34. Do not rerun historical SQL against an untracked schema.
+running migrations 1–36. Do not rerun historical SQL against an untracked schema.
 
 ### Server-side coding runs
 
@@ -131,3 +131,10 @@ change the API connection environment and restart; no automatic live overwrite.
 References: [Firebase Android setup](https://firebase.google.com/docs/android/setup),
 [FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/send/v1-api),
 [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).
+
+## Audio/video calls
+
+Android testing builds are now **1.3.0 / version code 4**. Apply migrations through
+36 before starting the updated API. See [calling setup](../CALLING_AND_RICH_MESSAGES.md)
+for HTTPS capture, the optional TURN relay, native permission behavior and testing
+limits. Keep the web and Android Firebase projects aligned for incoming-call push.

@@ -16,17 +16,19 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
 type PushPayload struct {
-	User  string `json:"user_id"`
-	ID    string `json:"notification_id"`
-	Title string `json:"title"`
-	Body  string `json:"body"`
-	URL   string `json:"url"`
+	User      string `json:"user_id"`
+	ID        string `json:"notification_id"`
+	Title     string `json:"title"`
+	Body      string `json:"body"`
+	URL       string `json:"url"`
+	ExpiresAt int64  `json:"expires_at,omitempty"`
 }
 type pushDevice struct {
 	ID, User, Platform, Token, Binding string
@@ -169,7 +171,13 @@ func (s *pushSender) send(ctx context.Context, d pushDevice, p PushPayload) (boo
 		if !validPushEndpoint(sub.Endpoint) {
 			return true, nil
 		}
-		response, e := webpush.SendNotificationWithContext(ctx, payload, &sub, &webpush.Options{HTTPClient: s.client, Subscriber: s.subject, VAPIDPublicKey: s.webPublic, VAPIDPrivateKey: s.webPrivate, TTL: 3600, Urgency: webpush.UrgencyNormal})
+		ttl := 3600
+		urgency := webpush.UrgencyNormal
+		if p.ExpiresAt > 0 {
+			ttl = max(1, min(3600, int(p.ExpiresAt-time.Now().Unix())))
+			urgency = webpush.UrgencyHigh
+		}
+		response, e := webpush.SendNotificationWithContext(ctx, payload, &sub, &webpush.Options{HTTPClient: s.client, Subscriber: s.subject, VAPIDPublicKey: s.webPublic, VAPIDPrivateKey: s.webPrivate, TTL: ttl, Urgency: urgency})
 		if e != nil {
 			return false, e
 		}
@@ -190,7 +198,11 @@ func (s *pushSender) send(ctx context.Context, d pushDevice, p PushPayload) (boo
 	if e != nil {
 		return false, e
 	}
-	body, _ := json.Marshal(map[string]any{"message": map[string]any{"token": d.Token, "data": map[string]string{"user_id": p.User, "notification_id": p.ID, "title": p.Title, "body": p.Body, "url": p.URL}, "android": map[string]any{"priority": "high", "ttl": "3600s"}}})
+	ttl := 3600
+	if p.ExpiresAt > 0 {
+		ttl = max(1, min(3600, int(p.ExpiresAt-time.Now().Unix())))
+	}
+	body, _ := json.Marshal(map[string]any{"message": map[string]any{"token": d.Token, "data": map[string]string{"user_id": p.User, "notification_id": p.ID, "title": p.Title, "body": p.Body, "url": p.URL, "expires_at": strconv.FormatInt(p.ExpiresAt, 10)}, "android": map[string]any{"priority": "high", "ttl": strconv.Itoa(ttl) + "s"}}})
 	req, e := http.NewRequestWithContext(ctx, "POST", s.fcmURL+url.PathEscape(s.firebaseProject)+"/messages:send", bytes.NewReader(body))
 	if e != nil {
 		return false, e

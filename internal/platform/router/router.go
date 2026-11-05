@@ -14,6 +14,7 @@ import (
 	classroomRoutes "github.com/edunexus/edunexus/internal/classroom/routes"
 	classroomService "github.com/edunexus/edunexus/internal/classroom/service"
 
+	"github.com/edunexus/edunexus/internal/calling"
 	"github.com/edunexus/edunexus/internal/exam"
 	"github.com/edunexus/edunexus/internal/learning"
 	"github.com/edunexus/edunexus/internal/messaging"
@@ -183,6 +184,7 @@ func Register(
 	// Browser sockets authenticate with their one-use ticket, before the general
 	// /messaging JWT prefix middleware (browsers cannot add Authorization here).
 	realtime.Register(app, dbPool)
+	calling.Register(app, dbPool)
 	messaging.Register(app, dbPool)
 
 	classroomRoutes.Register(

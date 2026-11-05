@@ -39,6 +39,8 @@ func Register(app *fiber.App, db *pgxpool.Pool) {
 	c.Get("/conversations", h.Conversations)
 	c.Post("/conversations", h.Create)
 	c.Get("/conversations/:threadID/messages", h.History)
+	c.Get("/conversations/:threadID/stars", h.Stars)
+	c.Put("/conversations/:threadID/messages/:messageID/star", h.Stars)
 	c.Post("/conversations/:threadID/messages", h.Send)
 	c.Post("/conversations/:threadID/read", h.Read)
 }
@@ -190,7 +192,7 @@ func (h *Handler) Conversations(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT t.id::text,u.id::text,trim(u.first_name||' '||u.last_name),peer.member_role,COALESCE(NULLIF(last.body,''),NULLIF(last.file_name,''),''),last.created_at,(SELECT count(*) FROM classroom_messages m WHERE m.conversation_id=t.id AND m.sender_id<>$1::uuid AND m.id>`+cursor+`)`+joins+`JOIN users u ON u.id=peer.user_id LEFT JOIN LATERAL(SELECT body,file_name,created_at FROM classroom_messages WHERE conversation_id=t.id ORDER BY id DESC LIMIT 1) last ON true WHERE `+mine+` AND `+eligible+` AND t.classroom_id=$2::uuid ORDER BY last.created_at DESC NULLS LAST,t.created_at DESC LIMIT 200`, user, c.Params("id"))
+	rows, err := h.db.Query(c.UserContext(), `SELECT t.id::text,u.id::text,trim(u.first_name||' '||u.last_name),peer.member_role,CASE WHEN last.kind='voice' THEN 'Voice message' ELSE COALESCE(NULLIF(last.body,''),NULLIF(last.file_name,''),'') END,last.created_at,(SELECT count(*) FROM classroom_messages m WHERE m.conversation_id=t.id AND m.sender_id<>$1::uuid AND m.id>`+cursor+`)`+joins+`JOIN users u ON u.id=peer.user_id LEFT JOIN LATERAL(SELECT body,file_name,kind,created_at FROM classroom_messages WHERE conversation_id=t.id ORDER BY id DESC LIMIT 1) last ON true WHERE `+mine+` AND `+eligible+` AND t.classroom_id=$2::uuid ORDER BY last.created_at DESC NULLS LAST,t.created_at DESC LIMIT 200`, user, c.Params("id"))
 	if err != nil {
 		return err
 	}
@@ -212,6 +214,9 @@ func (h *Handler) Conversations(c *fiber.Ctx) error {
 }
 
 type Message struct {
+	Kind       string      `json:"kind"`
+	EmojiSize  int         `json:"emoji_size"`
+	Duration   int         `json:"duration_ms"`
 	ID         string      `json:"id"`
 	Sender     string      `json:"sender_id"`
 	Body       string      `json:"body"`
@@ -237,7 +242,7 @@ func scan(row pgx.Row) (Message, error) {
 	var name, media string
 	var reactions, reply []byte
 	var size int64
-	err := row.Scan(&m.ID, &m.Sender, &m.Body, &m.At, &m.Request, &name, &size, &media, &m.hash, &reactions, &reply, &m.EditedAt, &m.DeletedAt)
+	err := row.Scan(&m.ID, &m.Sender, &m.Body, &m.At, &m.Request, &name, &size, &media, &m.hash, &reactions, &reply, &m.EditedAt, &m.DeletedAt, &m.Kind, &m.EmojiSize, &m.Duration)
 	if err == nil {
 		err = json.Unmarshal(reactions, &m.Reactions)
 		if err == nil && len(reply) > 0 && string(reply) != "null" {
@@ -250,7 +255,7 @@ func scan(row pgx.Row) (Message, error) {
 	return m, err
 }
 
-const columns = `id::text,sender_id::text,body,created_at,client_request_id::text,file_name,file_size,media_type,file_hash,COALESCE((SELECT json_agg(json_build_object('emoji',r.emoji,'user_id',r.user_id::text) ORDER BY r.user_id) FROM classroom_message_reactions r WHERE r.message_id=classroom_messages.id),'[]'::json),(SELECT json_build_object('id',r.id::text,'sender_id',r.sender_id::text,'body',CASE WHEN r.deleted_at IS NOT NULL THEN 'Message deleted' ELSE left(COALESCE(NULLIF(r.body,''),r.file_name),200) END,'deleted',r.deleted_at IS NOT NULL) FROM classroom_messages r WHERE r.id=classroom_messages.reply_to_id AND r.conversation_id=classroom_messages.conversation_id),edited_at,deleted_at`
+const columns = `id::text,sender_id::text,body,created_at,client_request_id::text,file_name,file_size,media_type,file_hash,COALESCE((SELECT json_agg(json_build_object('emoji',r.emoji,'user_id',r.user_id::text) ORDER BY r.user_id) FROM classroom_message_reactions r WHERE r.message_id=classroom_messages.id),'[]'::json),(SELECT json_build_object('id',r.id::text,'sender_id',r.sender_id::text,'body',CASE WHEN r.deleted_at IS NOT NULL THEN 'Message deleted' WHEN r.kind='voice' THEN 'Voice message' ELSE left(COALESCE(NULLIF(r.body,''),r.file_name),200) END,'deleted',r.deleted_at IS NOT NULL) FROM classroom_messages r WHERE r.id=classroom_messages.reply_to_id AND r.conversation_id=classroom_messages.conversation_id),edited_at,deleted_at,kind,emoji_size,duration_ms`
 
 func (h *Handler) History(c *fiber.Ctx) error {
 	user, authErr := h.thread(c)
@@ -269,7 +274,7 @@ func (h *Handler) History(c *fiber.Ctx) error {
 	if utf8.RuneCountInString(query) > 200 {
 		return fiber.NewError(400, "search must be at most 200 characters")
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT `+columns+` FROM classroom_messages WHERE conversation_id=$1::uuid AND id<$2 AND ($3='' OR (deleted_at IS NULL AND strpos(lower(body||' '||file_name),lower($3))>0)) ORDER BY classroom_messages.id DESC LIMIT 51`, c.Params("threadID"), before, query)
+	rows, err := h.db.Query(c.UserContext(), `SELECT `+columns+` FROM classroom_messages WHERE conversation_id=$1::uuid AND id<$2 AND ($3='' OR (deleted_at IS NULL AND strpos(lower(body||' '||file_name),lower($3))>0)) AND(NOT $4 OR (deleted_at IS NULL AND EXISTS(SELECT 1 FROM classroom_message_stars s WHERE s.message_id=classroom_messages.id AND s.user_id=$5::uuid))) ORDER BY classroom_messages.id DESC LIMIT 51`, c.Params("threadID"), before, query, c.Query("starred") == "1", user)
 	if err != nil {
 		return err
 	}
@@ -309,6 +314,9 @@ func (h *Handler) Send(c *fiber.Ctx) error {
 		return err
 	}
 	req.Body = strings.TrimSpace(req.Body)
+	if err = validateRichMessage(&req); err != nil {
+		return err
+	}
 	if (req.Body == "" && len(req.file) == 0) || utf8.RuneCountInString(req.Body) > 4000 || len(req.Body) > 16000 {
 		return fiber.NewError(400, "message must contain 1–4000 characters")
 	}
@@ -329,7 +337,7 @@ func (h *Handler) Send(c *fiber.Ctx) error {
 		if err = tx.QueryRow(c.UserContext(), `SELECT conversation_id::text FROM classroom_messages WHERE id=$1::bigint`, existing.ID).Scan(&existingThread); err != nil {
 			return err
 		}
-		if existingThread != c.Params("threadID") || (existing.Body != req.Body && existing.EditedAt == nil && existing.DeletedAt == nil) || replyID(existing.Reply) != req.Reply || existing.hash != req.hash || (existing.Attachment != nil && existing.Attachment.Name != req.name) {
+		if existingThread != c.Params("threadID") || (existing.Body != req.Body && existing.EditedAt == nil && existing.DeletedAt == nil) || replyID(existing.Reply) != req.Reply || existing.hash != req.hash || existing.Kind != req.Kind || existing.EmojiSize != req.EmojiSize || existing.Duration != req.Duration || (existing.Attachment != nil && existing.Attachment.Name != req.name) {
 			return fiber.NewError(409, "message request ID already used")
 		}
 		return result(c, existing)
@@ -390,7 +398,7 @@ func (h *Handler) Send(c *fiber.Ctx) error {
 			os.Remove(filepath.Join(fileDirectory(), key))
 		}
 	}()
-	m, err := scan(tx.QueryRow(c.UserContext(), `INSERT INTO classroom_messages(conversation_id,sender_id,client_request_id,body,file_name,file_size,media_type,storage_key,file_hash,reply_to_id) VALUES($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10) RETURNING `+columns, c.Params("threadID"), user, req.Request, req.Body, req.name, len(req.file), req.media, key, req.hash, reply))
+	m, err := scan(tx.QueryRow(c.UserContext(), `INSERT INTO classroom_messages(conversation_id,sender_id,client_request_id,body,file_name,file_size,media_type,storage_key,file_hash,reply_to_id,kind,emoji_size,duration_ms) VALUES($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING `+columns, c.Params("threadID"), user, req.Request, req.Body, req.name, len(req.file), req.media, key, req.hash, reply, req.Kind, req.EmojiSize, req.Duration))
 	if err != nil {
 		return err
 	}

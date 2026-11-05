@@ -2,6 +2,11 @@
 import { sendTyping } from "@/store/realtime-store";
 import { MessageActions } from "./message-actions";
 import { MessageSearch } from "./message-search";
+import { CallButtons } from "./call-buttons";
+import { StarredMessages } from "./starred-messages";
+import { GrowingEmojiButton } from "./growing-emoji";
+import { VoiceRecorder } from "./voice-recorder";
+import { useCallStore } from "@/store/call-store";
 import type { ChatMessage } from "@/services/messaging";
 import { useRealtimeStore } from "@/store/realtime-store";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -354,6 +359,28 @@ function ChatThread({
     }
   });
   const [reply, setReply] = useState<ChatMessage | null>(null);
+  const [emojiSize, setEmojiSize] = useState(1);
+  const [emojiDraft, setEmojiDraft] = useState(false);
+  const [voiceDuration, setVoiceDuration] = useState(0);
+  const [voicePreview, setVoicePreview] = useState("");
+  const voiceObject = useRef("");
+  const callPhase = useCallStore((s) => s.phase);
+  const stars = useQuery({
+    queryKey: ["message-stars", user, classId, thread],
+    queryFn: () => messaging.stars(classId, thread),
+  });
+  useEffect(
+    () => () => {
+      if (voiceObject.current) URL.revokeObjectURL(voiceObject.current);
+    },
+    [],
+  );
+  function clearVoice() {
+    setVoiceDuration(0);
+    setVoicePreview("");
+    if (voiceObject.current) URL.revokeObjectURL(voiceObject.current);
+    voiceObject.current = "";
+  }
   const [typing, setTyping] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const uploadAbort = useRef<AbortController | null>(null);
@@ -403,7 +430,9 @@ function ChatThread({
   const [error, setError] = useState("");
   const [atBottom, setAtBottom] = useState(true);
   const request = useRef<string | null>(null);
-  function resetRequest(){request.current=null}
+  function resetRequest() {
+    request.current = null;
+  }
   const viewport = useRef<HTMLDivElement>(null);
   const read = useRef("");
   const key = ["messages", user, classId, thread];
@@ -473,8 +502,18 @@ function ChatThread({
       if (box) box.scrollTop = previousTop + box.scrollHeight - previousHeight;
     });
   }
-  async function send() {
-    if (busy || (!draft.trim() && !file) || !canSend) return;
+  async function send(override?: { body: string; size: number }) {
+    const body = override?.body ?? draft.trim();
+    const selectedFile = override ? null : file;
+    const kind =
+      override || emojiDraft ? "emoji" : voiceDuration ? "voice" : "text";
+    const size = override?.size ?? emojiSize;
+    if (busy || (!body && !selectedFile) || !canSend) return;
+    if (override) {
+      setDraft(body);
+      setEmojiSize(size);
+      setEmojiDraft(true);
+    }
     setBusy(true);
     setError("");
     uploadAbort.current = new AbortController();
@@ -484,12 +523,17 @@ function ChatThread({
       const sent = await messaging.send(
         classId,
         thread,
-        draft.trim(),
+        body,
         request.current,
-        file,
+        selectedFile,
         reply?.id ?? "",
         {
           signal: uploadAbort.current.signal,
+          message: {
+            kind,
+            emoji_size: kind === "emoji" ? size : 1,
+            duration_ms: kind === "voice" ? voiceDuration : 0,
+          },
           onUploadProgress: (e) =>
             setUploadProgress(
               Math.min(
@@ -517,6 +561,9 @@ function ChatThread({
           : old,
       );
       setDraft("");
+      setEmojiDraft(false);
+      setEmojiSize(1);
+      clearVoice();
       setReply(null);
       sendTyping(classId, thread, false);
       setFile(null);
@@ -559,6 +606,7 @@ function ChatThread({
           <h2>{peer?.name ?? "Conversation"}</h2>
           <p>{classroomName}</p>
         </div>
+        <CallButtons thread={thread} disabled={!canSend || !peer} />
         <MessageSearch
           classId={classId}
           thread={thread}
@@ -571,6 +619,12 @@ function ChatThread({
           peerId={peer?.role === "student" ? peer.peer_id : undefined}
         />
       </header>
+      <StarredMessages
+        classId={classId}
+        thread={thread}
+        canSend={canSend}
+        onReply={beginReply}
+      />
       <div className="en-chat-scroll-area">
         <ChatWallpaper
           theme={override.data?.theme || settings.data?.theme || "violet"}
@@ -614,6 +668,7 @@ function ChatThread({
                 thread={thread}
                 message={m}
                 canSend={canSend}
+                starred={stars.data?.includes(m.id)}
                 onReply={beginReply}
               >
                 {m.reply && (
@@ -629,7 +684,23 @@ function ChatThread({
                 {m.attachment && (
                   <MessageFile classId={classId} thread={thread} message={m} />
                 )}
-                {m.body && <p>{m.body}</p>}
+                {m.body && (
+                  <p
+                    data-emoji-size={m.emoji_size}
+                    className={
+                      m.kind === "emoji" && !m.deleted_at
+                        ? "en-big-emoji"
+                        : undefined
+                    }
+                    style={
+                      m.kind === "emoji" && !m.deleted_at
+                        ? { fontSize: `${32 + 20 * m.emoji_size}px` }
+                        : undefined
+                    }
+                  >
+                    {m.body}
+                  </p>
+                )}
                 <time dateTime={m.created_at}>
                   {new Date(m.created_at).toLocaleString(undefined, {
                     month: "short",
@@ -738,7 +809,10 @@ function ChatThread({
         <div className="en-chat-file-draft">
           <Paperclip size={16} />
           <span>
-            {file.name} · {Math.max(1, Math.round(file.size / 1024))} KB
+            {voiceDuration
+              ? `Voice message · ${Math.floor(voiceDuration / 60000)}:${(Math.floor(voiceDuration / 1000) % 60).toString().padStart(2, "0")}`
+              : file.name}{" "}
+            · {Math.max(1, Math.round(file.size / 1024))} KB
           </span>
           <button
             type="button"
@@ -747,6 +821,7 @@ function ChatThread({
             disabled={busy}
             onClick={() => {
               setFile(null);
+              clearVoice();
               resetRequest();
               if (fileInput.current) fileInput.current.value = "";
             }}
@@ -754,6 +829,14 @@ function ChatThread({
             <X size={17} />
           </button>
         </div>
+      )}
+      {voicePreview && (
+        <audio
+          className="en-voice-draft-audio"
+          controls
+          src={voicePreview}
+          aria-label="Preview voice recording"
+        />
       )}
       <form
         className="en-chat-compose"
@@ -763,9 +846,40 @@ function ChatThread({
         }}
       >
         <div className="en-compose-tools">
+          <VoiceRecorder
+            disabled={
+              busy ||
+              !canSend ||
+              query.isError ||
+              !!file ||
+              (callPhase !== "idle" && callPhase !== "ended")
+            }
+            onError={setError}
+            onReady={(recording, duration) => {
+              setFile(recording);
+              setVoiceDuration(duration);
+              setDraft("");
+              setEmojiDraft(false);
+              setEmojiSize(1);
+              if (voiceObject.current) URL.revokeObjectURL(voiceObject.current);
+              voiceObject.current = URL.createObjectURL(recording);
+              setVoicePreview(voiceObject.current);
+              resetRequest();
+            }}
+          />
           <EmojiPicker
-            disabled={busy || !canSend || query.isError}
+            disabled={busy || !canSend || query.isError || !!voiceDuration}
+            onGrow={
+              !file
+                ? (emoji, size) => {
+                    resetRequest();
+                    void send({ body: emoji, size });
+                  }
+                : undefined
+            }
             onSelect={(emoji) => {
+              setEmojiDraft(false);
+              setEmojiSize(1);
               const start = textarea.current?.selectionStart ?? draft.length;
               const end = textarea.current?.selectionEnd ?? start;
               const next = draft.slice(0, start) + emoji + draft.slice(end);
@@ -805,6 +919,9 @@ function ChatThread({
                 return;
               }
               setError("");
+              clearVoice();
+              setEmojiDraft(false);
+              setEmojiSize(1);
               setFile(selected);
               resetRequest();
             }}
@@ -817,27 +934,42 @@ function ChatThread({
           maxLength={4000}
           rows={2}
           value={draft}
-          disabled={busy || query.isError || !canSend}
+          disabled={busy || query.isError || !canSend || !!voiceDuration}
           onChange={(e) => {
             setDraft(e.target.value);
+            setEmojiDraft(false);
+            setEmojiSize(1);
             sendTyping(classId, thread, !!e.target.value.trim());
             resetRequest();
           }}
         />
-        <button
-          className="en-solid-button"
-          type="submit"
-          disabled={
-            busy || (!draft.trim() && !file) || query.isError || !canSend
-          }
-          aria-label="Send message"
-        >
-          {busy ? (
-            <LoaderCircle size={20} className="animate-spin" />
-          ) : (
-            <Send size={20} />
-          )}
-        </button>
+        {!draft.trim() && !file && !busy ? (
+          <GrowingEmojiButton
+            emoji="👍"
+            quick
+            disabled={!canSend || query.isError}
+            onSelect={() => {}}
+            onGrow={(emoji, size) => {
+              resetRequest();
+              void send({ body: emoji, size });
+            }}
+          />
+        ) : (
+          <button
+            className="en-solid-button"
+            type="submit"
+            disabled={
+              busy || (!draft.trim() && !file) || query.isError || !canSend
+            }
+            aria-label="Send message"
+          >
+            {busy ? (
+              <LoaderCircle size={20} className="animate-spin" />
+            ) : (
+              <Send size={20} />
+            )}
+          </button>
+        )}
       </form>
     </section>
   );

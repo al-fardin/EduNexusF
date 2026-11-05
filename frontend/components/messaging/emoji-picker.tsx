@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Smile, X } from "lucide-react";
+import { GrowingEmojiButton } from "./growing-emoji";
 const groups = {
   Faces: [
     "😀",
@@ -60,9 +61,11 @@ const groups = {
 export function EmojiPicker({
   onSelect,
   disabled,
+  onGrow,
 }: {
   onSelect: (emoji: string) => void;
   disabled?: boolean;
+  onGrow?: (emoji: string, size: number) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [group, setGroup] = useState<keyof typeof groups>("Faces");
@@ -112,17 +115,22 @@ export function EmojiPicker({
           </div>
           <div className="en-emoji-grid">
             {groups[group].map((emoji) => (
-              <button
-                type="button"
+              <GrowingEmojiButton
                 key={emoji}
-                aria-label={`Insert ${emoji}`}
-                onClick={() => {
+                emoji={emoji}
+                onSelect={() => {
                   onSelect(emoji);
                   setOpen(false);
                 }}
-              >
-                {emoji}
-              </button>
+                onGrow={
+                  onGrow
+                    ? (emoji, size) => {
+                        onGrow(emoji, size);
+                        setOpen(false);
+                      }
+                    : undefined
+                }
+              />
             ))}
           </div>
         </div>

@@ -5,7 +5,19 @@ import { api } from "@/lib/api";
 import { Download, X } from "lucide-react";
 declare global {
   interface Window {
-    EduNexusApp?: { version: () => string };
+    EduNexusApp?: {
+      version: () => string;
+      keepCallAlive?: (
+        id: string,
+        session: string,
+        token: string,
+        video: boolean,
+      ) => void;
+      stopCallService?: (id: string) => void;
+      updateCallToken?: (id: string, token: string) => void;
+      setSpeaker?: (enabled: boolean) => void;
+      resetAudio?: () => void;
+    };
   }
 }
 type Release = {

@@ -39,7 +39,7 @@ func (h *Handler) ChangeMessage(c *fiber.Ctx) error {
 	}
 	if c.Method() == "DELETE" {
 		if !deleted {
-			_, err = tx.Exec(c.UserContext(), `UPDATE classroom_messages SET body='Message deleted',file_name='',file_size=0,media_type='',storage_key='',file_hash='',deleted_at=now() WHERE id=$1`, id)
+			_, err = tx.Exec(c.UserContext(), `UPDATE classroom_messages SET kind='text',emoji_size=1,duration_ms=0,body='Message deleted',file_name='',file_size=0,media_type='',storage_key='',file_hash='',deleted_at=now() WHERE id=$1`, id)
 			if err == nil {
 				_, err = tx.Exec(c.UserContext(), `DELETE FROM classroom_message_reactions WHERE message_id=$1`, id)
 			}
@@ -68,7 +68,7 @@ func (h *Handler) ChangeMessage(c *fiber.Ctx) error {
 		if !allowed {
 			return fiber.NewError(403, "your teacher has paused your messages")
 		}
-		_, err = tx.Exec(c.UserContext(), `UPDATE classroom_messages SET body=$2,edited_at=CASE WHEN body IS DISTINCT FROM $2 THEN now() ELSE edited_at END WHERE id=$1`, id, req.Body)
+		_, err = tx.Exec(c.UserContext(), `UPDATE classroom_messages SET kind=CASE WHEN kind='emoji' THEN 'text' ELSE kind END,emoji_size=1,body=$2,edited_at=CASE WHEN body IS DISTINCT FROM $2 THEN now() ELSE edited_at END WHERE id=$1`, id, req.Body)
 	}
 	if err != nil {
 		return err

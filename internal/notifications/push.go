@@ -194,7 +194,9 @@ func (h *pushHandler) deliverPush(ctx context.Context) error {
 	var attempts int
 	var d pushDevice
 	var p PushPayload
-	err := h.db.QueryRow(ctx, `UPDATE notification_push_outbox o SET status='sending',attempts=o.attempts+1,next_at=now()+interval '2 minutes' FROM(SELECT o.id FROM notification_push_outbox o WHERE o.status IN ('pending','sending') AND o.next_at<=now() AND o.attempts<5 ORDER BY o.id FOR UPDATE SKIP LOCKED LIMIT 1) candidate,user_notifications n,notification_devices d WHERE o.id=candidate.id AND n.id=o.notification_id AND d.id=o.device_id RETURNING o.id,o.attempts,d.id::text,d.user_id::text,d.platform,d.token,d.subscription,d.binding_id::text,n.user_id::text,n.id::text,n.title,n.body,n.url`).Scan(&job, &attempts, &d.ID, &d.User, &d.Platform, &d.Token, &d.Subscription, &d.Binding, &p.User, &p.ID, &p.Title, &p.Body, &p.URL)
+	var kind string
+	var created time.Time
+	err := h.db.QueryRow(ctx, `UPDATE notification_push_outbox o SET status='sending',attempts=o.attempts+1,next_at=now()+interval '2 minutes' FROM(SELECT o.id FROM notification_push_outbox o WHERE o.status IN ('pending','sending') AND o.next_at<=now() AND o.attempts<5 ORDER BY o.id FOR UPDATE SKIP LOCKED LIMIT 1) candidate,user_notifications n,notification_devices d WHERE o.id=candidate.id AND n.id=o.notification_id AND d.id=o.device_id RETURNING o.id,o.attempts,d.id::text,d.user_id::text,d.platform,d.token,d.subscription,d.binding_id::text,n.user_id::text,n.id::text,n.title,n.body,n.url,n.kind,n.created_at`).Scan(&job, &attempts, &d.ID, &d.User, &d.Platform, &d.Token, &d.Subscription, &d.Binding, &p.User, &p.ID, &p.Title, &p.Body, &p.URL, &kind, &created)
 	if err != nil {
 		return err
 	}
@@ -202,6 +204,12 @@ func (h *pushHandler) deliverPush(ctx context.Context) error {
 	err = h.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM user_notifications n JOIN notification_devices d ON d.id=$2::uuid AND d.user_id=n.user_id JOIN notification_preferences p ON p.user_id=n.user_id JOIN classroom_memberships m ON m.classroom_id=n.classroom_id AND m.user_id=n.user_id JOIN classrooms c ON c.id=n.classroom_id JOIN users u ON u.id=n.user_id WHERE n.id=$1::uuid AND d.enabled AND p.push_enabled AND p.app_enabled AND n.read_at IS NULL AND n.created_at>=d.registered_at AND n.created_at>now()-interval '1 day' AND m.status='active' AND c.status='active' AND c.deleted_at IS NULL AND u.status='active' AND u.deleted_at IS NULL)`, p.ID, d.ID).Scan(&allowed)
 	if err != nil {
 		return err
+	}
+	if kind == "call" {
+		p.ExpiresAt = created.Add(45 * time.Second).Unix()
+		if time.Now().Unix() >= p.ExpiresAt {
+			allowed = false
+		}
 	}
 	state := "skipped"
 	if allowed && d.User == p.User {

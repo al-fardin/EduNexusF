@@ -1,0 +1,36 @@
+# Optional relay for calls between different networks. Set a public IPv4 and
+# the same WEBRTC_TURN_SECRET used by the API; this file is not enabled by default.
+services:
+  turn:
+    image: coturn/coturn:4.18.0-alpine
+    restart: unless-stopped
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "49160-49260:49160-49260/udp"
+    command:
+      - -n
+      - --log-file=stdout
+      - --realm=${DOMAIN:?Set DOMAIN}
+      - --use-auth-secret
+      - --static-auth-secret=${WEBRTC_TURN_SECRET:?Set WEBRTC_TURN_SECRET}
+      - --external-ip=${TURN_PUBLIC_IP:?Set TURN_PUBLIC_IP}
+      - --listening-port=3478
+      - --min-port=49160
+      - --max-port=49260
+      - --fingerprint
+      - --no-cli
+      - --no-multicast-peers
+      - --no-tcp-relay
+      - --user-quota=4
+      - --total-quota=200
+      - --max-bps=400000
+      - --denied-peer-ip=0.0.0.0-0.255.255.255
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=127.0.0.0-127.255.255.255
+      - --denied-peer-ip=169.254.0.0-169.254.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+      - --denied-peer-ip=::1
+      - --denied-peer-ip=fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+      - --denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff

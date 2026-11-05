@@ -40,6 +40,7 @@ self.addEventListener("push", (event) =>
       } catch {
         return;
       }
+      if(payload?.expires_at&&Date.now()/1000>=payload.expires_at)return;
       if (!payload?.user_id || (await binding(false)) !== payload.user_id)
         return;
       const windows = await self.clients.matchAll({
