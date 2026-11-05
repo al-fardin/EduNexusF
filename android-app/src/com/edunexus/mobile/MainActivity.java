@@ -50,6 +50,7 @@ public class MainActivity extends Activity {
  private static final int OPEN_FILE=101,SAVE_FILE=102;
  @Override public void onCreate(Bundle state){super.onCreate(state);activeHost=new java.lang.ref.WeakReference<>(this);
   workspace=Config.LOCAL_TEST?getPreferences(0).getString("workspace",Config.SERVER_URL):Config.SERVER_URL;
+  if(Config.LOCAL_TEST){String previous=getPreferences(0).getString("server_default","");if(!Config.SERVER_URL.equals(previous)&&Config.SERVER_URL.startsWith("https://")&&(workspace.startsWith("http://")||workspace.equals(previous)))workspace=Config.SERVER_URL;getPreferences(0).edit().putString("workspace",workspace).putString("server_default",Config.SERVER_URL).apply();}
   root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setBackgroundColor(Color.rgb(252,250,255));setContentView(root);applyAppearance(getPreferences(0).getBoolean("dark",false));
   root.setOnApplyWindowInsetsListener((v,insets)->{int top=insets.getSystemWindowInsetTop(),bottom=insets.getSystemWindowInsetBottom();boolean keyboard=false;
    if(Build.VERSION.SDK_INT>=30){android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars());android.graphics.Insets ime=insets.getInsets(WindowInsets.Type.ime());top=bars.top;bottom=Math.max(bars.bottom,ime.bottom);keyboard=insets.isVisible(WindowInsets.Type.ime());}

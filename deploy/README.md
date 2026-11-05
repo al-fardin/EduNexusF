@@ -134,7 +134,35 @@ References: [Firebase Android setup](https://firebase.google.com/docs/android/se
 
 ## Audio/video calls
 
-Android testing builds are now **1.3.0 / version code 4**. Apply migrations through
+Android testing builds are now **1.3.1 / version code 5**. Apply migrations through
 36 before starting the updated API. See [calling setup](../CALLING_AND_RICH_MESSAGES.md)
 for HTTPS capture, the optional TURN relay, native permission behavior and testing
 limits. Keep the web and Android Firebase projects aligned for incoming-call push.
+
+### Temporary phone HTTPS testing
+
+A LAN `http://192.168...` or `http://10...` address cannot capture phone media.
+For a short test, Cloudflare Quick Tunnel can supply a valid HTTPS origin without
+a hosting account. It exposes the normal login page; academic API authorization
+remains required. Quick URLs change after restart and can expire after connection
+loss. Keep the laptop, Docker, frontend, API, gateway and tunnel running.
+
+Use an isolated production frontend (for example `.next-buildcheck` on loopback
+port 3010), not a public Next development server. Build and run `apps/mobile-preview`
+on loopback 3011, then point `cloudflared tunnel --url http://127.0.0.1:3011` at it.
+Pass its generated HTTPS origin to the gateway's `-public-url` flag. The gateway
+routes `/api/*` and `/messaging/socket` to the API and serves the frontend otherwise.
+It returns the public `wss:` address in realtime tickets; tickets, bearer tokens and
+backend origin checks remain required. Add the **exact** generated HTTPS origin to
+the API's `REALTIME_ALLOWED_ORIGINS` environment before starting/restarting the API.
+Do not add a wildcard origin, disable TLS validation or relax WebView security.
+
+Build with `android-app/BUILD_ANDROID_FCM.ps1 -ServerUrl https://YOUR-TUNNEL-HOST`.
+Android 1.3.1 moves saved HTTP test addresses to the build's HTTPS default on update.
+If an old tunnel expires, the connection error screen's **Workspace address** button
+allows entering the replacement HTTPS origin. Changing origins requires signing in
+again. A quick tunnel is not a TURN media relay; restrictive or different networks
+can still need the TURN configuration above. No physical-phone call is claimed
+verified by an HTTPS/API/WebSocket smoke test.
+
+Reference: [Cloudflare Quick Tunnel limitations](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).

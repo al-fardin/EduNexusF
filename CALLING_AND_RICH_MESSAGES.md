@@ -43,12 +43,15 @@ total allocation and bandwidth quotas and denies private/loopback peer addresses
 For networks that require TURN over TLS, configure a valid TURN TLS certificate
 and a `turns:` URL with your relay provider; HTTPS web hosting alone is not a relay.
 
-## Android 1.3.0
+## Android 1.3.1
 
-Version code 4 adds camera/microphone runtime permission handling for the trusted
+Version code 5 includes camera/microphone runtime permission handling for the trusted
 workspace origin. It grants only requested capture resources after Android
 permission approval. Calls never auto-answer or enable capture on an incoming
 notification. Native speaker routing restores its previous state after the call.
+Updating a local testing build to an HTTPS default migrates the saved HTTP
+workspace address. An expired temporary address can be changed from the native
+connection error screen. See the temporary HTTPS testing notes in `deploy/README.md`.
 
 An explicit call starts a foreground service with the appropriate microphone/
 camera service type, an ongoing End-call notification, bounded wake lock and

@@ -39,7 +39,7 @@ $config="package com.edunexus.mobile; public final class Config { public static 
 [IO.File]::WriteAllText((Join-Path $buildPath 'gen\Config.java'),$config)
 & "$buildTools\aapt2.exe" compile --dir (Join-Path $PSScriptRoot 'res') -o "$buildPath\compiled.zip"
 if($LASTEXITCODE -ne 0){throw 'Android resource compilation failed'}
-& "$buildTools\aapt2.exe" link -o "$buildPath\resources.apk" -I $androidJar --manifest "$buildPath\AndroidManifest.xml" --java "$buildPath\gen" -R "$buildPath\compiled.zip" --min-sdk-version 24 --target-sdk-version 35 --version-code 4 --version-name '1.3.0' --auto-add-overlay
+& "$buildTools\aapt2.exe" link -o "$buildPath\resources.apk" -I $androidJar --manifest "$buildPath\AndroidManifest.xml" --java "$buildPath\gen" -R "$buildPath\compiled.zip" --min-sdk-version 24 --target-sdk-version 35 --version-code 5 --version-name '1.3.1' --auto-add-overlay
 if($LASTEXITCODE -ne 0){throw 'Android resource linking failed'}
 $sources=@(Get-ChildItem (Join-Path $PSScriptRoot 'src'),"$buildPath\gen" -Filter '*.java' -Recurse | ForEach-Object FullName)
 & (Join-Path $javaHome 'bin\javac.exe') -encoding UTF-8 --release 8 -classpath $androidJar -d "$buildPath\classes" @sources
