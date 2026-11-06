@@ -29,8 +29,8 @@ jobs:
       EDUNEXUS_ANDROID_KEYPASS: ${{ secrets.ANDROID_KEYPASS }}
       EDUNEXUS_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
           java-version: '25'
@@ -40,8 +40,10 @@ jobs:
           curl --fail --location --retry 3 --output "$RUNNER_TEMP/google-java-format.jar" https://github.com/google/google-java-format/releases/download/v1.33.0/google-java-format-1.33.0-all-deps.jar
           echo "697707af07c7753f29cba415c6a76b7882702ff464f807da98b28069b8751910  $RUNNER_TEMP/google-java-format.jar" | sha256sum --check
           java -jar "$RUNNER_TEMP/google-java-format.jar" --dry-run --set-exit-if-changed $(git ls-files 'android-app/src/*.java' 'android-app/src/**/*.java' 'android-app/firebase-src/**/*.java')
-      - uses: android-actions/setup-android@v3
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: platform-tools
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           gradle-version: '9.1.0'
       - name: Prepare build inputs
@@ -78,7 +80,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$apk"
           cp "$apk" "release-bundle/EduNexus-${variant,,}.apk"
           if [ "$RELEASE" = true ]; then python deploy/android-manifest.py release-bundle/EduNexus-release.apk release-bundle/android.json; fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: EduNexus-Android-${{ inputs.release && 'release' || 'debug' }}
           path: release-bundle/

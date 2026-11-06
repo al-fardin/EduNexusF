@@ -6,6 +6,9 @@ build; Go formatting, vet and race tests against a fresh PostgreSQL database;
 desktop unit tests; and Java formatting plus Android compilation/signature.
 These checks reduce regression risk. They are not proof of perfect code,
 complete test coverage, production load capacity or physical-device behavior.
+Workflow actions use verified release commit SHAs. Android setup installs current
+platform tools and the explicitly required SDK packages, not the retired `tools`
+package. Review upstream release notes before updating action pins.
 
 Verified locally on 2026-11-06: frontend lint with zero errors/warnings,
 TypeScript, 16 Node tests and production build; all scoped Go tests including
