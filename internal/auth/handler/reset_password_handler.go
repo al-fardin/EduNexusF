@@ -1,5 +1,3 @@
-
-
 package handler
 
 import (
@@ -9,6 +7,7 @@ import (
 	"github.com/edunexus/edunexus/internal/platform/response"
 	validatorpkg "github.com/edunexus/edunexus/internal/platform/validator"
 )
+
 // ResetPassword godoc
 // @Summary Reset password
 // @Description Reset password using reset token

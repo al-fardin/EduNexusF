@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
-	"github.com/edunexus/edunexus/internal/platform/security"
 	db "github.com/edunexus/edunexus/internal/platform/database/sqlc"
+	"github.com/edunexus/edunexus/internal/platform/security"
 )
 
 func (s *UserService) ResetPassword(
@@ -34,12 +34,12 @@ func (s *UserService) ResetPassword(
 	}
 
 	err = s.repo.UpdatePassword(
-    ctx,
-    db.UpdatePasswordParams{
-        ID:           tokenData.UserID,
-        PasswordHash: hash,
-    },
-)
+		ctx,
+		db.UpdatePasswordParams{
+			ID:           tokenData.UserID,
+			PasswordHash: hash,
+		},
+	)
 	if err != nil {
 		return err
 	}

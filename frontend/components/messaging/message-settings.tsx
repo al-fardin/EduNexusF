@@ -115,7 +115,46 @@ export function MessageSettings({
               Everyone in the conversation sees theme changes.
             </DialogDescription>
           </DialogHeader>
-          {thread&&<div className="en-conversation-shortcuts"><button type="button" className="en-outline-button" onClick={()=>{setOpen(false);setTimeout(()=>window.dispatchEvent(new CustomEvent('edunexus:open-call-history',{detail:thread})),0)}}>Call history</button><button type="button" className="en-outline-button" onClick={()=>{setOpen(false);setTimeout(()=>window.dispatchEvent(new CustomEvent('edunexus:open-starred',{detail:thread})),0)}}>Starred messages</button></div>}
+          {thread && (
+            <div className="en-conversation-shortcuts">
+              <button
+                type="button"
+                className="en-outline-button"
+                onClick={() => {
+                  setOpen(false);
+                  setTimeout(
+                    () =>
+                      window.dispatchEvent(
+                        new CustomEvent("edunexus:open-call-history", {
+                          detail: thread,
+                        }),
+                      ),
+                    0,
+                  );
+                }}
+              >
+                Call history
+              </button>
+              <button
+                type="button"
+                className="en-outline-button"
+                onClick={() => {
+                  setOpen(false);
+                  setTimeout(
+                    () =>
+                      window.dispatchEvent(
+                        new CustomEvent("edunexus:open-starred", {
+                          detail: thread,
+                        }),
+                      ),
+                    0,
+                  );
+                }}
+              >
+                Starred messages
+              </button>
+            </div>
+          )}
           {query.isError ? (
             <p role="alert">{examError(query.error)}</p>
           ) : (

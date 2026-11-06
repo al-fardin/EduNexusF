@@ -20,9 +20,11 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
-
 	log := logger.NewPretty()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Invalid server configuration")
+	}
 
 	dbCfg := database.NewConfig(cfg)
 

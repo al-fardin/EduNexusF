@@ -18,7 +18,7 @@ import (
 // inherit the existing JWT middleware and classroom/exam authorization.
 func RegisterPhase3(g fiber.Router, h *Handler) {
 	g.Post("/:examID/run", h.RunCode)
-    g.Post("/:examID/run-workspace", h.RunWorkspace)
+	g.Post("/:examID/run-workspace", h.RunWorkspace)
 	g.Post("/:examID/activity", h.LogActivity)
 	g.Get("/:examID/activity/:attemptID", h.ActivityReport)
 }

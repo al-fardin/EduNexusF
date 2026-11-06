@@ -5,6 +5,7 @@ import (
 
 	"github.com/edunexus/edunexus/internal/platform/response"
 )
+
 // Me godoc
 // @Summary Get current user
 // @Description Get authenticated user's profile

@@ -48,7 +48,7 @@ func (s *UserService) ForgotPassword(
 		return err
 	}
 
-link := "http://localhost:3000/reset-password?token=" + token
+	link := "http://localhost:3000/reset-password?token=" + token
 
 	body := `
 <h2>Reset your password</h2>

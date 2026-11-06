@@ -1,5 +1,13 @@
 name: Build Android app
 on:
+  workflow_call:
+    inputs:
+      workspace_url:
+        required: true
+        type: string
+      release:
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       workspace_url:
@@ -26,6 +34,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
+      - name: Verify Java formatting
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/google-java-format.jar" https://github.com/google/google-java-format/releases/download/v1.33.0/google-java-format-1.33.0-all-deps.jar
+          echo "697707af07c7753f29cba415c6a76b7882702ff464f807da98b28069b8751910  $RUNNER_TEMP/google-java-format.jar" | sha256sum --check
+          java -jar "$RUNNER_TEMP/google-java-format.jar" --dry-run --set-exit-if-changed $(git ls-files 'android-app/src/*.java' 'android-app/src/**/*.java' 'android-app/firebase-src/**/*.java')
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with:

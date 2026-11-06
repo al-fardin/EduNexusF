@@ -13,7 +13,7 @@ func Register(
 	membershipHandler *classroomHandler.MembershipHandler,
 	streamHandler *classroomHandler.StreamHandler,
 	materialHandler *classroomHandler.MaterialHandler,
-    enrollment *classroomHandler.EnrollmentPhase5,
+	enrollment *classroomHandler.EnrollmentPhase5,
 ) {
 	classrooms := app.Group(
 		"/classrooms",
@@ -43,8 +43,8 @@ func Register(
 		membershipHandler.GetJoined,
 	)
 
-	classrooms.Post("/join/lookup",authMiddleware.JWTProtected(),enrollment.LookupCode)
-// Instructor classroom routes.
+	classrooms.Post("/join/lookup", authMiddleware.JWTProtected(), enrollment.LookupCode)
+	// Instructor classroom routes.
 	classrooms.Get(
 		"/mine",
 		authMiddleware.JWTProtected(),
@@ -109,11 +109,11 @@ func Register(
 	classrooms.Get("/:id/materials/:materialID/download", authMiddleware.JWTProtected(), materialHandler.Download)
 	classrooms.Delete("/:id/materials/:materialID", authMiddleware.JWTProtected(), materialHandler.Remove)
 
-	    classrooms.Get("/:id/my-roll",authMiddleware.JWTProtected(),enrollment.MyRoll)
-    classrooms.Put("/:id/my-roll",authMiddleware.JWTProtected(),enrollment.SetMyRoll)
-    classrooms.Get("/:id/course-code",authMiddleware.JWTProtected(),enrollment.GetCourseCode)
-    classrooms.Put("/:id/course-code",authMiddleware.JWTProtected(),enrollment.SetCourseCode)
-// Classroom people-management routes.
+	classrooms.Get("/:id/my-roll", authMiddleware.JWTProtected(), enrollment.MyRoll)
+	classrooms.Put("/:id/my-roll", authMiddleware.JWTProtected(), enrollment.SetMyRoll)
+	classrooms.Get("/:id/course-code", authMiddleware.JWTProtected(), enrollment.GetCourseCode)
+	classrooms.Put("/:id/course-code", authMiddleware.JWTProtected(), enrollment.SetCourseCode)
+	// Classroom people-management routes.
 	classrooms.Get(
 		"/:id/members",
 		authMiddleware.JWTProtected(),

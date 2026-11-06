@@ -9,10 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
-	
 
-    db "github.com/edunexus/edunexus/internal/platform/database/sqlc"
-    "github.com/edunexus/edunexus/internal/platform/security"
+	db "github.com/edunexus/edunexus/internal/platform/database/sqlc"
+	"github.com/edunexus/edunexus/internal/platform/security"
 )
 
 func (s *UserService) VerifyEmail(
@@ -32,10 +31,10 @@ func (s *UserService) VerifyEmail(
 		return errors.New("email already verified")
 	}
 
-if !tokenData.ExpiresAt.Valid ||
-    tokenData.ExpiresAt.Time.Before(time.Now()) {
-    return errors.New("verification token expired")
-}
+	if !tokenData.ExpiresAt.Valid ||
+		tokenData.ExpiresAt.Time.Before(time.Now()) {
+		return errors.New("verification token expired")
+	}
 
 	if err := s.verifyRepo.VerifyToken(
 		ctx,
@@ -88,47 +87,47 @@ func (s *UserService) ResendVerification(
 	uid.Valid = true
 
 	if err := s.verifyRepo.DeleteUserTokens(
-    ctx,
-    uid,
-); err != nil {
-    return err
-}
+		ctx,
+		uid,
+	); err != nil {
+		return err
+	}
 
-token, err := security.GenerateRefreshToken()
-if err != nil {
-    return err
-}
+	token, err := security.GenerateRefreshToken()
+	if err != nil {
+		return err
+	}
 
-expires := pgtype.Timestamptz{
-    Time:  time.Now().Add(24 * time.Hour),
-    Valid: true,
-}
+	expires := pgtype.Timestamptz{
+		Time:  time.Now().Add(24 * time.Hour),
+		Valid: true,
+	}
 
-_, err = s.verifyRepo.Create(
-    ctx,
-    db.CreateEmailVerificationTokenParams{
-        UserID:    uid,
-        Token:     token,
-        ExpiresAt: expires,
-    },
-)
-if err != nil {
-    return err
-}
+	_, err = s.verifyRepo.Create(
+		ctx,
+		db.CreateEmailVerificationTokenParams{
+			UserID:    uid,
+			Token:     token,
+			ExpiresAt: expires,
+		},
+	)
+	if err != nil {
+		return err
+	}
 
-link := "http://localhost:3000/verify-email?token=" + token
+	link := "http://localhost:3000/verify-email?token=" + token
 
-body := `
+	body := `
 <h2>Verify your email</h2>
 <p>Click below to verify your email.</p>
 <p><a href="` + link + `">Verify Email</a></p>
 `
 
-_ = s.mailer.Send(
-    user.Email,
-    "Verify your email",
-    body,
-)
+	_ = s.mailer.Send(
+		user.Email,
+		"Verify your email",
+		body,
+	)
 
-return nil
+	return nil
 }

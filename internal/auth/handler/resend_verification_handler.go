@@ -1,14 +1,13 @@
-
-
 package handler
 
 import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
-	validatorpkg "github.com/edunexus/edunexus/internal/platform/validator"
 	"github.com/edunexus/edunexus/internal/platform/response"
+	validatorpkg "github.com/edunexus/edunexus/internal/platform/validator"
 )
+
 // ResendVerification godoc
 // @Summary Resend verification email
 // @Description Send another verification email
