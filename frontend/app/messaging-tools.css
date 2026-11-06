@@ -16,3 +16,5 @@
 @media(prefers-reduced-motion:reduce){.en-call-pulse,.en-voice-wave i,.en-voice-dot{animation:none}.en-chat-bubble,.en-growing-emoji>span:first-child,.en-quick-emoji>span:first-child{transition:none}}
 
 .en-chat-emoji .en-big-emoji{font-size:52px!important}.en-chat-emoji .en-big-emoji[data-emoji-size="2"]{font-size:72px!important}.en-chat-emoji .en-big-emoji[data-emoji-size="3"]{font-size:92px!important}
+/* Conversation controls share the same theme tokens as the composer. */
+.en-pinned-bar{display:flex;align-items:center;gap:8px;min-width:0;width:100%;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--border);color:var(--foreground);text-align:left;font-size:12px}.en-pinned-bar>span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.en-pinned-bar>small{color:var(--muted-foreground);white-space:nowrap}.en-unread-divider{display:flex;align-items:center;gap:12px;padding:12px 0;color:var(--primary);font-size:11px;font-weight:600}.en-unread-divider:before,.en-unread-divider:after{content:"";height:1px;flex:1;background:var(--border)}

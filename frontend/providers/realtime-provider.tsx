@@ -5,6 +5,8 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/store/auth-store";
 import { setRealtimeSocket, useRealtimeStore } from "@/store/realtime-store";
 const roots = [
+  "conversation-pins",
+  "conversation-preferences",
   "messages",
   "message-unread",
   "message-classes",

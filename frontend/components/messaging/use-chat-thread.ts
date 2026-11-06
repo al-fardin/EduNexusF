@@ -43,6 +43,7 @@ export function useChatThread(classId: string, thread: string) {
     queryKey: ["message-stars", user, classId, thread],
     queryFn: () => messaging.stars(classId, thread),
   });
+  const pins=useQuery({queryKey:["conversation-pins",user,classId,thread],queryFn:()=>messaging.pins(classId,thread),refetchInterval:connected?false:10000});
   useEffect(
     () => () => {
       if (voiceObject.current) URL.revokeObjectURL(voiceObject.current);
@@ -102,17 +103,24 @@ export function useChatThread(classId: string, thread: string) {
   const canSend = settings.data?.can_send ?? false;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [failedSend,setFailedSend]=useState(false);
   const [atBottom, setAtBottom] = useState(true);
   const request = useRef<string | null>(null);
   function resetRequest() {
     request.current = null;
+    setFailedSend(false);
   }
   const viewport = useRef<HTMLDivElement>(null);
   const read = useRef("");
+  const openingCursor=useRef<string|null>(null);
   const key = ["messages", user, classId, thread];
   const query = useInfiniteQuery({
     queryKey: key,
-    queryFn: ({ pageParam }) => messaging.history(classId, thread, pageParam),
+    queryFn: async ({ pageParam }) => {
+      const page=await messaging.history(classId,thread,pageParam);
+      openingCursor.current??=page.last_read??"0";
+      return {...page,opening_last_read:openingCursor.current};
+    },
     initialPageParam: "",
     getNextPageParam: (last) =>
       last.has_more ? last.messages[0]?.id : undefined,
@@ -131,6 +139,8 @@ export function useChatThread(classId: string, thread: string) {
       });
   }, [query.data?.pages]);
   const last = messages[messages.length - 1];
+  const openingRead=query.data?.pages[0]?.opening_last_read??"0";
+  const firstUnread=messages.find(m=>m.sender_id!==user&&BigInt(m.id)>BigInt(openingRead))?.id;
   useEffect(() => {
     if (last && atBottom) {
       const box = viewport.current;
@@ -189,6 +199,7 @@ export function useChatThread(classId: string, thread: string) {
       setEmojiDraft(true);
     }
     setBusy(true);
+    setFailedSend(false);
     setError("");
     uploadAbort.current = new AbortController();
     setUploadProgress(0);
@@ -249,6 +260,7 @@ export function useChatThread(classId: string, thread: string) {
         queryKey: ["conversations", user, classId],
       });
     } catch (e) {
+      setFailedSend(true);
       setError(
         uploadAbort.current?.signal.aborted
           ? "Upload canceled. Your draft is ready to retry."
@@ -277,6 +289,9 @@ export function useChatThread(classId: string, thread: string) {
     resetRequest();
   }
   return {
+    pins,
+    firstUnread,
+    failedSend,
     removeAttachment,
     prepareVoice,
     user,

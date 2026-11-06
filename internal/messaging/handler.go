@@ -40,6 +40,10 @@ func Register(app *fiber.App, db *pgxpool.Pool) {
 	c.Post("/conversations", h.Create)
 	c.Get("/conversations/:threadID/messages", h.History)
 	c.Get("/conversations/:threadID/stars", h.Stars)
+	c.Get("/conversations/:threadID/preferences", h.Preferences)
+	c.Put("/conversations/:threadID/preferences", h.Preferences)
+	c.Get("/conversations/:threadID/pins", h.Pins)
+	c.Put("/conversations/:threadID/messages/:messageID/pin", h.Pins)
 	c.Put("/conversations/:threadID/messages/:messageID/star", h.Stars)
 	c.Post("/conversations/:threadID/messages", h.Send)
 	c.Post("/conversations/:threadID/read", h.Read)
@@ -297,12 +301,12 @@ func (h *Handler) History(c *fiber.Ctx) error {
 	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
 		out[i], out[j] = out[j], out[i]
 	}
-	var peerRead string
-	err = h.db.QueryRow(c.UserContext(), `SELECT CASE WHEN user_low=$1::uuid THEN high_last_read ELSE low_last_read END::text FROM classroom_conversations WHERE id=$2::uuid`, user, c.Params("threadID")).Scan(&peerRead)
+	var peerRead, ownRead string
+	err = h.db.QueryRow(c.UserContext(), `SELECT CASE WHEN user_low=$1::uuid THEN high_last_read ELSE low_last_read END::text,CASE WHEN user_low=$1::uuid THEN low_last_read ELSE high_last_read END::text FROM classroom_conversations WHERE id=$2::uuid`, user, c.Params("threadID")).Scan(&peerRead, &ownRead)
 	if err != nil {
 		return err
 	}
-	return result(c, fiber.Map{"messages": out, "has_more": more, "peer_last_read": peerRead})
+	return result(c, fiber.Map{"messages": out, "has_more": more, "peer_last_read": peerRead, "last_read": ownRead})
 }
 func (h *Handler) Send(c *fiber.Ctx) error {
 	user, err := h.thread(c)

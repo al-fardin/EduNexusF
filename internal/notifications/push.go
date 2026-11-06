@@ -211,6 +211,19 @@ func (h *pushHandler) deliverPush(ctx context.Context) error {
 			allowed = false
 		}
 	}
+	if allowed && kind == "message" {
+		parsed, parseErr := url.Parse(p.URL)
+		if parseErr != nil {
+			allowed = false
+		} else {
+			var muted bool
+			err = h.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM conversation_preferences WHERE user_id=$1::uuid AND conversation_id::text=$2 AND muted_until>now())`, p.User, parsed.Query().Get("thread")).Scan(&muted)
+			if err != nil {
+				return err
+			}
+			allowed = !muted
+		}
+	}
 	state := "skipped"
 	if allowed && d.User == p.User {
 		p.Title = shortPush(p.Title, 100)

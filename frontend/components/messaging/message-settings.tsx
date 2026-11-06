@@ -1,4 +1,5 @@
 "use client";
+import {ConversationMute} from "./conversation-tools";
 import { useRealtimeStore } from "@/store/realtime-store";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -115,6 +116,7 @@ export function MessageSettings({
               Everyone in the conversation sees theme changes.
             </DialogDescription>
           </DialogHeader>
+          {thread && <ConversationMute classId={classId} thread={thread}/>}
           {thread && (
             <div className="en-conversation-shortcuts">
               <button

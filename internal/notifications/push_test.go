@@ -16,11 +16,72 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
 )
 
 type pushTransport func(*http.Request) (*http.Response, error)
+
+func TestConversationMuteSkipsMessagesButNotCalls(t *testing.T) {
+	f := testsupport.Database(t)
+	private, public, err := webpush.GenerateVAPIDKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	h := &pushHandler{f.DB, &pushSender{webPrivate: private, webPublic: public, subject: "mailto:test@example.invalid", client: &http.Client{Transport: pushTransport(func(*http.Request) (*http.Response, error) {
+		calls++
+		return &http.Response{StatusCode: 201, Body: io.NopCloser(strings.NewReader("")), Header: make(http.Header)}, nil
+	})}}}
+	pair := []string{f.Student, f.Teacher}
+	sort.Strings(pair)
+	thread := uuid.NewString()
+	device := uuid.NewString()
+	sub := fmt.Sprintf(`{"endpoint":"https://fcm.googleapis.com/send/%s","keys":{"p256dh":"%s","auth":"%s"}}`, uuid.NewString(), public, base64.RawURLEncoding.EncodeToString(make([]byte, 16)))
+	statements := []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO classroom_conversations(id,classroom_id,user_low,user_high) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid)`, []any{thread, f.ClassID, pair[0], pair[1]}},
+		{`INSERT INTO conversation_preferences(conversation_id,user_id,muted_until) VALUES($1::uuid,$2::uuid,now()+interval '1 hour')`, []any{thread, f.Student}},
+		{`INSERT INTO notification_preferences(user_id,push_enabled) VALUES($1::uuid,true)`, []any{f.Student}},
+		{`INSERT INTO notification_devices(id,user_id,platform,subscription,token_hash) VALUES($1::uuid,$2::uuid,'web',$3::jsonb,$4)`, []any{device, f.Student, sub, uuid.NewString()}},
+	}
+	for _, s := range statements {
+		if _, err = f.DB.Exec(t.Context(), s.sql, s.args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	notification := func(kind string) string {
+		t.Helper()
+		id := uuid.NewString()
+		_, e := f.DB.Exec(t.Context(), `INSERT INTO user_notifications(id,user_id,classroom_id,kind,title,body,url,event_key,email_status) VALUES($1::uuid,$2::uuid,$3::uuid,$4,'Fixture','Message',$5,$6,'skipped')`, id, f.Student, f.ClassID, kind, "/messages?thread="+thread, uuid.NewString())
+		if e != nil {
+			t.Fatal(e)
+		}
+		return id
+	}
+	message := notification("message")
+	h.pollPush(t.Context())
+	var state string
+	if err = f.DB.QueryRow(t.Context(), `SELECT status FROM notification_push_outbox WHERE notification_id=$1::uuid`, message).Scan(&state); err != nil || state != "skipped" || calls != 0 {
+		t.Fatal(state, calls, err)
+	}
+	notification("call")
+	h.pollPush(t.Context())
+	if calls != 1 {
+		t.Fatal("muting suppressed a call", calls)
+	}
+	if _, err = f.DB.Exec(t.Context(), `UPDATE conversation_preferences SET muted_until=NULL WHERE conversation_id=$1::uuid`, thread); err != nil {
+		t.Fatal(err)
+	}
+	notification("message")
+	h.pollPush(t.Context())
+	if calls != 2 {
+		t.Fatal("unmuted message not delivered", calls)
+	}
+}
 
 func (f pushTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 

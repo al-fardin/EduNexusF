@@ -1,4 +1,6 @@
 "use client";
+import {Fragment} from "react";
+import {ConversationPins} from "./conversation-tools";
 import { sendTyping } from "@/store/realtime-store";
 import { MessageActions } from "./message-actions";
 import { MessageSearch } from "./message-search";
@@ -31,6 +33,9 @@ export function ChatThread({
   onBack: () => void;
 }) {
   const {
+    pins,
+    firstUnread,
+    failedSend,
     removeAttachment,
     prepareVoice,
     user,
@@ -104,6 +109,7 @@ export function ChatThread({
           peerId={peer?.role === "student" ? peer.peer_id : undefined}
         />
       </header>
+      <ConversationPins pins={pins.data??[]}/>
       <StarredMessages
         classId={classId}
         thread={thread}
@@ -146,7 +152,8 @@ export function ChatThread({
               Start a conversation with {peer?.name ?? "this class member"}.
             </p>
           ) : (
-            messages.map((m) => (
+            messages.map((m) => (<Fragment key={m.id}>
+              {m.id===firstUnread&&<div className="en-unread-divider" role="separator" aria-label="Unread messages"><span>Unread messages</span></div>}
               <MessageActions
                 key={m.id}
                 classId={classId}
@@ -154,6 +161,7 @@ export function ChatThread({
                 message={m}
                 canSend={canSend}
                 starred={stars.data?.includes(m.id)}
+                pinned={pins.data?.some(pin=>pin.id===m.id)}
                 onReply={beginReply}
               >
                 {m.reply && (
@@ -210,7 +218,7 @@ export function ChatThread({
                   />
                 )}
               </MessageActions>
-            ))
+            </Fragment>))
           )}
         </div>
       </div>
@@ -223,7 +231,7 @@ export function ChatThread({
             setAtBottom(true);
           }}
         >
-          Latest messages ↓
+          Jump to latest ↓
         </button>
       )}
       {typing && (
@@ -233,9 +241,7 @@ export function ChatThread({
         </p>
       )}
       {error && (
-        <p role="alert" className="en-chat-error">
-          {error}
-        </p>
+        <div role="alert" className="en-chat-error"><p>{error}</p>{failedSend&&<button type="button" className="en-outline-button mt-2" disabled={busy||!canSend} onClick={()=>void send()}>Retry send</button>}</div>
       )}
       {settings.isError && (
         <p role="alert" className="en-chat-error">

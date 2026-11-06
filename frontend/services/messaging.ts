@@ -15,6 +15,7 @@ export type Conversation = {
   last_message: string;
   last_at: string | null;
   unread: number;
+  muted_until?: string | null;
 };
 export type ChatTheme =
   "violet" | "lavender" | "ocean" | "sage" | "rose" | "midnight";
@@ -44,9 +45,15 @@ export type MessagePage = {
   messages: ChatMessage[];
   has_more: boolean;
   peer_last_read: string;
+  last_read: string;
 };
+export type PinnedMessage = {id:string;body:string;file_name:string;pinned_by:string;pinned_at:string};
 const base = (id: string) => `/classrooms/${id}`;
 export const messaging = {
+  async preferences(id:string,thread:string):Promise<{muted_until:string|null;muted:boolean}>{return (await api.get(`${base(id)}/conversations/${thread}/preferences`)).data.data;},
+  async mute(id:string,thread:string,hours:number){await api.put(`${base(id)}/conversations/${thread}/preferences`,{hours});},
+  async pins(id:string,thread:string):Promise<PinnedMessage[]>{return (await api.get(`${base(id)}/conversations/${thread}/pins`)).data.data;},
+  async pin(id:string,thread:string,message:string,pinned:boolean){await api.put(`${base(id)}/conversations/${thread}/messages/${message}/pin`,{pinned});},
   async stars(id:string,thread:string):Promise<string[]>{return (await api.get(`${base(id)}/conversations/${thread}/stars`)).data.data},
   async star(id:string,thread:string,message:string,starred:boolean){await api.put(`${base(id)}/conversations/${thread}/messages/${message}/star`,{starred})},
   async edit(id: string, thread: string, message: string, body: string) {

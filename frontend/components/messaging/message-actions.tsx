@@ -7,6 +7,7 @@ import {
   Trash2,
   Star,
   Copy,
+  Pin,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -27,6 +28,7 @@ export function MessageActions({
   onReply,
   children,
   starred = false,
+  pinned = false,
 }: {
   classId: string;
   thread: string;
@@ -35,6 +37,7 @@ export function MessageActions({
   onReply: (message: ChatMessage) => void;
   children: ReactNode;
   starred?: boolean;
+  pinned?: boolean;
 }) {
   const user = useAuthStore((s) => s.user?.id);
   const client = useQueryClient();
@@ -65,6 +68,7 @@ export function MessageActions({
     try {
       await action();
       await Promise.all([
+        client.invalidateQueries({queryKey:["conversation-pins",user,classId,thread]}),
         client.invalidateQueries({
           queryKey: ["messages", user, classId, thread],
         }),
@@ -194,6 +198,13 @@ export function MessageActions({
           >
             <Reply size={18} />
             Reply
+          </button>
+          <button
+            className="en-message-action-row"
+            disabled={busy||(!pinned&&!canSend)}
+            onClick={()=>void save(()=>messaging.pin(classId,thread,message.id,!pinned))}
+          >
+            <Pin size={18}/>{pinned?"Unpin message":"Pin for both participants"}
           </button>
           <button
             className="en-message-action-row"
