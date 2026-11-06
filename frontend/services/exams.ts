@@ -59,6 +59,7 @@ export type ExamSubmission = {
   answers: Record<string, string>;
 };
 export type NewExam = {
+  reason?:string;
   allow_mobile_mcq?: boolean;
   title: string;
   description: string;

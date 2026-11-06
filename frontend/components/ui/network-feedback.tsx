@@ -64,6 +64,7 @@ export function NetworkFeedback() {
               ? "You’re offline. Check your connection."
               : "Unable to reach EduNexus."}
           </span>
+          <a href="/offline" className="underline underline-offset-2">Saved work</a>
           <button
             disabled={retrying}
             onClick={async () => {

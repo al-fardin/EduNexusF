@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 import Image from "next/image";
-import { api } from "@/lib/api";
+import {materialBlob} from "@/lib/offline-resources";
 import {
   Dialog,
   DialogContent,
@@ -199,19 +199,16 @@ export function ProtectedFilePreview({
     controller.current = new AbortController();
     const current = controller.current;
     try {
-      const response = await api.get<Blob>(path, {
-        responseType: "blob",
-        signal: current.signal,
-      });
+      const dataBlob=await materialBlob(path,current.signal,filename);
       if (current.signal.aborted) return;
-      if (response.data.size > 20 * 1024 * 1024)
+      if (dataBlob.size > 20 * 1024 * 1024)
         throw Error("This file is too large to preview. Download it instead.");
       if (type === "pdf") {
-        const data = await response.data.arrayBuffer();
+        const data = await dataBlob.arrayBuffer();
         if (current.signal.aborted) return;
         setBytes(data);
       } else {
-        objectUrl.current = URL.createObjectURL(response.data);
+        objectUrl.current = URL.createObjectURL(dataBlob);
         setUrl(objectUrl.current);
       }
     } catch (e) {

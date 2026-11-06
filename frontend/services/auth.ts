@@ -1,4 +1,6 @@
 import { api } from "@/lib/api";
+import {rememberOfflineSession,offlineSession} from "@/lib/offline-session";
+import {unavailableNetwork} from "@/lib/offline-resources";
 
 export interface RegisterRequest {
   email: string;
@@ -75,9 +77,9 @@ export const authService = {
   },
 
   me: async () => {
-    const res = await api.get("/auth/me");
-
-    return res.data;
+    const token=typeof window!=="undefined"?localStorage.getItem("access_token"):null;
+    try{const res=await api.get("/auth/me");rememberOfflineSession(res.data.data,token);return res.data;}
+    catch(error){const cached=unavailableNetwork(error)?offlineSession(token):null;if(cached)return {success:true,data:cached};throw error;}
   },
 
   logout: async (refresh_token: string) => {

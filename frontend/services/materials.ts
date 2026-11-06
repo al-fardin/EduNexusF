@@ -1,5 +1,6 @@
 import type {AxiosProgressEvent} from "axios";
 import { api } from "@/lib/api";
+import {cachedResource,materialBlob} from "@/lib/offline-resources";
 
 export type ClassroomMaterial = {
   id: string;
@@ -16,10 +17,11 @@ type Envelope<T> = { success: boolean; data: T; message?: string };
 
 export const materialService = {
   async list(classroomId: string): Promise<ClassroomMaterial[]> {
+    return cachedResource(classroomId,"materials",async()=>{
     const response = await api.get<Envelope<ClassroomMaterial[]>>(
       `/classrooms/${classroomId}/materials`
     );
-    return response.data.data;
+    return response.data.data;});
   },
 
   async upload(classroomId: string, data: { title: string; description: string; file: File },options?:{signal?:AbortSignal;onUploadProgress?:(e:AxiosProgressEvent)=>void}): Promise<ClassroomMaterial> {
@@ -34,16 +36,13 @@ export const materialService = {
     return response.data.data;
   },
 
-  async remove(classroomId: string, materialId: string) {
-    await api.delete(`/classrooms/${classroomId}/materials/${materialId}`);
+  async remove(classroomId: string, materialId: string, reason="") {
+    await api.delete(`/classrooms/${classroomId}/materials/${materialId}`,{data:{reason}});
   },
 
   async download(classroomId: string, materialId: string, filename: string) {
-    const response = await api.get<Blob>(
-      `/classrooms/${classroomId}/materials/${materialId}/download`,
-      { responseType: "blob" }
-    );
-    const url = URL.createObjectURL(response.data);
+    const blob=await materialBlob(`/classrooms/${classroomId}/materials/${materialId}/download`,undefined,filename);
+    const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = filename || "material";

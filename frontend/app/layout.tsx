@@ -12,6 +12,7 @@ import { RealtimeProvider } from "@/providers/realtime-provider";
 import { QueryProvider } from "@/providers/query-provider";
 import { SiteChrome } from "@/components/layout/site-chrome";
 import { NetworkFeedback } from "@/components/ui/network-feedback";
+import {OfflineProvider} from "@/providers/offline-provider";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -37,6 +38,7 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <AppThemeProvider>
           <QueryProvider>
+            <OfflineProvider/>
             <RealtimeProvider />
             <PushProvider />
             <AppUpdateProvider />

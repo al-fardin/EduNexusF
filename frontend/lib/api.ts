@@ -46,6 +46,7 @@ const refreshClient = axios.create({
 let refreshPromise:
   | Promise<TokenPair>
   | null = null;
+let refreshingSession: string | null = null;
 
 const publicAuthRoutes = [
   "/auth/login",
@@ -109,7 +110,7 @@ async function requestNewTokens(
       ApiResponse<TokenPair>
     >("/auth/refresh", {
       refresh_token: refreshToken,
-    });
+    }, { timeout: 10000 });
 
   return response.data.data;
 }
@@ -200,17 +201,22 @@ api.interceptors.response.use(
        * একসঙ্গে একাধিক API 401 দিলে
        * শুধু একটি refresh request যাবে।
        */
-      if (!refreshPromise) {
-        refreshPromise =
-          requestNewTokens(
-            refreshToken
-          ).finally(() => {
+      if (!refreshPromise || refreshingSession !== refreshToken) {
+        const pending = requestNewTokens(refreshToken).finally(() => {
+          if (refreshPromise === pending) {
             refreshPromise = null;
-          });
+            refreshingSession = null;
+          }
+        });
+        refreshingSession = refreshToken;
+        refreshPromise = pending;
       }
 
       const newTokens =
         await refreshPromise;
+
+      if (typeof window !== "undefined" && window.localStorage.getItem("refresh_token") !== refreshToken)
+        throw new Error("Session changed. Retry this request.");
 
       saveTokens(newTokens);
 
@@ -219,6 +225,12 @@ api.interceptors.response.use(
 
       return api(originalRequest);
     } catch (refreshError: unknown) {
+      // A temporary outage must not sign the user out and erase offline drafts.
+      // A late response from an older login must not affect the current account.
+      const status = axios.isAxiosError(refreshError) ? refreshError.response?.status : undefined;
+      if ((status !== 401 && status !== 403) ||
+          (typeof window !== "undefined" && window.localStorage.getItem("refresh_token") !== refreshToken))
+        return Promise.reject(refreshError);
       clearAuthentication();
 
       if (

@@ -20,6 +20,12 @@ returning to the exam list. Only isolated fixture accounts were used for UI writ
 
 ## Local checks
 
+Additional checks on 2026-11-07 cover conversation tools, account-scoped offline
+work and transactional teacher history. Migrations 1–38 passed in a fresh
+database; the live database was backed up before applying 37–38. See
+[LEARNING_WORKFLOWS.md](LEARNING_WORKFLOWS.md) for behavior, verification and the
+remaining browser/device checks. These additions do not imply perfect coverage.
+
 ```powershell
 cd F:\EduNexus\frontend
 npm ci

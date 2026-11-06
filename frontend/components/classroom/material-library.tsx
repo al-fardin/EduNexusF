@@ -1,5 +1,7 @@
 "use client";
 
+import {ReasonDialog} from "@/components/ui/reason-dialog";
+import {EmptyState,ErrorState,UploadState} from "@/components/ui/app-feedback";
 import {useTopics,matchesTopic,ResourceTopicPicker} from "./classwork-topics";
 import {ProtectedFilePreview} from "@/components/files/protected-preview";
 import { useClassroomComposer } from "@/lib/classroom-composer";
@@ -30,6 +32,7 @@ export function MaterialUploadForm({ classroomId, compact = false, onUploaded }:
       setFile(null);
       setInputKey((n) => n + 1);
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["classroom-activity", classroomId] }),
         queryClient.invalidateQueries({ queryKey: ["materials", classroomId] }),
         queryClient.invalidateQueries({ queryKey: ["classrooms", "stream", classroomId] }),
       ]);
@@ -72,7 +75,7 @@ export function MaterialUploadForm({ classroomId, compact = false, onUploaded }:
           <textarea rows={compact ? 2 : 3} maxLength={5000} value={description} disabled={mutation.isPending} onChange={(e) => setDescription(e.target.value)} className="mt-1 block w-full resize-y rounded-xl border border-border bg-background p-3 outline-none focus:border-primary" placeholder="What should students read or prepare?" />
         </label>
         {(validationError || mutation.isError) && <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{validationError || getStreamErrorMessage(mutation.error)}</p>}
-        {mutation.isPending&&<div className="en-chat-upload" role="status"><progress value={progress} max={100}/><span>{progress<100?`Uploading ${progress}%`:"Publishing…"}</span><button type="button" className="en-outline-button" disabled={progress>=100} onClick={()=>uploadAbort.current?.abort()}>Cancel upload</button></div>}
+        {mutation.isPending&&<UploadState progress={progress} onCancel={()=>uploadAbort.current?.abort()}/>}
         <button type="submit" disabled={!file || !title.trim() || !!validationError || mutation.isPending} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {mutation.isPending ? <LoaderCircle size={17} className="animate-spin" /> : <FileUp size={17} />} {mutation.isPending ? "Uploading material…" : "Upload & publish to Stream"}
         </button>
@@ -101,21 +104,22 @@ export function MaterialDownloadButton({ classroomId, materialId, filename, labe
 }
 
 export function MaterialLibrary({ classroomId, canManage, topic="" }: { classroomId: string; canManage: boolean;topic?:string }) {
- const topicData=useTopics(classroomId);
+ const topicData=useTopics(classroomId);const [deleting,setDeleting]=useState<ClassroomMaterial|null>(null);
   const [composer,setComposer]=useClassroomComposer();
-  const materials = useQuery({ queryKey: ["materials", classroomId], queryFn: () => materialService.list(classroomId), enabled: Boolean(classroomId) });
+  const materials = useQuery({ networkMode:"always", queryKey: ["materials", classroomId], queryFn: () => materialService.list(classroomId), enabled: Boolean(classroomId) });
   const queryClient = useQueryClient();
   const remove = useMutation({
-    mutationFn: (id: string) => materialService.remove(classroomId, id),
+    mutationFn: (data: {id:string;reason:string}) => materialService.remove(classroomId, data.id,data.reason),
     onSuccess: async () => {
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["classroom-activity", classroomId] }),
         queryClient.invalidateQueries({ queryKey: ["materials", classroomId] }),
         queryClient.invalidateQueries({ queryKey: ["classrooms", "stream", classroomId] }),
       ]);
     },
   });
   if(canManage&&composer==="material")return <div className="en-composer-view"><button className="en-composer-back" onClick={()=>setComposer(null)}><ArrowLeft size={17}/>Back to classwork</button><MaterialUploadForm classroomId={classroomId} onUploaded={()=>setComposer(null)}/></div>;
-  return <div className="space-y-5">
+  return <div className="space-y-5"><ReasonDialog open={!!deleting} onOpenChange={value=>{if(!value)setDeleting(null);}} title="Delete material" description={deleting?.title??""} onConfirm={async reason=>{if(deleting)await remove.mutateAsync({id:deleting.id,reason});}}/>
     <section className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
       <div className="mb-5 flex items-center justify-between gap-2">
         <div><h2 className="flex items-center gap-2 text-xl font-bold"><BookOpen size={20} /> Class materials</h2><p className="mt-1 text-sm text-muted-foreground">Files shared with your class.</p></div>
@@ -125,8 +129,8 @@ export function MaterialLibrary({ classroomId, canManage, topic="" }: { classroo
         {[0,1,2].map(i=><div key={i} className="rounded-2xl border border-border bg-background p-4"><div className="en-skeleton mb-3 h-5 w-2/5 rounded-lg"/><div className="en-skeleton mb-3 h-3 w-4/5 rounded-lg"/><div className="en-skeleton h-9 w-32 rounded-xl"/></div>)}
       </div>}
       {remove.isError && <p role="alert" className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{getStreamErrorMessage(remove.error)}</p>}
-      {materials.isError && <p role="alert" className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{getStreamErrorMessage(materials.error)}</p>}
-      {materials.isSuccess && materials.data.filter(item=>matchesTopic(topicData.data?.links,topic,"material",item.id)).length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">{topic?"No materials in this topic.":"No materials shared yet."}</p>}
+      {materials.isError && <ErrorState message={getStreamErrorMessage(materials.error)} onRetry={()=>void materials.refetch()}/>}
+      {materials.isSuccess && materials.data.filter(item=>matchesTopic(topicData.data?.links,topic,"material",item.id)).length === 0 && <EmptyState title={topic?"No materials in this topic":"No materials shared yet"}/>}
       {materials.isSuccess && <div className="space-y-3">{materials.data.filter(item=>matchesTopic(topicData.data?.links,topic,"material",item.id)).map((item: ClassroomMaterial) => <article key={item.id} className="rounded-2xl border border-border bg-background p-4">{canManage&&<ResourceTopicPicker classId={classroomId} kind="material" id={item.id}/>}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1"><h3 className="font-semibold text-foreground">{item.title}</h3>
@@ -135,7 +139,7 @@ export function MaterialLibrary({ classroomId, canManage, topic="" }: { classroo
           </div>
           <div className="flex flex-wrap items-start gap-2">
             <ProtectedFilePreview path={`/classrooms/${classroomId}/materials/${item.id}/download`} filename={item.file_name}/><MaterialDownloadButton classroomId={classroomId} materialId={item.id} filename={item.file_name} />
-            {canManage && <button type="button" disabled={remove.isPending} onClick={() => { if (window.confirm(`Delete ${item.title}?`)) remove.mutate(item.id); }} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-destructive/30 px-3 text-sm text-destructive disabled:opacity-50">{remove.isPending && remove.variables === item.id ? <LoaderCircle size={15} className="animate-spin"/> : <Trash2 size={15} />} {remove.isPending && remove.variables === item.id ? "Deleting…" : "Delete"}</button>}
+            {canManage && <button type="button" disabled={remove.isPending} onClick={() => { setDeleting(item); }} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-destructive/30 px-3 text-sm text-destructive disabled:opacity-50">{remove.isPending && remove.variables?.id === item.id ? <LoaderCircle size={15} className="animate-spin"/> : <Trash2 size={15} />} {remove.isPending && remove.variables?.id === item.id ? "Deleting…" : "Delete"}</button>}
           </div>
         </div>
       </article>)}</div>}

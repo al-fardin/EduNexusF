@@ -23,15 +23,15 @@ export const examManagement = {
   async edit(classroom: string, id: string, payload: NewExam) {
     await api.put(`${base(classroom)}/${id}/manage`, payload);
   },
-  async close(classroom: string, id: string) {
-    await api.post(`${base(classroom)}/${id}/close`);
+  async close(classroom: string, id: string,reason="") {
+    await api.post(`${base(classroom)}/${id}/close`,{reason});
   },
   async grades(classroom: string, id: string): Promise<GradeSheet> {
     const res = await api.get<Envelope<GradeSheet>>(`${base(classroom)}/${id}/grades`);
     return res.data.data;
   },
-  async mark(classroom: string, id: string, attemptId: string, questionId: string, points: number, feedback: string) {
-    await api.put(`${base(classroom)}/${id}/grades/${attemptId}`, { question_id: questionId, points, feedback });
+  async mark(classroom: string, id: string, attemptId: string, questionId: string, points: number, feedback: string,reason="") {
+    await api.put(`${base(classroom)}/${id}/grades/${attemptId}`, { question_id: questionId, points, feedback,reason });
   },
   async publishResults(classroom: string, id: string, attemptIds: string[]) {
     const res = await api.post<Envelope<{processed:number;skipped:string[]}>>(`${base(classroom)}/${id}/results/publish`, {attempt_ids:attemptIds});

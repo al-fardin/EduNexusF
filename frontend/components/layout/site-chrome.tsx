@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronDown,
   Folder,
+  Download,
   GraduationCap,
   House,
   Layers,
@@ -33,6 +34,7 @@ const links = [
   { href: "/classrooms", label: "Classroom", icon: Layers },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/files", label: "Files", icon: Folder },
+  { href: "/offline", label: "Saved work", icon: Download },
 ];
 const mobileLinks = [
   links[0],
