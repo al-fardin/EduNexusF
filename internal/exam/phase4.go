@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/edunexus/edunexus/internal/activity"
 	"math"
 	"strconv"
 	"strings"
@@ -72,6 +73,14 @@ func (h *Handler) EditExam(c *fiber.Ctx) error {
 		return err
 	}
 	defer tx.Rollback(c.UserContext())
+	actor, _ := identity(c)
+	var attribution struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.BodyParser(&attribution)
+	if err = activity.SetActor(c.UserContext(), tx, actor, attribution.Reason); err != nil {
+		return err
+	}
 	if _, err = tx.Exec(c.UserContext(), `SELECT id FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid FOR UPDATE`, e.ID, c.Params("id")); err != nil {
 		return err
 	}
@@ -100,12 +109,28 @@ func (h *Handler) CloseExam(c *fiber.Ctx) error {
 	if e.Status != "published" {
 		return failure(c, 409, "only an open/published exam can be closed")
 	}
-	tag, err := h.db.Exec(c.UserContext(), `UPDATE classroom_exams SET ends_at=CASE WHEN now() <= starts_at THEN starts_at + interval '1 second' ELSE LEAST(ends_at,now()) END,closed_at=now() WHERE id=$1::uuid AND classroom_id=$2::uuid AND closed_at IS NULL AND status='published'`, e.ID, c.Params("id"))
+	tx, err := h.db.Begin(c.UserContext())
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(c.UserContext())
+	actor, _ := identity(c)
+	var attribution struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.BodyParser(&attribution)
+	if err = activity.SetActor(c.UserContext(), tx, actor, attribution.Reason); err != nil {
+		return err
+	}
+	tag, err := tx.Exec(c.UserContext(), `UPDATE classroom_exams SET ends_at=CASE WHEN now() <= starts_at THEN starts_at + interval '1 second' ELSE LEAST(ends_at,now()) END,closed_at=now() WHERE id=$1::uuid AND classroom_id=$2::uuid AND closed_at IS NULL AND status='published'`, e.ID, c.Params("id"))
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
 		return failure(c, 409, "exam already closed")
+	}
+	if err = tx.Commit(c.UserContext()); err != nil {
+		return err
 	}
 	return result(c, 200, fiber.Map{"closed": true})
 }
@@ -231,6 +256,7 @@ type gradeInput struct {
 	QuestionID string `json:"question_id"`
 	Points     int    `json:"points"`
 	Feedback   string `json:"feedback"`
+	Reason     string `json:"reason"`
 }
 
 func (h *Handler) SetGrade(c *fiber.Ctx) error {
@@ -258,9 +284,21 @@ func (h *Handler) SetGrade(c *fiber.Ctx) error {
 	if !found || req.Points < 0 || req.Points > max || len(req.Feedback) > 5000 {
 		return failure(c, 400, "invalid question, marks or feedback")
 	}
+	grader, _ := identity(c)
+	tx, err := h.db.Begin(c.UserContext())
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(c.UserContext())
+	if err = activity.SetActor(c.UserContext(), tx, grader, req.Reason); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(c.UserContext(), `SELECT id FROM classroom_exams WHERE id=$1::uuid FOR UPDATE`, e.ID); err != nil {
+		return err
+	}
 	var eligible bool
 	var published bool
-	err = h.db.QueryRow(c.UserContext(), `SELECT (a.status='submitted' OR a.expires_at<=now() OR e.ends_at<=now()),
+	err = tx.QueryRow(c.UserContext(), `SELECT (a.status='submitted' OR a.expires_at<=now() OR e.ends_at<=now()),
         EXISTS(SELECT 1 FROM classroom_exam_result_publications p WHERE p.attempt_id=a.id)
         FROM classroom_exam_attempts a JOIN classroom_exams e ON e.id=a.exam_id
         WHERE a.id=$1::uuid AND e.id=$2::uuid`, attemptID, e.ID).Scan(&eligible, &published)
@@ -276,11 +314,13 @@ func (h *Handler) SetGrade(c *fiber.Ctx) error {
 	if published {
 		return failure(c, 409, "retract this student's published result before editing marks")
 	}
-	grader, _ := identity(c)
-	_, err = h.db.Exec(c.UserContext(), `INSERT INTO classroom_exam_question_marks(attempt_id,question_id,awarded_points,feedback,grader_kind,graded_by)
+	_, err = tx.Exec(c.UserContext(), `INSERT INTO classroom_exam_question_marks(attempt_id,question_id,awarded_points,feedback,grader_kind,graded_by)
     VALUES($1::uuid,$2,$3,$4,'teacher',$5::uuid)
     ON CONFLICT(attempt_id,question_id) DO UPDATE SET awarded_points=EXCLUDED.awarded_points,feedback=EXCLUDED.feedback,grader_kind='teacher',graded_by=EXCLUDED.graded_by,updated_at=now()`, attemptID, req.QuestionID, req.Points, strings.TrimSpace(req.Feedback), grader)
 	if err != nil {
+		return err
+	}
+	if err = tx.Commit(c.UserContext()); err != nil {
 		return err
 	}
 	return result(c, 200, fiber.Map{"saved": true})

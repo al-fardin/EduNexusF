@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/edunexus/edunexus/internal/activity"
 	"io"
 	"net/http"
 	"os"
@@ -296,6 +297,19 @@ func (h *MaterialHandler) Remove(c *fiber.Ctx) error {
 		return err
 	}
 	defer tx.Rollback(context.Background())
+	actor, _, err := currentIdentity(c)
+	if err != nil {
+		return err
+	}
+	var attribution struct {
+		Reason string `json:"reason"`
+	}
+	if len(c.Body()) > 0 && c.BodyParser(&attribution) != nil {
+		return errorResponse(c, 400, "invalid reason")
+	}
+	if err = activity.SetActor(c.UserContext(), tx, actor, attribution.Reason); err != nil {
+		return err
+	}
 	var storageKey string
 	err = tx.QueryRow(c.UserContext(), `SELECT storage_key FROM classroom_materials WHERE id=$1 AND classroom_id=$2 FOR UPDATE`, materialID.String(), classID.String()).Scan(&storageKey)
 	if errors.Is(err, pgx.ErrNoRows) {

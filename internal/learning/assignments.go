@@ -3,6 +3,7 @@ package learning
 import (
 	"encoding/json"
 	"errors"
+	"github.com/edunexus/edunexus/internal/activity"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
 	"io"
@@ -22,6 +23,7 @@ type Assignment struct {
 	AllowLate     bool      `json:"allow_late"`
 	AllowResubmit bool      `json:"allow_resubmit"`
 	Status        string    `json:"status"`
+	Reason        string    `json:"reason,omitempty"`
 }
 
 func validAssignment(a Assignment) error {
@@ -70,6 +72,9 @@ func (h *Handler) SaveAssignment(c *fiber.Ctx) error {
 		return err
 	}
 	defer tx.Rollback(c.UserContext())
+	if err = activity.SetActor(c.UserContext(), tx, user, a.Reason); err != nil {
+		return err
+	}
 	if c.Params("assignmentID") == "" {
 		err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_assignments(classroom_id,created_by,title,instructions,due_at,max_points,allow_late,allow_resubmit) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8) RETURNING id::text`, c.Params("id"), user, strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit).Scan(&a.ID)
 	} else {
@@ -261,16 +266,28 @@ func (h *Handler) GradeAssignment(c *fiber.Ctx) error {
 	var req struct {
 		Points   int    `json:"points"`
 		Feedback string `json:"feedback"`
+		Reason   string `json:"reason"`
 	}
 	if err = json.Unmarshal(c.Body(), &req); err != nil || req.Points < 0 || len(req.Feedback) > 5000 {
 		return fail(400, "invalid grade or feedback")
 	}
-	tag, err := h.db.Exec(c.UserContext(), `UPDATE classroom_assignment_submissions s SET awarded_points=$4,feedback=$5,graded_by=$6::uuid,graded_at=now() FROM classroom_assignments a WHERE s.id=$1::uuid AND s.assignment_id=$2::uuid AND a.id=s.assignment_id AND a.classroom_id=$3::uuid AND $4<=a.max_points`, c.Params("submissionID"), c.Params("assignmentID"), c.Params("id"), req.Points, req.Feedback, user)
+	tx, err := h.db.Begin(c.UserContext())
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(c.UserContext())
+	if err = activity.SetActor(c.UserContext(), tx, user, req.Reason); err != nil {
+		return err
+	}
+	tag, err := tx.Exec(c.UserContext(), `UPDATE classroom_assignment_submissions s SET awarded_points=$4,feedback=$5,graded_by=$6::uuid,graded_at=now() FROM classroom_assignments a WHERE s.id=$1::uuid AND s.assignment_id=$2::uuid AND a.id=s.assignment_id AND a.classroom_id=$3::uuid AND $4<=a.max_points`, c.Params("submissionID"), c.Params("assignmentID"), c.Params("id"), req.Points, req.Feedback, user)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
 		return fail(400, "submission not found or points exceed assignment maximum")
+	}
+	if err = tx.Commit(c.UserContext()); err != nil {
+		return err
 	}
 	return respond(c, 200, fiber.Map{"graded": true})
 }
