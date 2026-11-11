@@ -20,6 +20,12 @@ returning to the exam list. Only isolated fixture accounts were used for UI writ
 
 ## Local checks
 
+On 2026-11-11, frontend lint, TypeScript, 29 Node tests and production builds
+passed. Full Go tests, vet and Linux race tests passed against isolated PostgreSQL
+fixtures, including migrations 1–41. Browser checks and operational limits for
+the new features are recorded in the
+[coursework workflow guide](../guides/coursework-workflows.md).
+
 Additional checks on 2026-11-07 cover conversation tools, account-scoped offline
 work and transactional teacher history. Migrations 1–38 passed in a fresh
 database; the live database was backed up before applying 37–38. See

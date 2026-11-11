@@ -4,6 +4,7 @@
 
 - [Learning features and deployment migrations](guides/learning-features.md)
 - [Messaging, saved coursework and teacher history](guides/learning-workflows.md)
+- [Classwork, grading, scheduling and notification workflows](guides/coursework-workflows.md)
 - [Violet interface and messaging](guides/violet-messaging.md)
 - [Audio/video calls and rich messages](guides/calling-and-rich-messages.md)
 - [Android and mobile setup](guides/mobile-android.md)

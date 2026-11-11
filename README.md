@@ -58,3 +58,6 @@ EduNexus Desktop 1.5 adds a refreshed interface and optional Windows `.exe` test
 See [learning features](docs/guides/learning-features.md) for deployment migrations,
 SMTP and OpenAI tutor configuration, and [saved work and teacher history](docs/guides/learning-workflows.md)
 for the recent coursework workflows.
+The [coursework workflow guide](docs/guides/coursework-workflows.md) covers the
+combined classwork catalogue, gradebook, rubrics, scheduled posts, notification
+digests and shared message files.

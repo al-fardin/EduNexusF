@@ -77,8 +77,10 @@ so rollbacks and no-op grade retries do not leave misleading entries.
   the already cached Go image. Fresh migrations 1–38 completed successfully.
 - Live database backup created before applying migrations 37–38.
 
-The user's phone call test was reported successful. Fresh browser checks for the
-changed mobile keyboard/back/upload flows and full offline navigation remain
-pending: automatic approval review rejected starting the isolated frontend on
-127.0.0.1:3007, including after explicit user permission, without a specific
-reason. These checks must not be represented as completed.
+The user's phone call test was reported successful. On 2026-11-11 the user started
+the isolated QA frontend after server-start policy rejection. Authorized headless
+Chrome checks then passed for mobile classroom refresh/back navigation, draft and
+attachment restoration, cold offline Saved work, offline editing and queuing,
+single submission after reconnect, and cached material previews. A reduced
+viewport with form focus was checked; this does not replace physical Android
+keyboard testing. See the [new workflow guide](coursework-workflows.md).
