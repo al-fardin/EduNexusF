@@ -1,4 +1,5 @@
 "use client";
+import {Localized} from "@/components/ui/localized";
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { readActiveExam } from "@/lib/exam-resume";
@@ -123,9 +124,7 @@ export default function StudentClassroomPage() {
               href="/student/classrooms"
               className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
             >
-              <ArrowLeft size={18} />
-              My classes
-            </Link>
+              <ArrowLeft size={18} /><Localized>My classes</Localized></Link>
           </div>
         </main>
       </AuthGuard>
@@ -158,7 +157,7 @@ export default function StudentClassroomPage() {
                         : "text-muted-foreground hover:bg-secondary"
                     }`}
                   >
-                    {tab.label}
+                    <Localized>{tab.label}</Localized>
                   </button>
                 ))}
               </div>

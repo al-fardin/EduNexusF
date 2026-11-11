@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./accessibility.css";
+import {PreferencesProvider} from "@/providers/preferences-provider";
 import "./mobile.css";
 import "./workspace.css";
 import "./violet.css";
@@ -13,6 +15,7 @@ import { QueryProvider } from "@/providers/query-provider";
 import { SiteChrome } from "@/components/layout/site-chrome";
 import { NetworkFeedback } from "@/components/ui/network-feedback";
 import {OfflineProvider} from "@/providers/offline-provider";
+import {ErrorMonitorProvider} from "@/providers/error-monitor-provider";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -36,9 +39,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="flex min-h-full flex-col">
-        <AppThemeProvider>
+        <PreferencesProvider><AppThemeProvider>
           <QueryProvider>
             <OfflineProvider/>
+            <ErrorMonitorProvider/>
             <RealtimeProvider />
             <PushProvider />
             <AppUpdateProvider />
@@ -46,7 +50,7 @@ export default function RootLayout({
             <SiteChrome>{children}</SiteChrome>
             <NetworkFeedback />
           </QueryProvider>
-        </AppThemeProvider>
+        </AppThemeProvider></PreferencesProvider>
       </body>
     </html>
   );

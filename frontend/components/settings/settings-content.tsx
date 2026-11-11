@@ -1,5 +1,8 @@
 "use client";
+import {Localized} from "@/components/ui/localized";
 
+import {AccessibilitySettings} from "./accessibility-settings";
+import {usePreferences} from "@/providers/preferences-provider";
 import { PushSettings } from "@/components/settings/push-settings";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ProfileAccount } from "@/components/auth/profile-account";
@@ -25,6 +28,7 @@ import {
 } from "./settings-fields";
 import { useSettingsAccount } from "./use-settings-account";
 export function SettingsContent() {
+  const {t}=usePreferences();
   const {
     activePanel,
     user,
@@ -85,16 +89,16 @@ export function SettingsContent() {
             className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground transition hover:bg-card hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
+            {t("Back to dashboard")}
           </Link>
 
           <div className="mt-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Preferences
+              {t("Preferences")}
             </p>
 
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Account settings
+              {t("Account settings")}
             </h1>
 
             <p className="mt-3 max-w-2xl text-muted-foreground">
@@ -149,7 +153,7 @@ export function SettingsContent() {
               <ThemeToggle label />
             </div>
             <PushSettings />
-            <ProfileAccount user={user} />
+            <AccessibilitySettings/><ProfileAccount user={user} />
             <motion.div
               initial="hidden"
               animate="visible"
@@ -256,9 +260,7 @@ export function SettingsContent() {
                   type="button"
                   onClick={closePanel}
                   className="rounded-xl border border-border bg-card px-5 py-3 font-medium text-foreground transition hover:bg-secondary hover:text-foreground"
-                >
-                  Cancel
-                </button>
+                ><Localized>Cancel</Localized></button>
 
                 <button
                   type="submit"
@@ -339,9 +341,7 @@ export function SettingsContent() {
                   type="button"
                   onClick={closePanel}
                   className="rounded-xl border border-border bg-card px-5 py-3 font-medium text-foreground transition hover:bg-secondary hover:text-foreground"
-                >
-                  Cancel
-                </button>
+                ><Localized>Cancel</Localized></button>
 
                 <button
                   type="submit"

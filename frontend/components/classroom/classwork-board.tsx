@@ -1,4 +1,5 @@
 "use client";
+import {Localized} from "@/components/ui/localized";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useClassroomComposer } from "@/lib/classroom-composer";
 import {ClassworkExplorer} from "./classwork-explorer";
@@ -47,14 +48,10 @@ export function ClassworkBoard({
         className="en-filter-tabs inline-flex w-fit"
         aria-label="Classwork type"
       >
-        <button aria-pressed={work==="all"} onClick={()=>select("all")}>Overview</button>
-        <button aria-pressed={work==="assignments"} onClick={() => select("assignments")}>
-          Assignments
-        </button>
-        <button aria-pressed={materials} onClick={() => select("materials")}>
-          Materials
-        </button>
-        <button aria-pressed={work==="exams"} onClick={()=>select("exams")}>Exams</button>
+        <button aria-pressed={work==="all"} onClick={()=>select("all")}><Localized>Overview</Localized></button>
+        <button aria-pressed={work==="assignments"} onClick={() => select("assignments")}><Localized>Assignments</Localized></button>
+        <button aria-pressed={materials} onClick={() => select("materials")}><Localized>Materials</Localized></button>
+        <button aria-pressed={work==="exams"} onClick={()=>select("exams")}><Localized>Exams</Localized></button>
       </div>
       {work==="all"?<ClassworkExplorer classId={classroomId} canManage={canManage} onOpen={open}/>:work==="exams"?<ExamBoard classroomId={classroomId} canManage={canManage}/>:materials ? (
         <MaterialLibrary

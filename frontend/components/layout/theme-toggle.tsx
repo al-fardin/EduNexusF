@@ -1,4 +1,5 @@
 "use client";
+import {Localized} from "@/components/ui/localized";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
@@ -23,7 +24,7 @@ export function ThemeToggle({ label = false }: { label?: boolean }) {
       {dark ? <Sun size={19} /> : <Moon size={19} />}{" "}
       {label && (
         <>
-          <span>Dark mode</span>
+          <span><Localized>Dark mode</Localized></span>
           <span className="en-toggle-track" data-on={dark}>
             <i />
           </span>

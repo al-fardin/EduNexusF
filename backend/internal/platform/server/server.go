@@ -4,6 +4,7 @@ import (
 	"github.com/edunexus/edunexus/internal/platform/config"
 	appErrors "github.com/edunexus/edunexus/internal/platform/errors"
 	"github.com/edunexus/edunexus/internal/platform/middleware"
+	"github.com/edunexus/edunexus/internal/platform/observability"
 	"github.com/edunexus/edunexus/internal/platform/router"
 	"github.com/edunexus/edunexus/internal/platform/security"
 
@@ -23,7 +24,9 @@ func New(
 		ErrorHandler: appErrors.Handler,
 	})
 
+	app.Use(observability.Middleware)
 	middleware.Register(app)
+	observability.Register(app, db)
 
 	router.Register(
 		app,

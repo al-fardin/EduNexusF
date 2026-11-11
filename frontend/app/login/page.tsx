@@ -1,4 +1,5 @@
 "use client";
+import {Localized} from "@/components/ui/localized";
 
 import axios from "axios";
 import Link from "next/link";
@@ -153,9 +154,7 @@ export default function LoginPage() {
             <label
               htmlFor="email"
               className="mb-2 block text-sm font-medium text-foreground"
-            >
-              Email
-            </label>
+            ><Localized>Email</Localized></label>
 
             <input
               id="email"
@@ -176,9 +175,7 @@ export default function LoginPage() {
             <label
               htmlFor="password"
               className="mb-2 block text-sm font-medium text-foreground"
-            >
-              Password
-            </label>
+            ><Localized>Password</Localized></label>
 
             <input
               id="password"
@@ -194,9 +191,7 @@ export default function LoginPage() {
               <Link
                 href="/forgot-password"
                 className="text-sm font-medium text-muted-foreground transition hover:text-foreground hover:underline"
-              >
-                Forgot password?
-              </Link>
+              ><Localized>Forgot password?</Localized></Link>
             </div>
           </div>
 
@@ -224,9 +219,7 @@ export default function LoginPage() {
             <Link
               href="/register"
               className="font-semibold text-foreground hover:underline"
-            >
-              Create account
-            </Link>
+            ><Localized>Create account</Localized></Link>
           </p>
         </form>
       </div>

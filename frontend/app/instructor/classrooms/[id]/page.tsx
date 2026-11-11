@@ -1,4 +1,5 @@
 "use client";
+import {Localized} from "@/components/ui/localized";
 import {Gradebook} from "@/components/classroom/gradebook";
 import {ActivityHistory} from "@/components/classroom/activity-history";
 import { useClassroomTab } from "@/lib/classroom-tab";
@@ -196,7 +197,7 @@ export default function ClassroomDetailsPage() {
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }`}
                 >
-                  {tab.label}
+                  <Localized>{tab.label}</Localized>
                 </button>
               ))}
             </div>
@@ -346,9 +347,7 @@ function PeopleTab({
           type="button"
           onClick={onRetry}
           className="mt-5 rounded-xl bg-red-700 px-5 py-2.5 text-sm font-semibold text-white"
-        >
-          Try again
-        </button>
+        ><Localized>Try again</Localized></button>
       </div>
     );
   }

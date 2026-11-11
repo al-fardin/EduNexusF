@@ -1,4 +1,5 @@
 "use client";
+import {Localized} from "@/components/ui/localized";
 import type { ReactNode } from "react";
 import { Button } from "./button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./dialog";
@@ -20,7 +21,7 @@ export function ConfirmAction({ open, onOpenChange, title, description, busy = f
     busy?: boolean;
     onConfirm: () => void;
 }) { return <Dialog open={open} onOpenChange={value => { if (!busy)
-    onOpenChange(value); }}><DialogContent><DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Cancel</Button><Button variant="destructive" disabled={busy} onClick={onConfirm}>{busy ? "Working…" : "Confirm"}</Button></DialogFooter></DialogContent></Dialog>; }
+    onOpenChange(value); }}><DialogContent><DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}><Localized>Cancel</Localized></Button><Button variant="destructive" disabled={busy} onClick={onConfirm}>{busy ? "Working…" : "Confirm"}</Button></DialogFooter></DialogContent></Dialog>; }
 export function UploadState({ progress, onCancel }: {
     progress: number;
     onCancel?: () => void;

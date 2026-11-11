@@ -1,0 +1,53 @@
+.en-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 300;
+  transform: translateY(-200%);
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 12px 20px;
+}
+.en-skip-link:focus {
+  transform: translateY(0);
+}
+html[data-text-size="large"] {
+  font-size: 18px;
+}
+html[data-text-size="larger"] {
+  font-size: 20px;
+}
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  scroll-margin-block: 100px 180px;
+}
+.en-violet-sidebar nav {
+  overflow-y: auto;
+  min-height: 0;
+}
+@media (max-width: 767px) {
+  html[data-text-size="large"] .en-site-main :is(input, textarea, select),
+  html[data-text-size="larger"] .en-site-main :is(input, textarea, select) {
+    font-size: 1rem !important;
+  }
+  .en-calendar-day {
+    min-width: 0;
+  }
+  .en-calendar-day a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
