@@ -18,6 +18,20 @@ type Handler struct {
 
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := &Handler{db: db}
+	app.Get("/workspace/search", authMiddleware.JWTProtected(), h.Search)
+	app.Get("/workspace/calendar", authMiddleware.JWTProtected(), h.Calendar)
+	app.Post("/classrooms/:id/calendar/events", authMiddleware.JWTProtected(), h.SaveCalendarEvent)
+	app.Delete("/classrooms/:id/calendar/events/:eventID", authMiddleware.JWTProtected(), h.SaveCalendarEvent)
+	app.Put("/classrooms/:id/calendar/:kind/:resourceID/reminder", authMiddleware.JWTProtected(), h.CalendarReminder)
+	app.Delete("/classrooms/:id/calendar/:kind/:resourceID/reminder", authMiddleware.JWTProtected(), h.CalendarReminder)
+	app.Get("/classrooms/:id/progress", authMiddleware.JWTProtected(), h.Progress)
+	app.Get("/classrooms/:id/attendance", authMiddleware.JWTProtected(), h.Attendance)
+	app.Put("/classrooms/:id/attendance", authMiddleware.JWTProtected(), h.Attendance)
+	app.Post("/classrooms/:id/assignments/:assignmentID/import-grades", authMiddleware.JWTProtected(), h.ImportGrades)
+	app.Get("/classrooms/:id/assignments/:assignmentID/import-template", authMiddleware.JWTProtected(), h.GradeImportTemplate)
+	app.Get("/classrooms/:id/assignments/:assignmentID/submission-bundle", authMiddleware.JWTProtected(), h.SubmissionBundle)
+	app.Post("/classrooms/:id/assignments/:assignmentID/remind", authMiddleware.JWTProtected(), h.RemindStudents)
+	registerCalendarReminders(app, h)
 	topic := app.Group("/classrooms/:id/topics", authMiddleware.JWTProtected())
 	topic.Get("/", h.Topics)
 	topic.Post("/", h.SaveTopic)
