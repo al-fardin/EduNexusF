@@ -1,5 +1,7 @@
 "use client";
+import {Localized} from "@/components/ui/localized";
 import Link from "next/link";
+import {usePreferences} from "@/providers/preferences-provider";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -19,6 +21,7 @@ export function WorkspaceHome({
 }: {
   classesOnly?: boolean;
 }) {
+  const {t}=usePreferences();
   const user = useAuthStore((s) => s.user?.id);
   const [filter, setFilter] = useState("all");
   const query = useQuery({
@@ -32,20 +35,21 @@ export function WorkspaceHome({
     <main className="en-workspace-page en-violet-home">
       <div className="en-workspace-container">
         <header className="en-page-heading">
-          <h1>{classesOnly ? "Classroom" : "Home"}</h1>
+          <h1>{t(classesOnly ? "Classroom" : "Home")}</h1>
           <div className="flex gap-3">
             <Link className="en-outline-button" href="/student/classrooms/join">
-              Join class
+              {t("Join class")}
             </Link>
             <Link
               className="en-solid-button"
               href="/instructor/classrooms/create"
             >
               <Plus size={18} />
-              Create class
+              {t("Create class")}
             </Link>
           </div>
         </header>
+        <nav className="mb-4 flex flex-wrap gap-2" aria-label="Workspace tools"><Link className="en-outline-button" href="/calendar">{t("Calendar")}</Link><Link className="en-outline-button" href="/progress">{t("Progress")}</Link><Link className="en-outline-button" href="/search">{t("Search")}</Link></nav>
         <div className="en-home-filters" aria-label="Filter classes">
           {[
             ["all", "All"],
@@ -57,7 +61,7 @@ export function WorkspaceHome({
               aria-pressed={filter === value}
               onClick={() => setFilter(value)}
             >
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
@@ -69,9 +73,7 @@ export function WorkspaceHome({
             <button
               className="en-outline-button mt-4"
               onClick={() => void query.refetch()}
-            >
-              Retry
-            </button>
+            ><Localized>Retry</Localized></button>
           </div>
         ) : classes.length ? (
           <div className="en-workspace-class-grid">
@@ -89,7 +91,7 @@ export function WorkspaceHome({
           <div className="en-home-panels">
             <section className="en-home-panel">
               <div className="en-panel-heading">
-                <h2>Recent activity</h2>
+                <h2><Localized>Recent activity</Localized></h2>
               </div>
               {query.data.activity.length === 0 ? (
                 <p className="en-panel-empty">
@@ -124,10 +126,8 @@ export function WorkspaceHome({
             </section>
             <section className="en-home-panel">
               <div className="en-panel-heading">
-                <h2>Upcoming</h2>
-                <Link href="/calendar">
-                  View all
-                  <ArrowRight size={15} />
+                <h2><Localized>Upcoming</Localized></h2>
+                <Link href="/calendar"><Localized>View all</Localized><ArrowRight size={15} />
                 </Link>
               </div>
               {query.data.upcoming.length === 0 ? (

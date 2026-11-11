@@ -2,6 +2,8 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
+  Search,
+  ChartNoAxesCombined,
   BookOpen,
   CalendarDays,
   ChevronDown,
@@ -27,11 +29,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/store/auth-store";
+import {usePreferences} from "@/providers/preferences-provider";
 const links = [
   { href: "/", label: "Home", icon: House },
   { href: "/instructor/classrooms", label: "Teaching", icon: GraduationCap },
   { href: "/student/classrooms", label: "Learning", icon: BookOpen },
   { href: "/classrooms", label: "Classroom", icon: Layers },
+  { href: "/search", label: "Search", icon: Search },
+  { href: "/progress", label: "Progress", icon: ChartNoAxesCombined },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/files", label: "Files", icon: Folder },
   { href: "/offline", label: "Saved work", icon: Download },
@@ -70,6 +75,7 @@ function Logo() {
   );
 }
 export function SiteChrome({ children }: { children: React.ReactNode }) {
+  const {t}=usePreferences();
   const path = usePathname() ?? "/";
   const user = useAuthStore((s) => s.user);
   const unread = useUnreadMessages().data?.unread ?? 0;
@@ -87,6 +93,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   );
   return (
     <div className={`en-app-shell${inClass ? " en-in-classroom" : ""}`}>
+      <a className="en-skip-link" href="#main-content">{t("Skip to main content")}</a>
       <aside className="en-violet-sidebar">
         <Link href="/" className="en-violet-brand" aria-label="EduNexus home">
           <Logo />
@@ -101,7 +108,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                 aria-current={active(path, item.href) ? "page" : undefined}
               >
                 <Icon size={22} />
-                <span>{item.label}</span>
+                <span>{t(item.label)}</span>
               </Link>
             );
           })}
@@ -111,7 +118,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             aria-current={active(path, "/messages") ? "page" : undefined}
           >
             <MessageSquare size={22} />
-            <span>Messages</span>
+            <span>{t("Messages")}</span>
             {unread > 0 && (
               <b className="en-sidebar-count">{unread > 99 ? "99+" : unread}</b>
             )}
@@ -121,7 +128,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             aria-current={active(path, "/settings") ? "page" : undefined}
           >
             <Settings size={22} />
-            <span>Settings</span>
+            <span>{t("Settings")}</span>
           </Link>
         </nav>
         <div className="en-sidebar-bottom">
@@ -141,13 +148,13 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
           <Link href="/" className="en-violet-brand" aria-label="EduNexus home">
             <Logo />
           </Link>
-          <div className="en-mobile-actions">
+          <div className="en-mobile-actions"><Link href="/search" className="en-icon-button" aria-label={t("Search")}><Search size={20}/></Link>
             <ThemeToggle />
             <NotificationBell />
             <MessagingLink />
           </div>
         </header>
-        <div className="en-site-main">{children}</div>
+        <div id="main-content" tabIndex={-1} className="en-site-main">{children}</div>
       </div>
       <nav className="en-violet-bottom" aria-label="Mobile navigation">
         {mobileLinks.map((item) => {
@@ -159,7 +166,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
               aria-current={active(path, item.href) ? "page" : undefined}
             >
               <Icon size={23} />
-              <span>{item.label}</span>
+              <span>{t(item.label)}</span>
             </Link>
           );
         })}
