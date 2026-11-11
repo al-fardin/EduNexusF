@@ -61,3 +61,13 @@ test("offline identity rejects expired, mismatched or stale verified sessions",(
  data.set("edunexus:verified-offline:a",JSON.stringify({user:{id:"b",status:"active"},verifiedAt:Date.now()}));assert.equal(exports.offlineSession(valid),null);
  data.set("edunexus:verified-offline:a",JSON.stringify({user:{id:"a",status:"active"},verifiedAt:Date.now()-86400001}));assert.equal(exports.offlineSession(valid),null);
 });
+
+test("manual sync retries keep request identity and cannot bypass a blocked assignment",async()=>{
+ const {store:s}=setup();const original=await s.saveAssignmentDraft("student-a","class","assignment","Work",draft({queued:true}),null);
+ let claimed=await s.claimAssignmentDraft("student-a");await s.finishAssignmentDraft(claimed,{message:"Connection lost",blocked:false});
+ await s.retryAssignmentDraft("student-a",original.id,original.value.revision);let current=await s.readOffline("student-a",original.id);
+ assert.equal(current.value.requestId,original.value.requestId);assert.equal(current.value.nextRetryAt,0);
+ claimed=await s.claimAssignmentDraft("student-a");await assert.rejects(s.retryAssignmentDraft("student-a",original.id,original.value.revision),/active upload/);
+ await s.finishAssignmentDraft(claimed,{message:"Deadline passed",blocked:true});await assert.rejects(s.retryAssignmentDraft("student-a",original.id,original.value.revision),/Review this assignment/);
+ current=await s.readOffline("student-a",original.id);assert.equal(current.value.state,"blocked");assert.equal(current.value.answer,"Saved answer");
+});

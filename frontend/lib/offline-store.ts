@@ -145,3 +145,7 @@ export async function renewAssignmentLease(snapshot: DraftEntry): Promise<boolea
     done(false);
     return;
 } current.value.leaseUntil = Date.now() + 90000; store.put(current); done(true); }; }); }
+
+export async function retryAssignmentDraft(owner:string,id:string,revision:string):Promise<void>{
+ return transaction("readwrite",owner,(store,done,fail)=>{const request=store.get(id);request.onsuccess=()=>{const current=request.result as DraftEntry|undefined;if(current?.owner!==owner||current.kind!=="draft"||current.value.revision!==revision){fail(new OfflineConflict());return;}if(!current.value.queued||current.value.state==="blocked"||current.value.leaseUntil>Date.now()){fail(new Error("Review this assignment or wait for the active upload."));return;}current.value={...current.value,state:"queued",nextRetryAt:0,error:"",lease:"",leaseUntil:0};store.put(current);done();};});
+}

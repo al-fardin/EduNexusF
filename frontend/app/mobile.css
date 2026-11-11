@@ -84,3 +84,6 @@ input[type=checkbox],input[type=radio]{accent-color:#375942}
  .en-class-hero>div.p-6{padding:20px!important}.en-class-hero h1{font-size:26px!important}.en-class-hero .mt-4{margin-top:10px}.en-class-hero .gap-6{gap:18px}
  .en-class-hero .lg\:w-64{padding:12px 14px!important}.en-class-hero .lg\:w-64>p:last-child{margin-top:6px}.en-class-hero code{font-size:20px}.en-class-hero .lg\:w-64>.mt-2{margin-top:4px}
 }
+
+/* Keep saved-work actions above offline status and mobile navigation. */
+@media(max-width:767px){.en-site-main main.en-saved-work-page{padding-bottom:calc(176px + env(safe-area-inset-bottom))!important}}

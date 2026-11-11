@@ -23,7 +23,7 @@ export function AssignmentDraftForm({ classroomId, assignment: a, baseVersion }:
     } }
     return <div className="space-y-3">
   <form onSubmit={e => { e.preventDefault(); void submit(); }} className="space-y-3 rounded-xl bg-secondary p-4">
-   <label className="block text-sm font-semibold">Your answer<textarea rows={4} maxLength={20000} value={draft.answer} className="mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm" disabled={busy || draft.loading || draft.locked || draft.conflicted} onChange={e => draft.editAnswer(e.target.value)}/></label>
+   <label className="block text-sm font-semibold">Your answer<textarea aria-label="Your answer" rows={4} maxLength={20000} value={draft.answer} className="mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm" disabled={busy || draft.loading || draft.locked || draft.conflicted} onChange={e => draft.editAnswer(e.target.value)}/></label>
    <label className="block text-sm">Attach file · up to 15 MB<input type="file" className="mt-1 w-full rounded-xl border border-border bg-card p-2 text-sm" disabled={busy || draft.loading || draft.locked || draft.conflicted} onChange={e => draft.editFile(e.target.files?.[0] ?? null)} accept=".pdf,.txt,.md,.zip,.docx,.png,.jpg,.jpeg,.py,.cpp,.c,.h,.java,.js,.ts,.go,.rs"/></label>
    {draft.file && <p className="break-all text-xs text-muted-foreground">Saved attachment: {draft.file.name}</p>}
    {draft.record?.value.state === "syncing" && <div role="status" className="en-chat-upload"><progress aria-label="Submission upload" value={draft.progress} max={100}/><span>{draft.progress < 100 ? `Uploading ${draft.progress}%` : "Confirming…"}</span></div>}
