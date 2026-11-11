@@ -34,6 +34,14 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -c "INSERT INTO users(email,username,password_hash,first_name,last_name) VALUES('restore@example.invalid','restore_fixture','fixture','Restore','Check');"
       - name: Backup, restore and verify
         run: |
-          pg_dump -Fc -f "$RUNNER_TEMP/recovery.dump"
-          sha256sum "$RUNNER_TEMP/recovery.dump" > "$RUNNER_TEMP/recovery.dump.sha256"
-          sh deploy/verify-backup.sh "$RUNNER_TEMP/recovery.dump"
+          # Keep dump/restore clients on the same major version as the service.
+          docker run --rm --network host \
+            -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE -e BACKUP_EXPECTED_USERS \
+            -v "$RUNNER_TEMP:/verification" \
+            -v "$GITHUB_WORKSPACE/deploy:/verification-tools:ro" \
+            postgres:17 sh -c '
+              set -eu
+              pg_dump -Fc -f /verification/recovery.dump
+              sha256sum /verification/recovery.dump > /verification/recovery.dump.sha256
+              sh /verification-tools/verify-backup.sh /verification/recovery.dump
+            '
