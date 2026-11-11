@@ -29,6 +29,7 @@ export function CallButtons({
   disabled: boolean;
 }) {
   const phase = useCallStore((s) => s.phase);
+  const [missedOnly,setMissedOnly]=useState(false);
   const [open, setOpen] = useState(false);
   const [session] = useState(clientId);
   const user = useAuthStore((s) => s.user?.id);
@@ -85,14 +86,15 @@ export function CallButtons({
               Audio and video calls in this conversation.
             </DialogDescription>
           </DialogHeader>
+<label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={missedOnly} onChange={e=>setMissedOnly(e.target.checked)}/>Missed calls only</label>
           {history.isPending ? (
             <p role="status">Loading calls…</p>
           ) : history.isError ? (
             <p role="alert">{examError(history.error)}</p>
-          ) : history.data?.length === 0 ? (
+          ) : history.data?.filter(call=>!missedOnly||call.reason==="missed").length === 0 ? (
             <p>No calls yet.</p>
           ) : (
-            history.data?.map((call) => (
+            history.data?.filter(call=>!missedOnly||call.reason==="missed").map((call) => (
               <article key={call.id}>
                 {call.reason === "missed" || call.reason === "declined" ? (
                   <PhoneMissed className="text-destructive" size={19} />

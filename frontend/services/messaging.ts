@@ -50,6 +50,7 @@ export type MessagePage = {
 export type PinnedMessage = {id:string;body:string;file_name:string;pinned_by:string;pinned_at:string};
 const base = (id: string) => `/classrooms/${id}`;
 export const messaging = {
+ async library(id:string,thread:string,params:{kind:string;q:string;before?:string}):Promise<{items:ChatMessage[];next:string}>{return (await api.get(`${base(id)}/conversations/${thread}/library`,{params})).data.data;},
   async preferences(id:string,thread:string):Promise<{muted_until:string|null;muted:boolean}>{return (await api.get(`${base(id)}/conversations/${thread}/preferences`)).data.data;},
   async mute(id:string,thread:string,hours:number){await api.put(`${base(id)}/conversations/${thread}/preferences`,{hours});},
   async pins(id:string,thread:string):Promise<PinnedMessage[]>{return (await api.get(`${base(id)}/conversations/${thread}/pins`)).data.data;},

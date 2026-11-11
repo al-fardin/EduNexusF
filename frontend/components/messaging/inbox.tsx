@@ -35,6 +35,8 @@ export function Inbox() {
   const path = usePathname();
   const search = useSearchParams();
   const client = useQueryClient();
+  const [inboxSearch,setInboxSearch]=useState("");
+  const [onlyUnread,setOnlyUnread]=useState(false);
   const [newChat, setNewChat] = useState(false);
   const [recipientSearch, setRecipientSearch] = useState("");
   const [creating, setCreating] = useState(false);
@@ -90,6 +92,7 @@ export function Inbox() {
       setCreating(false);
     }
   }
+  const visibleConversations=(conversations.data??[]).filter(c=>(!onlyUnread||c.unread>0)&&(c.name+" "+c.last_message).toLowerCase().includes(inboxSearch.toLowerCase()));
   const peer = conversations.data?.find((c) => c.id === thread);
   return (
     <main className={`en-inbox-page${thread ? " en-mobile-chat-open" : ""}`}>
@@ -172,6 +175,7 @@ export function Inbox() {
               Your teacher has paused your messages in this class.
             </p>
           )}
+          {classId&&<div className="space-y-2 border-b border-border p-3"><input aria-label="Search conversations" placeholder="Search names or latest message" value={inboxSearch} onChange={e=>setInboxSearch(e.target.value)} className="w-full min-w-0 rounded-xl border border-border bg-card p-2 text-sm"/><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={onlyUnread} onChange={e=>setOnlyUnread(e.target.checked)}/>Unread only</label></div>}
           {!classId ? (
             <p className="en-panel-empty">
               Choose a class to view its conversations.
@@ -182,10 +186,10 @@ export function Inbox() {
             <p role="alert" className="en-chat-error">
               {examError(conversations.error)}
             </p>
-          ) : conversations.data?.length === 0 ? (
+          ) : visibleConversations.length === 0 ? (
             <div className="en-conversation-empty">
               <MessageSquare size={28} />
-              <p>No conversations yet</p>
+              <p>{inboxSearch||onlyUnread?"No matching conversations":"No conversations yet"}</p>
               <button
                 className="en-solid-button"
                 disabled={!settings.data?.can_send}
@@ -195,7 +199,7 @@ export function Inbox() {
               </button>
             </div>
           ) : (
-            conversations.data?.map((c) => (
+            visibleConversations.map((c) => (
               <button
                 className="en-conversation-row"
                 aria-pressed={c.id === thread}

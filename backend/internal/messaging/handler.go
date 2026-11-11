@@ -43,6 +43,7 @@ func Register(app *fiber.App, db *pgxpool.Pool) {
 	c.Get("/conversations/:threadID/preferences", h.Preferences)
 	c.Put("/conversations/:threadID/preferences", h.Preferences)
 	c.Get("/conversations/:threadID/pins", h.Pins)
+	c.Get("/conversations/:threadID/library", h.Library)
 	c.Put("/conversations/:threadID/messages/:messageID/pin", h.Pins)
 	c.Put("/conversations/:threadID/messages/:messageID/star", h.Stars)
 	c.Post("/conversations/:threadID/messages", h.Send)

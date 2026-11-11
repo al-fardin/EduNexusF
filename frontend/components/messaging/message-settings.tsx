@@ -1,4 +1,5 @@
 "use client";
+import {ConversationLibrary} from "./conversation-library";
 import {ConversationMute} from "./conversation-tools";
 import { useRealtimeStore } from "@/store/realtime-store";
 import { useState } from "react";
@@ -116,7 +117,7 @@ export function MessageSettings({
               Everyone in the conversation sees theme changes.
             </DialogDescription>
           </DialogHeader>
-          {thread && <ConversationMute classId={classId} thread={thread}/>}
+          {thread && <><ConversationMute classId={classId} thread={thread}/><ConversationLibrary classId={classId} thread={thread}/></>}
           {thread && (
             <div className="en-conversation-shortcuts">
               <button
