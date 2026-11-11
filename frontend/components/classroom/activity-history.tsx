@@ -15,7 +15,7 @@ type Entry = {
     reason: string;
     created_at: string;
 };
-const actions: Record<string, string> = { assignment_grade: "Assignment grade", exam_grade: "Exam grade", assignment_deadline: "Assignment deadline", exam_schedule: "Exam schedule", material_deleted: "Material deleted" };
+const actions: Record<string, string> = { assignment_rubric:"Rubric grade",assignment_grade: "Assignment grade", exam_grade: "Exam grade", assignment_deadline: "Assignment deadline", exam_schedule: "Exam schedule", material_deleted: "Material deleted" };
 const fields: Record<string, string> = { points: "Points", feedback: "Feedback", due_at: "Deadline", starts_at: "Starts", ends_at: "Ends", closed_at: "Closed", file_name: "File", version: "Version" };
 function value(key: string, v: unknown) { return v === null || v === undefined ? "—" : key.endsWith("_at") ? new Date(String(v)).toLocaleString() : String(v); }
 export function ActivityHistory({ classroomId }: {

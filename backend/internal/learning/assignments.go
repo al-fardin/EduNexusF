@@ -15,29 +15,30 @@ import (
 )
 
 type Assignment struct {
-	ID            string    `json:"id"`
-	Title         string    `json:"title"`
-	Instructions  string    `json:"instructions"`
-	DueAt         time.Time `json:"due_at"`
-	MaxPoints     int       `json:"max_points"`
-	AllowLate     bool      `json:"allow_late"`
-	AllowResubmit bool      `json:"allow_resubmit"`
-	Status        string    `json:"status"`
-	Reason        string    `json:"reason,omitempty"`
+	Rubric        []RubricCriterion `json:"rubric"`
+	ID            string            `json:"id"`
+	Title         string            `json:"title"`
+	Instructions  string            `json:"instructions"`
+	DueAt         time.Time         `json:"due_at"`
+	MaxPoints     int               `json:"max_points"`
+	AllowLate     bool              `json:"allow_late"`
+	AllowResubmit bool              `json:"allow_resubmit"`
+	Status        string            `json:"status"`
+	Reason        string            `json:"reason,omitempty"`
 }
 
 func validAssignment(a Assignment) error {
 	if len(strings.TrimSpace(a.Title)) < 3 || len(a.Title) > 200 || len(a.Instructions) > 20000 || a.DueAt.IsZero() || a.MaxPoints < 1 || a.MaxPoints > 1000 {
 		return fail(400, "provide a title, due date and 1-1000 points")
 	}
-	return nil
+	return validRubric(a.Rubric, a.MaxPoints)
 }
 func (h *Handler) ListAssignments(c *fiber.Ctx) error {
 	_, role, err := h.member(c, false)
 	if err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT id::text,title,instructions,due_at,max_points,allow_late,allow_resubmit,status FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') ORDER BY due_at DESC LIMIT 200`, c.Params("id"), role)
+	rows, err := h.db.Query(c.UserContext(), `SELECT id::text,title,instructions,due_at,max_points,allow_late,allow_resubmit,status,rubric FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') ORDER BY due_at DESC LIMIT 200`, c.Params("id"), role)
 	if err != nil {
 		return err
 	}
@@ -45,7 +46,7 @@ func (h *Handler) ListAssignments(c *fiber.Ctx) error {
 	out := make([]Assignment, 0)
 	for rows.Next() {
 		var a Assignment
-		if err = rows.Scan(&a.ID, &a.Title, &a.Instructions, &a.DueAt, &a.MaxPoints, &a.AllowLate, &a.AllowResubmit, &a.Status); err != nil {
+		if err = rows.Scan(&a.ID, &a.Title, &a.Instructions, &a.DueAt, &a.MaxPoints, &a.AllowLate, &a.AllowResubmit, &a.Status, &a.Rubric); err != nil {
 			return err
 		}
 		out = append(out, a)
@@ -67,6 +68,10 @@ func (h *Handler) SaveAssignment(c *fiber.Ctx) error {
 	if err = validAssignment(a); err != nil {
 		return err
 	}
+	if a.Rubric == nil {
+		a.Rubric = []RubricCriterion{}
+	}
+	rubricJSON, _ := json.Marshal(a.Rubric)
 	tx, err := h.db.Begin(c.UserContext())
 	if err != nil {
 		return err
@@ -76,7 +81,7 @@ func (h *Handler) SaveAssignment(c *fiber.Ctx) error {
 		return err
 	}
 	if c.Params("assignmentID") == "" {
-		err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_assignments(classroom_id,created_by,title,instructions,due_at,max_points,allow_late,allow_resubmit) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8) RETURNING id::text`, c.Params("id"), user, strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit).Scan(&a.ID)
+		err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_assignments(classroom_id,created_by,title,instructions,due_at,max_points,allow_late,allow_resubmit,rubric) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9::jsonb) RETURNING id::text`, c.Params("id"), user, strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit, rubricJSON).Scan(&a.ID)
 	} else {
 		if err = validID(c.Params("assignmentID")); err != nil {
 			return err
@@ -85,7 +90,7 @@ func (h *Handler) SaveAssignment(c *fiber.Ctx) error {
 		if _, err = tx.Exec(c.UserContext(), `SELECT id FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid FOR UPDATE`, a.ID, c.Params("id")); err != nil {
 			return err
 		}
-		tag, e := tx.Exec(c.UserContext(), `UPDATE classroom_assignments SET title=$3,instructions=$4,due_at=$5,max_points=$6,allow_late=$7,allow_resubmit=$8 WHERE id=$1::uuid AND classroom_id=$2::uuid AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions WHERE assignment_id=$1::uuid)`, a.ID, c.Params("id"), strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit)
+		tag, e := tx.Exec(c.UserContext(), `UPDATE classroom_assignments SET title=$3,instructions=$4,due_at=$5,max_points=$6,allow_late=$7,allow_resubmit=$8,rubric=$9::jsonb WHERE id=$1::uuid AND classroom_id=$2::uuid AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions WHERE assignment_id=$1::uuid)`, a.ID, c.Params("id"), strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit, rubricJSON)
 		err = e
 		if err == nil && tag.RowsAffected() == 0 {
 			return fail(409, "assignment is unavailable or already has submissions")
@@ -227,7 +232,7 @@ func (h *Handler) AssignmentSubmissions(c *fiber.Ctx) error {
 	if err = validID(c.Params("assignmentID")); err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT s.id::text,s.student_id::text,trim(u.first_name||' '||u.last_name),s.version,s.answer,s.file_name,s.submitted_at,s.submitted_at>a.due_at,s.awarded_points,s.feedback,s.graded_at
+	rows, err := h.db.Query(c.UserContext(), `SELECT s.id::text,s.student_id::text,trim(u.first_name||' '||u.last_name),s.version,s.answer,s.file_name,s.submitted_at,s.submitted_at>a.due_at,s.awarded_points,s.feedback,s.graded_at,s.rubric_scores
  FROM classroom_assignment_submissions s JOIN classroom_assignments a ON a.id=s.assignment_id JOIN users u ON u.id=s.student_id
  WHERE a.id=$1::uuid AND a.classroom_id=$2::uuid AND ($3='teacher' OR (a.status='published' AND s.student_id=$4::uuid)) ORDER BY s.submitted_at DESC LIMIT 1000`, c.Params("assignmentID"), c.Params("id"), role, user)
 	if err != nil {
@@ -242,10 +247,11 @@ func (h *Handler) AssignmentSubmissions(c *fiber.Ctx) error {
 		var late bool
 		var score *int
 		var graded *time.Time
-		if err = rows.Scan(&id, &student, &name, &version, &answer, &file, &submitted, &late, &score, &feedback, &graded); err != nil {
+		var scores json.RawMessage
+		if err = rows.Scan(&id, &student, &name, &version, &answer, &file, &submitted, &late, &score, &feedback, &graded, &scores); err != nil {
 			return err
 		}
-		out = append(out, fiber.Map{"id": id, "student_id": student, "student_name": name, "version": version, "answer": answer, "file_name": file, "submitted_at": submitted, "late": late, "awarded_points": score, "feedback": feedback, "graded_at": graded})
+		out = append(out, fiber.Map{"id": id, "student_id": student, "student_name": name, "version": version, "answer": answer, "file_name": file, "submitted_at": submitted, "late": late, "awarded_points": score, "feedback": feedback, "graded_at": graded, "rubric_scores": scores})
 	}
 	if err = rows.Err(); err != nil {
 		return err
@@ -264,9 +270,10 @@ func (h *Handler) GradeAssignment(c *fiber.Ctx) error {
 		return err
 	}
 	var req struct {
-		Points   int    `json:"points"`
-		Feedback string `json:"feedback"`
-		Reason   string `json:"reason"`
+		Criteria map[string]int `json:"criteria"`
+		Points   int            `json:"points"`
+		Feedback string         `json:"feedback"`
+		Reason   string         `json:"reason"`
 	}
 	if err = json.Unmarshal(c.Body(), &req); err != nil || req.Points < 0 || len(req.Feedback) > 5000 {
 		return fail(400, "invalid grade or feedback")
@@ -279,7 +286,24 @@ func (h *Handler) GradeAssignment(c *fiber.Ctx) error {
 	if err = activity.SetActor(c.UserContext(), tx, user, req.Reason); err != nil {
 		return err
 	}
-	tag, err := tx.Exec(c.UserContext(), `UPDATE classroom_assignment_submissions s SET awarded_points=$4,feedback=$5,graded_by=$6::uuid,graded_at=now() FROM classroom_assignments a WHERE s.id=$1::uuid AND s.assignment_id=$2::uuid AND a.id=s.assignment_id AND a.classroom_id=$3::uuid AND $4<=a.max_points`, c.Params("submissionID"), c.Params("assignmentID"), c.Params("id"), req.Points, req.Feedback, user)
+	var criteria []RubricCriterion
+	if err = tx.QueryRow(c.UserContext(), `SELECT a.rubric FROM classroom_assignments a JOIN classroom_assignment_submissions s ON s.assignment_id=a.id WHERE a.id=$1::uuid AND a.classroom_id=$2::uuid AND s.id=$3::uuid FOR UPDATE OF s`, c.Params("assignmentID"), c.Params("id"), c.Params("submissionID")).Scan(&criteria); errors.Is(err, pgx.ErrNoRows) {
+		return fail(404, "Submission not found")
+	} else if err != nil {
+		return err
+	}
+	total, err := rubricTotal(criteria, req.Criteria)
+	if err != nil {
+		return err
+	}
+	if len(criteria) > 0 {
+		req.Points = total
+	}
+	if req.Criteria == nil {
+		req.Criteria = map[string]int{}
+	}
+	scoresJSON, _ := json.Marshal(req.Criteria)
+	tag, err := tx.Exec(c.UserContext(), `UPDATE classroom_assignment_submissions s SET awarded_points=$4,feedback=$5,graded_by=$6::uuid,graded_at=now(),rubric_scores=$7::jsonb FROM classroom_assignments a WHERE s.id=$1::uuid AND s.assignment_id=$2::uuid AND a.id=s.assignment_id AND a.classroom_id=$3::uuid AND $4<=a.max_points`, c.Params("submissionID"), c.Params("assignmentID"), c.Params("id"), req.Points, req.Feedback, user, scoresJSON)
 	if err != nil {
 		return err
 	}

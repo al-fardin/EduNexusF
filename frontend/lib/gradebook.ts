@@ -1,0 +1,3 @@
+import type {GradebookData,GradeStudent} from "@/services/gradebook";
+export function csvValue(value:string|number){let text=String(value);if(/^[\s]*[=+@\-]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"';}
+export function gradebookCSV(data:GradebookData,students:GradeStudent[]){const rows:(string|number)[][]=[["Student ID","Student",...data.columns.map(c=>`${c.title} (${c.maximum})`),"Missing","Needs grading"]];for(const s of students)rows.push([s.roll,s.name,...data.columns.map(c=>{const cell=s.cells[`${c.kind}:${c.id}`];return cell.score===null?cell.status:cell.score;}),s.missing,s.needs_grading]);return "\uFEFF"+rows.map(row=>row.map(csvValue).join(",")).join("\r\n");}

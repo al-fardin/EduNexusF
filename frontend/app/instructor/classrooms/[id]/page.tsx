@@ -1,4 +1,5 @@
 "use client";
+import {Gradebook} from "@/components/classroom/gradebook";
 import {ActivityHistory} from "@/components/classroom/activity-history";
 import { useClassroomTab } from "@/lib/classroom-tab";
 import { ClassroomHeader } from "@/components/classroom/classroom-header";
@@ -35,6 +36,7 @@ import {
 type ClassroomTab =
   | "stream"
   | "tutor"
+  | "gradebook"
   | "activity"
   | "analytics"
   | "classwork"
@@ -67,6 +69,7 @@ const tabs: {
     key: "exam",
     label: "Exam",
   },
+  {key:"gradebook",label:"Gradebook"},
   {key:"activity",label:"History"},
   { key: "analytics", label: "Analytics" },
   { key: "tutor", label: "AI tutor" },
@@ -207,6 +210,7 @@ export default function ClassroomDetailsPage() {
             {activeTab === "tutor" && (
               <AITutor classroomId={classroomId} canManage={true} />
             )}
+            {activeTab === "gradebook" && <Gradebook classroomId={classroomId}/>}
             {activeTab === "activity" && <ActivityHistory classroomId={classroomId}/>}
             {activeTab === "analytics" && (
               <LearningAnalytics classroomId={classroomId} />
