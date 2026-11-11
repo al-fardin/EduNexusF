@@ -16,6 +16,9 @@ type RubricCriterion struct {
 }
 
 func validRubric(criteria []RubricCriterion, maximum int) error {
+	if len(criteria) > 0 && (maximum < 1 || maximum > 1000) {
+		return fail(400, "Rubrics support a total of 1–1000 points")
+	}
 	if len(criteria) > 20 {
 		return fail(400, "A rubric supports at most 20 criteria")
 	}

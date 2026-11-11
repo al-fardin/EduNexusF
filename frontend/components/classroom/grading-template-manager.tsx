@@ -1,0 +1,13 @@
+"use client";
+import {useState} from "react";
+import {useQuery,useQueryClient} from "@tanstack/react-query";
+import {gradingTools,type GradingTemplate} from "@/services/grading-tools";
+import {Button} from "@/components/ui/button";
+import {EmptyState,ErrorState,ConfirmAction} from "@/components/ui/app-feedback";
+import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from "@/components/ui/dialog";
+import {examError} from "@/services/exams";
+export function GradingTemplateManager({classId}:{classId:string}){
+ const [open,setOpen]=useState(false),[kind,setKind]=useState<"rubric"|"feedback">("rubric"),[removing,setRemoving]=useState<GradingTemplate|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState("");const client=useQueryClient();
+ const query=useQuery({queryKey:["grading-templates",classId,kind],queryFn:()=>gradingTools.list(classId,kind),enabled:open});
+ return <><Button variant="outline" onClick={()=>setOpen(true)}>Grading templates</Button><Dialog open={open} onOpenChange={value=>{if(!busy)setOpen(value);}}><DialogContent className="max-h-[85dvh] overflow-y-auto"><DialogHeader><DialogTitle>Grading templates</DialogTitle><DialogDescription>Templates saved in this class. Existing assignment rubrics remain independent.</DialogDescription></DialogHeader><select aria-label="Grading template type" value={kind} onChange={e=>setKind(e.target.value as typeof kind)} className="rounded-xl border border-border bg-card p-2 text-sm"><option value="rubric">Rubrics</option><option value="feedback">Feedback</option></select>{(error||query.isError)&&<ErrorState message={error||examError(query.error)}/>} {!query.isPending&&query.data?.length===0&&<EmptyState title="No saved templates"/>}{query.data?.map(item=><article key={item.id} className="space-y-2 rounded-xl border border-border p-3"><h3 className="font-semibold">{item.title}</h3>{item.payload.criteria?.map(r=><p className="text-sm" key={r.id}>{r.title} · {r.maximum} points</p>)}{item.payload.text&&<p className="whitespace-pre-wrap text-sm">{item.payload.text}</p>}<Button variant="ghost" onClick={()=>setRemoving(item)}>Remove template</Button></article>)}</DialogContent></Dialog><ConfirmAction open={!!removing} onOpenChange={value=>{if(!value)setRemoving(null);}} title="Remove grading template?" description="Assignments that already use this rubric keep their criteria." busy={busy} onConfirm={()=>{if(!removing)return;setBusy(true);setError("");void gradingTools.remove(classId,removing.id).then(()=>client.invalidateQueries({queryKey:["grading-templates",classId]})).then(()=>setRemoving(null)).catch(e=>setError(examError(e))).finally(()=>setBusy(false));}}/></>;
+}
