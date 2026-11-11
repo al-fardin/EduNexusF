@@ -19,7 +19,7 @@ export const topics = {
   },
   async move(
     classId: string,
-    kind: "assignment" | "material",
+    kind: "assignment" | "material" | "exam",
     resource: string,
     topic_id: string,
   ) {

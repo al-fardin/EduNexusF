@@ -31,7 +31,7 @@ func (h *Handler) Topics(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	rows, err = h.db.Query(c.UserContext(), `SELECT r.resource_id::text,r.resource_kind,r.topic_id::text FROM classroom_topic_resources r WHERE r.classroom_id=$1::uuid AND((r.resource_kind='assignment' AND EXISTS(SELECT 1 FROM classroom_assignments a WHERE a.id=r.resource_id AND a.classroom_id=r.classroom_id AND($2='teacher' OR a.status='published'))) OR(r.resource_kind='material' AND EXISTS(SELECT 1 FROM classroom_materials a JOIN classroom_stream_posts p ON p.reference_id=a.id AND p.classroom_id=a.classroom_id AND p.reference_type='material' AND p.deleted_at IS NULL WHERE a.id=r.resource_id AND a.classroom_id=r.classroom_id)))`, c.Params("id"), role)
+	rows, err = h.db.Query(c.UserContext(), `SELECT r.resource_id::text,r.resource_kind,r.topic_id::text FROM classroom_topic_resources r WHERE r.classroom_id=$1::uuid AND((r.resource_kind='assignment' AND EXISTS(SELECT 1 FROM classroom_assignments a WHERE a.id=r.resource_id AND a.classroom_id=r.classroom_id AND($2='teacher' OR a.status='published'))) OR(r.resource_kind='exam' AND EXISTS(SELECT 1 FROM classroom_exams e WHERE e.id=r.resource_id AND e.classroom_id=r.classroom_id AND($2='teacher' OR e.status='published'))) OR(r.resource_kind='material' AND EXISTS(SELECT 1 FROM classroom_materials a JOIN classroom_stream_posts p ON p.reference_id=a.id AND p.classroom_id=a.classroom_id AND p.reference_type='material' AND p.deleted_at IS NULL WHERE a.id=r.resource_id AND a.classroom_id=r.classroom_id)))`, c.Params("id"), role)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (h *Handler) MoveTopicResource(c *fiber.Ctx) error {
 		return err
 	}
 	kind := c.Params("kind")
-	if kind != "assignment" && kind != "material" {
+	if kind != "assignment" && kind != "material" && kind != "exam" {
 		return fail(400, "unknown classwork type")
 	}
 	var req struct {
@@ -145,7 +145,7 @@ func (h *Handler) MoveTopicResource(c *fiber.Ctx) error {
 	}
 	defer tx.Rollback(c.UserContext())
 	var exists bool
-	err = tx.QueryRow(c.UserContext(), `SELECT CASE WHEN $3='assignment' THEN EXISTS(SELECT 1 FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid) ELSE EXISTS(SELECT 1 FROM classroom_materials WHERE id=$1::uuid AND classroom_id=$2::uuid) END`, resource, c.Params("id"), kind).Scan(&exists)
+	err = tx.QueryRow(c.UserContext(), `SELECT CASE WHEN $3='assignment' THEN EXISTS(SELECT 1 FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid) WHEN $3='exam' THEN EXISTS(SELECT 1 FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid) ELSE EXISTS(SELECT 1 FROM classroom_materials WHERE id=$1::uuid AND classroom_id=$2::uuid) END`, resource, c.Params("id"), kind).Scan(&exists)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,5 @@
 "use client";
+import {AnnouncementDrafts} from "./announcement-drafts";
 import {AnnouncementDetailsModal} from "./announcement-details";
 import {getAuthorName,getInitials,formatPostDate} from "./stream-format";
 import {ContentSkeleton} from "@/components/ui/content-skeleton";
@@ -250,7 +251,7 @@ export function StreamFeed({
   if(canManage&&(composer==="announcement"||composer==="material"))return <div className="en-composer-view"><button className="en-composer-back" onClick={()=>setComposer(null)}><ArrowLeft size={17}/>Back to stream</button>{composer==="announcement"?<AnnouncementComposer classroomId={classroomId} onCreated={()=>{setPage(1);setComposer(null)}}/>:<MaterialUploadForm classroomId={classroomId} onUploaded={()=>{setPage(1);setComposer(null)}}/>}</div>;
   return (
     <div className="space-y-5">
-      {canManage&&<div className="en-stream-compose-bar"><button className="en-stream-compose-prompt" onClick={()=>setComposer("announcement")}><span><Pencil size={17}/></span>Post an update</button><button className="en-outline-button" onClick={()=>setComposer("material")}><FileUp size={16}/>Material</button></div>}
+      {canManage&&<div className="en-stream-compose-bar"><AnnouncementDrafts classId={classroomId}/><button className="en-stream-compose-prompt" onClick={()=>setComposer("announcement")}><span><Pencil size={17}/></span>Post an update</button><button className="en-outline-button" onClick={()=>setComposer("material")}><FileUp size={16}/>Material</button></div>}
 
       <section className="en-stream-panel overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
         <header className="flex flex-col gap-4 border-b border-border px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">

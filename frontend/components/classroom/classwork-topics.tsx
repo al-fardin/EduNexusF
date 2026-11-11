@@ -52,7 +52,7 @@ export function ClassworkTopics({
     setError("");
     try {
       await action();
-      await client.invalidateQueries({ queryKey: ["classwork-topics"] });
+      await Promise.all([client.invalidateQueries({ queryKey: ["classwork-topics"] }),client.invalidateQueries({queryKey:["classwork",classId]})]);
       setTitle("");
       setEditing("");
       setRemove(null);
@@ -104,7 +104,7 @@ export function ClassworkTopics({
           <DialogHeader>
             <DialogTitle>Classwork topics</DialogTitle>
             <DialogDescription>
-              Group materials and assignments. Removing a topic keeps its
+              Group materials, assignments and exams. Removing a topic keeps its
               classwork in Unsorted.
             </DialogDescription>
           </DialogHeader>
@@ -218,7 +218,7 @@ export function ResourceTopicPicker({
   id,
 }: {
   classId: string;
-  kind: "assignment" | "material";
+  kind: "assignment" | "material" | "exam";
   id: string;
 }) {
   const query = useTopics(classId);
@@ -238,9 +238,7 @@ export function ResourceTopicPicker({
             setError("");
             try {
               await topics.move(classId, kind, id, e.target.value);
-              await client.invalidateQueries({
-                queryKey: ["classwork-topics"],
-              });
+              await Promise.all([client.invalidateQueries({queryKey:["classwork-topics"]}),client.invalidateQueries({queryKey:["classwork",classId]})]);
             } catch (err) {
               setError(examError(err));
             } finally {

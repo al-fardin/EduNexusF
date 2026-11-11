@@ -1,6 +1,8 @@
 "use client";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useClassroomComposer } from "@/lib/classroom-composer";
+import {ClassworkExplorer} from "./classwork-explorer";
+import {ExamBoard} from "./exam-board";
 import { ClassworkTopics } from "./classwork-topics";
 import { AssignmentBoard } from "@/components/classroom/assignments";
 import { MaterialLibrary } from "@/components/classroom/material-library";
@@ -23,7 +25,9 @@ export function ClassworkBoard({
     else next.delete("topic");
     router.push(`${path}?${next.toString()}`, { scroll: false });
   }
-  const materials = search.get("work") === "materials";
+  const work=search.get("work")??(search.get("assignment")?"assignments":"all");
+  const materials=work==="materials";
+  function open(kind:"assignment"|"material"|"exam",id:string){const next=new URLSearchParams(search.toString());next.set("work",kind==="exam"?"exams":kind==="material"?"materials":"assignments");if(kind==="assignment")next.set("assignment",id);else next.delete("assignment");router.push(`${path}?${next}`,{scroll:false});}
   function select(value: string) {
     const next = new URLSearchParams(search.toString());
     next.set("work", value);
@@ -43,14 +47,16 @@ export function ClassworkBoard({
         className="en-filter-tabs inline-flex w-fit"
         aria-label="Classwork type"
       >
-        <button aria-pressed={!materials} onClick={() => select("assignments")}>
+        <button aria-pressed={work==="all"} onClick={()=>select("all")}>Overview</button>
+        <button aria-pressed={work==="assignments"} onClick={() => select("assignments")}>
           Assignments
         </button>
         <button aria-pressed={materials} onClick={() => select("materials")}>
           Materials
         </button>
+        <button aria-pressed={work==="exams"} onClick={()=>select("exams")}>Exams</button>
       </div>
-      {materials ? (
+      {work==="all"?<ClassworkExplorer classId={classroomId} canManage={canManage} onOpen={open}/>:work==="exams"?<ExamBoard classroomId={classroomId} canManage={canManage}/>:materials ? (
         <MaterialLibrary
           classroomId={classroomId}
           canManage={canManage}
