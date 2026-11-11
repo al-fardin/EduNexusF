@@ -1,5 +1,5 @@
 param(
-    [string]$Project = $PSScriptRoot,
+    [string]$Project = ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))),
     [string]$PsqlPath = '',
     [string]$DatabaseUrl = '',
     [switch]$SqlOnly

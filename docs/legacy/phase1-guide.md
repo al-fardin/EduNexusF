@@ -22,8 +22,8 @@ This package starts from the user's latest `EduNexus_Latest.zip` **after** the u
 ```powershell
 cd "F:\EduNexus"
 docker compose up -d
-powershell -ExecutionPolicy Bypass -File .\APPLY_PHASE1.ps1 -Project "F:\EduNexus"
-go run ./apps/api
+powershell -ExecutionPolicy Bypass -File .\scripts/database/legacy/apply-phase1.ps1 -Project "F:\EduNexus"
+go run ./backend/apps/api
 ```
 
 4. In a **second** PowerShell terminal:
@@ -49,7 +49,7 @@ All require `Authorization: Bearer <access_token>` and valid classroom membershi
 | GET | `/classrooms/:id/materials/:materialID/download` | Any active class member |
 | DELETE | `/classrooms/:id/materials/:materialID` | Teacher membership |
 
-New migration: `database/migrations/000010_create_classroom_materials.up.sql`. Run **once** against the existing database; `APPLY_PHASE1.ps1` checks for existing table first and is safe to rerun. No existing data is reset.
+New migration: `database/migrations/000010_create_classroom_materials.up.sql`. Run **once** against the existing database; `scripts/database/legacy/apply-phase1.ps1` checks for existing table first and is safe to rerun. No existing data is reset.
 
 **Storage warning:** This phase stores files locally on the machine running Go. Back up `uploads/materials` along with PostgreSQL before moving servers. Set `MATERIAL_UPLOAD_DIR` on the backend if you need another location. Cloud storage and virus scanning are not implemented yet; do not deploy to untrusted public users without storage/AV hardening. Direct deletion of a material using the old generic Stream-delete API can leave an orphan local file; use the Classwork Delete button.
 

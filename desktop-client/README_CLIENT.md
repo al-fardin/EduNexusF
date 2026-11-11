@@ -23,7 +23,7 @@ Each run requires local approval. The app verifies SHA-256 and uses a short-live
 
 ## Build and deploy
 
-- Apply `database/migrations/000022_question_testers.up.sql` after existing migrations. For standard Docker setup, run `powershell -File APPLY_QUESTION_TESTERS.ps1` from the project root.
+- Apply `database/migrations/000022_question_testers.up.sql` after existing migrations. For standard Docker setup, run `powershell -File scripts/database/apply-question-testers.ps1` from the project root.
 - Windows: `powershell -File desktop-client/BUILD_WINDOWS.ps1`. Produces the native app and refreshes the frontend download.
 - macOS/Linux: `sh desktop-client/BUILD_NATIVE_ON_THIS_OS.sh` on the target OS. Windows testers are unsupported there.
 - Set `NEXT_PUBLIC_EDUNEXUS_DESKTOP_API_ORIGIN` to the HTTPS API origin and `EDUNEXUS_WEB_ORIGINS` to the exact web origin on student clients for deployed installations. Source launchers inherit these environment variables.

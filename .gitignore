@@ -1,6 +1,3 @@
-.env
-.env
-
 # Private classroom material storage
 uploads/
 
@@ -56,3 +53,8 @@ android-app/.gradle/
 deploy/secrets/
 deploy/releases/
 deploy/backups/
+
+# Archived local snapshots and Go workspace resolution
+/archive/backups/
+go.work.sum
+/archive/outputs/

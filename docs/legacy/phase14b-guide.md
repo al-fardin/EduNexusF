@@ -26,7 +26,7 @@ powershell -ExecutionPolicy Bypass -File 'F:\EduNexus_Phase14B_Patch\INSTALL_PHA
 ```powershell
 cd 'F:\EduNexus'
 docker compose up -d
-powershell -ExecutionPolicy Bypass -File 'F:\EduNexus_Phase14B_Patch\APPLY_PHASE14B.ps1' -Project 'F:\EduNexus'
+powershell -ExecutionPolicy Bypass -File 'F:\EduNexus_Phase14B_Patch\scripts/database/legacy/apply-phase14b.ps1' -Project 'F:\EduNexus'
 ```
 
 5. Backend in one terminal:
@@ -34,7 +34,7 @@ powershell -ExecutionPolicy Bypass -File 'F:\EduNexus_Phase14B_Patch\APPLY_PHASE
 ```powershell
 cd 'F:\EduNexus'
 $env:EXAM_RUNNER_ENABLED='true'
-go run ./apps/api
+go run ./backend/apps/api
 ```
 
 6. Frontend in a second terminal:

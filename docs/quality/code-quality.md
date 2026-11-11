@@ -23,7 +23,7 @@ returning to the exam list. Only isolated fixture accounts were used for UI writ
 Additional checks on 2026-11-07 cover conversation tools, account-scoped offline
 work and transactional teacher history. Migrations 1–38 passed in a fresh
 database; the live database was backed up before applying 37–38. See
-[LEARNING_WORKFLOWS.md](LEARNING_WORKFLOWS.md) for behavior, verification and the
+[LEARNING_WORKFLOWS.md](../guides/learning-workflows.md) for behavior, verification and the
 remaining browser/device checks. These additions do not imply perfect coverage.
 
 ```powershell
@@ -34,8 +34,8 @@ npm run build
 
 cd F:\EduNexus
 $env:EDUNEXUS_TEST_DATABASE_URL='postgres://postgres:postgres@127.0.0.1:5432/edunexus_features?sslmode=disable'
-go vet ./internal/... ./apps/...
-go test -p 1 -count=1 ./internal/... ./apps/...
+go vet ./backend/internal/... ./backend/apps/...
+go test -p 1 -count=1 ./backend/internal/... ./backend/apps/...
 python -m unittest discover -s desktop-client/tests -v
 .\android-app\FORMAT_JAVA.ps1 -Check
 ```

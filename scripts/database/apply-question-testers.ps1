@@ -1,4 +1,4 @@
-param([string]$Project = $PSScriptRoot)
+param([string]$Project = ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))))
 $ErrorActionPreference = 'Stop'
 $migration = Join-Path $Project 'database\migrations\000022_question_testers.up.sql'
 if (-not (Test-Path -LiteralPath $migration)) { throw "Migration missing: $migration" }

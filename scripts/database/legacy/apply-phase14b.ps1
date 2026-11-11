@@ -1,4 +1,4 @@
-param([string]$Project = 'F:\EduNexus')
+param([string]$Project = ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))))
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $Project
 $migration = Join-Path -Path $Project -ChildPath 'database\migrations\000019_exam_desktop_preflight.up.sql'

@@ -1,6 +1,6 @@
 param([int]$WebPort=3000,[int]$ApiPort=8080,[switch]$Production)
 $ErrorActionPreference='Stop'
-$project=$PSScriptRoot
+$project=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $logs=Join-Path $project 'release-builds\mobile-server'
 New-Item -ItemType Directory -Path $logs -Force | Out-Null
 if (-not (Test-Path (Join-Path $project '.env'))) {
@@ -21,7 +21,7 @@ if (-not (IsListening $ApiPort)) {
     $env:APP_PORT=[string]$ApiPort
     $apiExe=Join-Path $logs 'edunexus-api.exe'
     Push-Location $project
-    try { & go build -o $apiExe ./apps/api; if ($LASTEXITCODE -ne 0) { throw 'API build failed.' } } finally { Pop-Location }
+    try { & go build -o $apiExe ./backend/apps/api; if ($LASTEXITCODE -ne 0) { throw 'API build failed.' } } finally { Pop-Location }
     $apiProcess=Start-Process -FilePath $apiExe -WorkingDirectory $project -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logs 'api-out.log') -RedirectStandardError (Join-Path $logs 'api-error.log')
     $apiProcess.Id | Set-Content (Join-Path $logs 'api.pid')
 }

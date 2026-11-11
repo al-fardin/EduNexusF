@@ -9,7 +9,7 @@ remain in place.
 
 ## Verified locally
 
-- Scoped Go suite: `go test -p 1 ./internal/... ./apps/...` passed with the isolated
+- Scoped Go suite: `go test -p 1 ./backend/internal/... ./backend/apps/...` passed with the isolated
   `edunexus_features` database. Includes cross-class/account authorization, exam
   answer-release boundaries, reply/edit/search/seen behavior, push device binding,
   encrypted Web Push, mocked data-only FCM delivery, preference/read suppression
@@ -49,6 +49,6 @@ Push integrations use local mocks for delivery verification. The signed GitHub
 workflow needs the owner's release keystore and optional Firebase configuration.
 The APK has not been exercised on a physical Android device during this check.
 
-See [deployment instructions](deploy/README.md). The default deployment excludes
+See [deployment instructions](../../deploy/README.md). The default deployment excludes
 Docker-daemon access; server-side coding execution requires the documented
 dedicated-host runner override. Local Windows exam execution remains unchanged.

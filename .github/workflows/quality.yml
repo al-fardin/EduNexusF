@@ -27,6 +27,9 @@ jobs:
       - run: npm run build
   backend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     services:
       postgres:
         image: postgres:17
@@ -49,13 +52,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: go.mod
+          go-version-file: backend/go.mod
           cache: true
+          cache-dependency-path: backend/go.sum
       - name: Check Go formatting
         run: test -z "$(gofmt -l $(git ls-files '*.go'))"
       - name: Apply migrations to the disposable test database
         run: |
-          for migration in database/migrations/*.up.sql; do
+          for migration in ../database/migrations/*.up.sql; do
             psql -X -v ON_ERROR_STOP=1 -f "$migration"
           done
       - run: go vet ./internal/... ./apps/...

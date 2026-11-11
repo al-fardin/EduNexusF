@@ -1,4 +1,4 @@
-param([string]$Container='edunexus-postgres',[string]$Database='edunexus',[string]$User='postgres',[string]$OutputDirectory=(Join-Path $PSScriptRoot '..\release-builds\database-backups'))
+param([string]$Container='edunexus-postgres',[string]$Database='edunexus',[string]$User='postgres',[string]$OutputDirectory=(Join-Path $PSScriptRoot '..\..\release-builds\database-backups'))
 $ErrorActionPreference='Stop'
 if($Database -notmatch '^[a-z][a-z0-9_]*$'){throw 'Invalid database name.'}
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null

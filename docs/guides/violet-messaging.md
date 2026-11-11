@@ -8,7 +8,7 @@ Course covers are native SVG geometry. Home, Calendar and Files use actual, auth
 
 ## Database rollout
 
-Back up PostgreSQL, then run `./APPLY_LEARNING_FEATURES.ps1` to apply the migration ledger through `000031_realtime_message_tools`. Restart the API after building the new source. The migrations add conversation, message, background preference and teacher permission and reaction tables without changing existing exams or submissions. Back up `uploads/messages` along with PostgreSQL: attachment content is private filesystem storage, not part of a database-only dump.
+Back up PostgreSQL, then run `./scripts/database/apply-learning-features.ps1` to apply the migration ledger through `000031_realtime_message_tools`. Restart the API after building the new source. The migrations add conversation, message, background preference and teacher permission and reaction tables without changing existing exams or submissions. Back up `uploads/messages` along with PostgreSQL: attachment content is private filesystem storage, not part of a database-only dump.
 
 ## Messaging rules
 
@@ -26,7 +26,7 @@ Messages support same-conversation replies, editing/deleting your own messages, 
 
 Integration tests use only the isolated `edunexus_features` database via `EDUNEXUS_TEST_DATABASE_URL`. They cover class isolation, participant authorization, removed memberships, duplicate retries, unread cursors, pagination and rate limits. Existing-data GET checks accept `EDUNEXUS_REAL_READONLY_DATABASE_URL` and force read-only connections.
 
-Run `go test -p 1 ./internal/... ./apps/api/... ./apps/set-role/...` and the frontend production build. Use `EDUNEXUS_NEXT_DIST_DIR=.next-buildcheck` for the build if another dev server is running.
+Run `go test -p 1 ./backend/internal/... ./backend/apps/api/... ./backend/apps/set-role/...` and the frontend production build. Use `EDUNEXUS_NEXT_DIST_DIR=.next-buildcheck` for the build if another dev server is running.
 
 ## Android
 

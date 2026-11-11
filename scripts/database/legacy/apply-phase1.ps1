@@ -1,5 +1,5 @@
 # EduNexus Phase 1 classroom-materials migration — no existing database tables are removed.
-param([string]$Project = "F:\EduNexus")
+param([string]$Project = ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))))
 $ErrorActionPreference = "Stop"
 Set-Location -LiteralPath $Project
 $migration = Join-Path $Project "database\migrations\000010_create_classroom_materials.up.sql"
@@ -17,4 +17,4 @@ if ($LASTEXITCODE -ne 0) { throw "Migration copy failed" }
 docker exec edunexus-postgres psql -X -U postgres -d edunexus -v ON_ERROR_STOP=1 -1 -f "/tmp/edunexus_000010.sql"
 if ($LASTEXITCODE -ne 0) { throw "Migration failed; database transaction was rolled back" }
 Write-Host "Classroom materials migration applied successfully." -ForegroundColor Green
-Write-Host "Now run: go run ./apps/api" -ForegroundColor Cyan
+Write-Host "Now run: go run ./backend/apps/api" -ForegroundColor Cyan

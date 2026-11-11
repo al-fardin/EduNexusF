@@ -6,7 +6,7 @@ delivery. No production deployment is performed by these scripts.
 
 ## Local Android testing
 
-Start the database, API and frontend with the existing `START_LOCAL_MOBILE.ps1`.
+Start the database, API and frontend with the existing `scripts/dev/start-local.ps1`.
 Then run from the repository root:
 
 ```powershell
@@ -56,7 +56,7 @@ Create that host directory with owner UID/GID 10001 before starting. Include
 `-f deploy/compose.runner.yml` after `-f deploy/compose.yml` in the compose command.
 The directory must have the same absolute path inside the API and on the Docker
 host, because the runner uses bind mounts. The image includes the Docker CLI.
-Pre-pull the language images listed in `internal/exam/runner_phase3.go` and
+Pre-pull the language images listed in `backend/internal/exam/runner_phase3.go` and
 `workspace_phase6.go`; the daemon needs enough disk and memory for concurrent runs.
 
 Docker socket access controls the execution host; use this override only on a
@@ -71,7 +71,7 @@ to work independently. Email needs SMTP credentials; AI tutor needs a server-sid
 OpenAI key. Nothing is sent by an unconfigured provider.
 
 ```powershell
-go run ./apps/push-keys -out release-builds/push.env -subject mailto:admin@example.com
+go run ./backend/apps/push-keys -out release-builds/push.env -subject mailto:admin@example.com
 ```
 
 Copy those three values into the server environment and preserve the private key
@@ -113,8 +113,8 @@ remain user actions. Only the fixed same-origin APK path is accepted.
 For the existing local Docker database:
 
 ```powershell
-.\deploy\BACKUP_DATABASE.ps1
-.\deploy\VERIFY_RESTORE.ps1 -Backup F:\EduNexus\release-builds\database-backups\YOUR-BACKUP.dump
+.\scripts\database\backup-database.ps1
+.\scripts\database\verify-restore.ps1 -Backup F:\EduNexus\release-builds\database-backups\YOUR-BACKUP.dump
 ```
 
 Restore verification creates a **new** `edunexus_restore_...` database, verifies its
@@ -135,7 +135,7 @@ References: [Firebase Android setup](https://firebase.google.com/docs/android/se
 ## Audio/video calls
 
 Android testing builds are now **1.3.1 / version code 5**. Apply migrations through
-36 before starting the updated API. See [calling setup](../CALLING_AND_RICH_MESSAGES.md)
+36 before starting the updated API. See [calling setup](../docs/guides/calling-and-rich-messages.md)
 for HTTPS capture, the optional TURN relay, native permission behavior and testing
 limits. Keep the web and Android Firebase projects aligned for incoming-call push.
 
@@ -148,7 +148,7 @@ remains required. Quick URLs change after restart and can expire after connectio
 loss. Keep the laptop, Docker, frontend, API, gateway and tunnel running.
 
 Use an isolated production frontend (for example `.next-buildcheck` on loopback
-port 3010), not a public Next development server. Build and run `apps/mobile-preview`
+port 3010), not a public Next development server. Build and run `backend/apps/mobile-preview`
 on loopback 3011, then point `cloudflared tunnel --url http://127.0.0.1:3011` at it.
 Pass its generated HTTPS origin to the gateway's `-public-url` flag. The gateway
 routes `/api/*` and `/messaging/socket` to the API and serves the frontend otherwise.

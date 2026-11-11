@@ -25,3 +25,6 @@ deploy/releases
 deploy/backups
 frontend/public/pdfjs
 frontend/public/downloads/*.apk
+
+# Historical snapshots are never part of application images
+archive

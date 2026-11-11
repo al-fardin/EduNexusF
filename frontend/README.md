@@ -11,7 +11,7 @@ Next.js, React and TypeScript interface with a violet light/dark theme, responsi
 - `/settings` — profile, verification, notification preferences and appearance.
 - Authentication and classroom routes retain their existing account, coursework and exam workflows. Classroom sections persist in the `tab` URL parameter.
 
-See [theme and messaging rollout](../VIOLET_MESSAGING.md). The old `/preview` route is a sample-data design archive; use the authenticated app to inspect the current interface.
+See [theme and messaging rollout](../docs/guides/violet-messaging.md). The old `/preview` route is a sample-data design archive; use the authenticated app to inspect the current interface.
 
 ## Quick start
 

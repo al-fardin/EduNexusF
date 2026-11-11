@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-# Feature ledger is shared with APPLY_LEARNING_FEATURES.ps1. Back up existing
+# Feature ledger is shared with scripts/database/apply-learning-features.ps1. Back up existing
 # databases and record already-applied migrations before the first import.
 for migration in /migrations/*.up.sql; do
   name=$(basename "$migration")

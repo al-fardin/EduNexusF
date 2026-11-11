@@ -7,7 +7,7 @@ This rollout adds exam recovery, question bank, assignments, app/email notificat
 Back up the database using your normal backup process, then run from the repository root:
 
 ```powershell
-powershell -File .\APPLY_LEARNING_FEATURES.ps1
+powershell -File .\scripts/database/apply-learning-features.ps1
 ```
 
 This applies migrations 21–34 once, under a transaction and advisory lock. A ledger allows safe reruns. It supports the existing `edunexus-postgres` Docker container. For another PostgreSQL server, supply `-PsqlPath` and `-DatabaseUrl`. `-SqlOnly` writes the SQL into ignored `release-builds/` for inspection without applying it. Existing base migrations 1–20 are required.
@@ -52,7 +52,7 @@ The integration follows official OpenAI documentation for [text generation](http
 ## Verification
 
 ```powershell
-go test ./internal/... ./apps/api/... ./apps/set-role/...
+go test ./backend/internal/... ./backend/apps/api/... ./backend/apps/set-role/...
 cd frontend
 node --test tests/exam-drafts.test.cjs
 npm run build
