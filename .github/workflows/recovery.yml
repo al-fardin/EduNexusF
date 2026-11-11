@@ -1,0 +1,39 @@
+name: Recovery verification
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 20 * * 0'
+permissions:
+  contents: read
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: edunexus_features
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d edunexus_features"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: edunexus_features
+      BACKUP_EXPECTED_USERS: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Create isolated schema and sentinel records
+        run: |
+          for migration in database/migrations/*.up.sql; do psql -X -v ON_ERROR_STOP=1 -f "$migration"; done
+          psql -X -v ON_ERROR_STOP=1 -c "INSERT INTO users(email,username,password_hash,first_name,last_name) VALUES('restore@example.invalid','restore_fixture','fixture','Restore','Check');"
+      - name: Backup, restore and verify
+        run: |
+          pg_dump -Fc -f "$RUNNER_TEMP/recovery.dump"
+          sha256sum "$RUNNER_TEMP/recovery.dump" > "$RUNNER_TEMP/recovery.dump.sha256"
+          sh deploy/verify-backup.sh "$RUNNER_TEMP/recovery.dump"

@@ -1,0 +1,20 @@
+# Opt-in, daily backup and restore verification alongside deploy/compose.yml.
+services:
+  recovery:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: edunexus
+      PGDATABASE: edunexus
+      PGPASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ./verify-backup.sh:/verify-backup.sh:ro
+      - ./backup-loop.sh:/backup-loop.sh:ro
+      - ./backups:/backups
+      - uploads:/uploads:ro
+    entrypoint: [sh, /backup-loop.sh]
+    depends_on:
+      postgres: {condition: service_healthy}

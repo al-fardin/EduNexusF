@@ -9,5 +9,6 @@ sha256sum "/backups/edunexus-$stamp.dump" > "/backups/edunexus-$stamp.dump.sha25
 if [ -d /uploads ]; then
   tar -czf "/backups/uploads-$stamp.tar.gz" -C /uploads .
   sha256sum "/backups/uploads-$stamp.tar.gz" > "/backups/uploads-$stamp.tar.gz.sha256"
+  tar -tzf "/backups/uploads-$stamp.tar.gz" > /dev/null
 fi
 echo "Database backup created: edunexus-$stamp.dump"
