@@ -20,6 +20,12 @@ returning to the exam list. Only isolated fixture accounts were used for UI writ
 
 ## Local checks
 
+Verification on 2026-11-12 adds migration 42, 32 frontend tests, isolated academic
+permission/conflict tests, a 501-student gradebook/progress check, concurrent exam
+replay testing, private diagnostics and a successful database/uploads recovery
+cycle. See [academic release operations](academic-release-operations.md) for the
+measured scope and operational setup.
+
 On 2026-11-11, frontend lint, TypeScript, 29 Node tests and production builds
 passed. Full Go tests, vet and Linux race tests passed against isolated PostgreSQL
 fixtures, including migrations 1–41. Browser checks and operational limits for

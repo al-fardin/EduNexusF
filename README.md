@@ -61,3 +61,7 @@ for the recent coursework workflows.
 The [coursework workflow guide](docs/guides/coursework-workflows.md) covers the
 combined classwork catalogue, gradebook, rubrics, scheduled posts, notification
 digests and shared message files.
+See [academic workspace](docs/guides/academic-workspace.md) for calendar reminders,
+bulk grading, progress/attendance, global search and language/accessibility
+preferences, and [release operations](docs/quality/academic-release-operations.md)
+for automated backup verification, diagnostics and bounded load checks.

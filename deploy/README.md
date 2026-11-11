@@ -43,7 +43,11 @@ must be checked when an account is selected; this setup does not promise free ho
 The migration service is idempotent for fresh installations and databases using
 the shared migration ledger. For importing an older database, back it up first
 and reconcile its already-applied schema with `edunexus_feature_migrations` before
-running migrations 1–36. Do not rerun historical SQL against an untracked schema.
+running migrations 1–42. Do not rerun historical SQL against an untracked schema.
+
+Optional [recovery and monitoring setup](../docs/quality/academic-release-operations.md)
+adds daily database/uploads backups with disposable restore verification. Include
+`-f deploy/compose.recovery.yml` after the base compose file to enable that service.
 
 ### Server-side coding runs
 

@@ -12,6 +12,7 @@ root from their own location; callers may keep using the existing parameters.
 | Apply optional question tester migration | `.\scripts\database\apply-question-testers.ps1` |
 | Back up local PostgreSQL | `.\scripts\database\backup-database.ps1` |
 | Verify a backup in a new disposable database | `.\scripts\database\verify-restore.ps1 -Backup <backup-file>` |
+| Bounded read-only HTTP load check | `node scripts/qa/load-readonly.mjs` |
 
 `database/legacy/` preserves the old individual phase migration helpers. They are
 not a substitute for the complete setup instructions. Moving scripts does not
