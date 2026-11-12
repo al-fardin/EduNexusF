@@ -40,6 +40,11 @@ jobs:
           curl --fail --location --retry 3 --output "$RUNNER_TEMP/google-java-format.jar" https://github.com/google/google-java-format/releases/download/v1.33.0/google-java-format-1.33.0-all-deps.jar
           echo "697707af07c7753f29cba415c6a76b7882702ff464f807da98b28069b8751910  $RUNNER_TEMP/google-java-format.jar" | sha256sum --check
           java -jar "$RUNNER_TEMP/google-java-format.jar" --dry-run --set-exit-if-changed $(git ls-files 'android-app/src/*.java' 'android-app/src/**/*.java' 'android-app/firebase-src/**/*.java')
+      - name: Verify update trust boundaries
+        run: |
+          javac -encoding UTF-8 --release 8 -d "$RUNNER_TEMP/update-tests" android-app/src/com/edunexus/mobile/UpdatePolicy.java android-app/tests/UpdatePolicyTest.java
+          java -cp "$RUNNER_TEMP/update-tests" com.edunexus.mobile.UpdatePolicyTest
+          python scripts/qa/test_android_manifest.py
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
           packages: platform-tools

@@ -34,5 +34,9 @@ $output=Join-Path $PSScriptRoot '..\release-builds\android';New-Item -ItemType D
 $name='EduNexus-'+$variant.ToLowerInvariant()+'.apk';$target=Join-Path $output $name;Copy-Item -LiteralPath $source -Destination $target -Force
 & (Join-Path $env:ANDROID_HOME 'build-tools\36.0.0\apksigner.bat') verify --verbose $target
 if($LASTEXITCODE -ne 0){throw 'APK signature verification failed.'}
+if($Release){
+ & python (Join-Path $PSScriptRoot '..\deploy\android-manifest.py') $target (Join-Path $output 'android.json') --sdk $env:ANDROID_HOME
+ if($LASTEXITCODE -ne 0){throw 'Release metadata verification failed.'}
+}
 $downloads=Join-Path $PSScriptRoot '..\frontend\public\downloads';New-Item -ItemType Directory -Path $downloads -Force | Out-Null;Copy-Item -LiteralPath $target -Destination (Join-Path $downloads $name) -Force
 Write-Output "Android APK: $([IO.Path]::GetFullPath($target))"

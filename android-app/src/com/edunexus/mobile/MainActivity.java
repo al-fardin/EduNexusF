@@ -33,6 +33,7 @@ import java.io.OutputStream;
 /** Thin native shell. Academic data and exam rules remain enforced by the API. */
 public class MainActivity extends Activity {
   private WebView web;
+  private AppUpdateManager updates;
   private static java.lang.ref.WeakReference<MainActivity> activeHost =
       new java.lang.ref.WeakReference<>(null);
 
@@ -84,6 +85,7 @@ public class MainActivity extends Activity {
           .putString("server_default", Config.SERVER_URL)
           .apply();
     }
+    updates = new AppUpdateManager(this, this::updateState);
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setBackgroundColor(Color.rgb(252, 250, 255));
@@ -484,7 +486,43 @@ public class MainActivity extends Activity {
     manager.setMode(previousAudioMode);
   }
 
+  private void updateState(String state, int progress, String message) {
+    runOnUiThread(
+        () -> {
+          if (web == null || isDestroyed() || !sameOrigin(web.getUrl())) return;
+          try {
+            String data =
+                new org.json.JSONObject()
+                    .put("state", state)
+                    .put("progress", progress)
+                    .put("message", message)
+                    .toString();
+            web.evaluateJavascript(
+                "window.dispatchEvent(new CustomEvent('edunexus:update-state',{detail:"
+                    + data
+                    + "}))",
+                null);
+          } catch (Exception e) {
+            AppDiagnostics.warn("Update status unavailable", e);
+          }
+        });
+  }
+
   private final class AppBridge {
+    @JavascriptInterface
+    public void installUpdate(int code, String sha256, String certificate, long size) {
+      runOnUiThread(
+          () -> {
+            if (web == null
+                || updates == null
+                || isFinishing()
+                || isDestroyed()
+                || !sameOrigin(web.getUrl())
+                || !hasWindowFocus()) return;
+            updates.install(workspace, code, sha256, certificate, size);
+          });
+    }
+
     @JavascriptInterface
     public void keepCallAlive(String id, String session, String token, boolean video) {
       runOnUiThread(
@@ -705,6 +743,7 @@ public class MainActivity extends Activity {
 
   @Override
   protected void onDestroy() {
+    if (updates != null) updates.close();
     stopService(new Intent(this, CallKeepAliveService.class));
     if (activeHost.get() == this) activeHost.clear();
     if (mediaPermission != null) {

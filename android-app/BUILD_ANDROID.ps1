@@ -6,6 +6,9 @@ param(
  [string]$KeyAlias = 'edunexus'
 )
 $ErrorActionPreference='Stop'
+$version=@{}
+Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version.properties') | ForEach-Object {if($_ -match '^([a-zA-Z]+)=(.+)$'){$version[$Matches[1]]=$Matches[2]}}
+if($version.versionCode -notmatch '^[1-9][0-9]*$' -or $version.versionName -notmatch '^\d+\.\d+\.\d+$'){throw 'Invalid version.properties'}
 $SdkPath=[IO.Path]::GetFullPath($SdkPath)
 # Oracle's javapath exposes javac but not keytool. Resolve the actual JDK.
 $javaHome = $env:JAVA_HOME
@@ -39,7 +42,7 @@ $config="package com.edunexus.mobile; public final class Config { public static 
 [IO.File]::WriteAllText((Join-Path $buildPath 'gen\Config.java'),$config)
 & "$buildTools\aapt2.exe" compile --dir (Join-Path $PSScriptRoot 'res') -o "$buildPath\compiled.zip"
 if($LASTEXITCODE -ne 0){throw 'Android resource compilation failed'}
-& "$buildTools\aapt2.exe" link -o "$buildPath\resources.apk" -I $androidJar --manifest "$buildPath\AndroidManifest.xml" --java "$buildPath\gen" -R "$buildPath\compiled.zip" --min-sdk-version 24 --target-sdk-version 35 --version-code 5 --version-name '1.3.1' --auto-add-overlay
+& "$buildTools\aapt2.exe" link -o "$buildPath\resources.apk" -I $androidJar --manifest "$buildPath\AndroidManifest.xml" --java "$buildPath\gen" -R "$buildPath\compiled.zip" --min-sdk-version 24 --target-sdk-version 35 --version-code $version.versionCode --version-name $version.versionName --auto-add-overlay
 if($LASTEXITCODE -ne 0){throw 'Android resource linking failed'}
 $sources=@(Get-ChildItem (Join-Path $PSScriptRoot 'src'),"$buildPath\gen" -Filter '*.java' -Recurse | ForEach-Object FullName)
 & (Join-Path $javaHome 'bin\javac.exe') -encoding UTF-8 --release 8 -classpath $androidJar -d "$buildPath\classes" @sources

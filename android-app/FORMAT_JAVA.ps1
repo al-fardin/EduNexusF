@@ -9,6 +9,6 @@ if(-not(Test-Path -LiteralPath $formatter)) {
 }
 if((Get-FileHash -LiteralPath $formatter -Algorithm SHA256).Hash.ToLowerInvariant() -ne $digest) {throw 'Java formatter checksum mismatch.'}
 $sources=Get-ChildItem (Join-Path $PSScriptRoot 'src'),(Join-Path $PSScriptRoot 'firebase-src') -Filter '*.java' -Recurse | Select-Object -ExpandProperty FullName
-$arguments=if($Check){@('--dry-run','--set-exit-if-changed')}else{@('--replace')}
-& java -jar $formatter @arguments @sources
+if($Check){& java -jar $formatter --dry-run --set-exit-if-changed @sources}
+else{& java -jar $formatter --replace @sources}
 if($LASTEXITCODE -ne 0){throw 'Java formatting check failed.'}
