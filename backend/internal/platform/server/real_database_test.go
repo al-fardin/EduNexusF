@@ -65,6 +65,7 @@ func TestExistingDatabaseReadOnlyRoutes(t *testing.T) {
 		}
 		paths := []string{"/notifications", "/classrooms/joined", "/classrooms/mine", "/workspace", "/workspace/files", "/messaging/classes", "/messaging/unread", "/notifications/push", "/app/releases/android", "/calling/config", "/calling/active?session=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}
 		base := "/classrooms/" + m.class
+		paths = append(paths, "/workspace/terms", "/workspace/semester-classes", base+"/rechecks")
 		for _, suffix := range []string{"/details", "/message-recipients", "/messaging-settings", "/conversations", "/exams", "/assignments", "/analytics", "/tutor", "/tutor/sources", "/stream", "/materials", "/topics"} {
 			paths = append(paths, base+suffix)
 		}

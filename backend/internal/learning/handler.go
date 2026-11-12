@@ -18,6 +18,22 @@ type Handler struct {
 
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := &Handler{db: db}
+	app.Get("/workspace/terms", authMiddleware.JWTProtected(), h.Terms)
+	app.Post("/workspace/terms", authMiddleware.JWTProtected(), h.Terms)
+	app.Get("/workspace/semester-classes", authMiddleware.JWTProtected(), h.SemesterClasses)
+	app.Put("/workspace/semester-classes/:id", authMiddleware.JWTProtected(), h.SaveSemesterClass)
+	app.Get("/workspace/semester-classes/:id/contents", authMiddleware.JWTProtected(), h.ArchiveContents)
+	app.Post("/workspace/semester-classes/:id/rollover", authMiddleware.JWTProtected(), h.RolloverClass)
+	app.Get("/classrooms/:id/exams/:examID/question-analysis", authMiddleware.JWTProtected(), h.QuestionAnalysis)
+	app.Get("/classrooms/:id/assignments/:assignmentID/similarity-roster", authMiddleware.JWTProtected(), h.SimilarityRoster)
+	app.Post("/classrooms/:id/assignments/:assignmentID/similarity", authMiddleware.JWTProtected(), h.Similarity)
+	app.Post("/classrooms/:id/assignments/:assignmentID/similarity-review", authMiddleware.JWTProtected(), h.ReviewSimilarity)
+	app.Get("/classrooms/:id/rechecks/eligible", authMiddleware.JWTProtected(), h.RecheckCandidates)
+	app.Get("/classrooms/:id/rechecks", authMiddleware.JWTProtected(), h.Rechecks)
+	app.Post("/classrooms/:id/rechecks", authMiddleware.JWTProtected(), h.Rechecks)
+	app.Post("/classrooms/:id/rechecks/:requestID/respond", authMiddleware.JWTProtected(), h.RespondRecheck)
+	app.Get("/classrooms/:id/materials/:materialID/accessibility", authMiddleware.JWTProtected(), h.AccessibleMaterial)
+	app.Put("/classrooms/:id/materials/:materialID/accessibility", authMiddleware.JWTProtected(), h.AccessibleMaterial)
 	app.Get("/workspace/search", authMiddleware.JWTProtected(), h.Search)
 	app.Get("/workspace/calendar", authMiddleware.JWTProtected(), h.Calendar)
 	app.Post("/classrooms/:id/calendar/events", authMiddleware.JWTProtected(), h.SaveCalendarEvent)

@@ -1,0 +1,1 @@
+DROP TABLE classroom_material_accessibility;

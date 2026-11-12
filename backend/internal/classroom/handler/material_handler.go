@@ -25,6 +25,7 @@ var allowedMaterialExt = map[string]bool{
 	".pdf": true, ".png": true, ".jpg": true, ".jpeg": true, ".webp": true,
 	".txt": true, ".md": true, ".csv": true, ".doc": true, ".docx": true,
 	".ppt": true, ".pptx": true, ".xls": true, ".xlsx": true, ".zip": true,
+	".mp3": true, ".wav": true, ".ogg": true, ".mp4": true, ".webm": true,
 }
 
 type MaterialHandler struct {
@@ -34,6 +35,7 @@ type MaterialHandler struct {
 }
 
 type materialRecord struct {
+	ImageAlt    string    `json:"image_alt"`
 	ID          string    `json:"id"`
 	ClassroomID string    `json:"classroom_id"`
 	Title       string    `json:"title"`
@@ -176,8 +178,9 @@ func (h *MaterialHandler) List(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "invalid classroom id")
 	}
 	rows, err := h.pool.Query(c.UserContext(), `
-        SELECT m.id::text, m.classroom_id::text, m.title, m.description, m.original_filename, m.media_type, m.file_size, m.created_at
+        SELECT m.id::text, m.classroom_id::text, m.title, m.description, m.original_filename, m.media_type, m.file_size, m.created_at,COALESCE(x.image_alt,'')
         FROM classroom_materials m
+        LEFT JOIN classroom_material_accessibility x ON x.material_id=m.id
         JOIN classroom_stream_posts p ON p.reference_type='material' AND p.reference_id=m.id
            AND p.classroom_id=m.classroom_id AND p.deleted_at IS NULL
         WHERE m.classroom_id=$1::uuid
@@ -189,7 +192,7 @@ func (h *MaterialHandler) List(c *fiber.Ctx) error {
 	items := make([]materialRecord, 0)
 	for rows.Next() {
 		var item materialRecord
-		if err := rows.Scan(&item.ID, &item.ClassroomID, &item.Title, &item.Description, &item.FileName, &item.MediaType, &item.FileSize, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.ClassroomID, &item.Title, &item.Description, &item.FileName, &item.MediaType, &item.FileSize, &item.CreatedAt, &item.ImageAlt); err != nil {
 			return err
 		}
 		items = append(items, item)
@@ -273,6 +276,16 @@ func acceptableMaterialContent(ext, mime string) bool {
 		return mime == "image/jpeg"
 	case ".webp":
 		return mime == "image/webp"
+	case ".mp3":
+		return mime == "audio/mpeg"
+	case ".wav":
+		return mime == "audio/wave" || mime == "audio/wav" || mime == "audio/x-wav"
+	case ".ogg":
+		return mime == "application/ogg" || mime == "audio/ogg"
+	case ".mp4":
+		return mime == "video/mp4"
+	case ".webm":
+		return mime == "video/webm"
 	default:
 		return true // Office and archive files may have multiple valid MIME signatures.
 	}
