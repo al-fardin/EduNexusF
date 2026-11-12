@@ -1,6 +1,8 @@
 "use client";
+import {RecheckRequests} from "./recheck-requests";
 import {Localized} from "@/components/ui/localized";
 import Link from "next/link";
+import {usePathname,useRouter,useSearchParams} from "next/navigation";
 import {MessagingLink} from "@/components/layout/messaging-link";
 import { ArrowLeft, Check, Copy, Info, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
@@ -25,9 +27,12 @@ export function ClassroomDetailsDialog({ classroom, open, onOpenChange }: { clas
 
 export function ClassroomHeader({ classroom, kind }: { classroom: Classroom; kind: "teacher" | "student" }) {
   const [details, setDetails] = useState(false);
+  const search=useSearchParams(),router=useRouter(),path=usePathname();
+  const rechecks=search.get("review")==="1";
+  function setRechecks(open:boolean){const next=new URLSearchParams(search.toString());if(open)next.set("review","1");else next.delete("review");router.push(`${path}?${next}`,{scroll:false});}
   return <><header className="en-classroom-heading">
     <Link className="en-icon-button" href={kind==="teacher"?"/instructor/classrooms":"/student/classrooms"} aria-label="Back to classes"><ArrowLeft size={20}/></Link>
     <div className="min-w-0 flex-1"><h1>{classroom.name}</h1>{classroom.subject&&<p>{classroom.subject}{classroom.section ? ` · ${classroom.section}` : ""}</p>}</div>
-    <MessagingLink classroomId={classroom.id}/><DropdownMenu><DropdownMenuTrigger className="en-icon-button" aria-label="Classroom options"><MoreHorizontal size={22}/></DropdownMenuTrigger><DropdownMenuContent align="end" className="en-action-menu w-52"><DropdownMenuItem onClick={()=>setDetails(true)}><Info/><Localized>Class & teacher details</Localized></DropdownMenuItem></DropdownMenuContent></DropdownMenu>
-  </header><ClassroomDetailsDialog classroom={classroom} open={details} onOpenChange={setDetails}/></>;
+    <MessagingLink classroomId={classroom.id}/><DropdownMenu><DropdownMenuTrigger className="en-icon-button" aria-label="Classroom options"><MoreHorizontal size={22}/></DropdownMenuTrigger><DropdownMenuContent align="end" className="en-action-menu w-52"><DropdownMenuItem onClick={()=>setRechecks(true)}>Recheck requests</DropdownMenuItem><DropdownMenuItem onClick={()=>setDetails(true)}><Info/><Localized>Class & teacher details</Localized></DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+  </header><RecheckRequests classId={classroom.id} canManage={kind==="teacher"} open={rechecks} onOpenChange={setRechecks}/><ClassroomDetailsDialog classroom={classroom} open={details} onOpenChange={setDetails}/></>;
 }

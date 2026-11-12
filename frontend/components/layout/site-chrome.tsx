@@ -38,6 +38,7 @@ const links = [
   { href: "/search", label: "Search", icon: Search },
   { href: "/progress", label: "Progress", icon: ChartNoAxesCombined },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/semesters", label: "Semesters", icon: Layers },
   { href: "/files", label: "Files", icon: Folder },
   { href: "/offline", label: "Saved work", icon: Download },
 ];

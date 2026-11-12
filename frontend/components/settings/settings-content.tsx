@@ -1,6 +1,7 @@
 "use client";
 import {Localized} from "@/components/ui/localized";
 
+import {AndroidReleaseSettings} from "@/providers/app-update-provider";
 import {AccessibilitySettings} from "./accessibility-settings";
 import {usePreferences} from "@/providers/preferences-provider";
 import { PushSettings } from "@/components/settings/push-settings";
@@ -153,7 +154,7 @@ export function SettingsContent() {
               <ThemeToggle label />
             </div>
             <PushSettings />
-            <AccessibilitySettings/><ProfileAccount user={user} />
+            <AndroidReleaseSettings/><AccessibilitySettings/><ProfileAccount user={user} />
             <motion.div
               initial="hidden"
               animate="visible"

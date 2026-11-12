@@ -159,9 +159,11 @@ function PDFPages({ bytes }: { bytes: ArrayBuffer }) {
 export function ProtectedFilePreview({
   path,
   filename,
+  altText,
 }: {
   path: string;
   filename: string;
+  altText?:string;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -254,7 +256,7 @@ export function ProtectedFilePreview({
             <div className="en-image-preview">
               <Image
                 src={url}
-                alt={filename}
+                alt={altText||filename}
                 fill
                 unoptimized
                 sizes="90vw"

@@ -1,5 +1,6 @@
 "use client";
 
+import {AccessibleMaterial} from "./accessible-material";
 import {ReasonDialog} from "@/components/ui/reason-dialog";
 import {EmptyState,ErrorState,UploadState} from "@/components/ui/app-feedback";
 import {useTopics,matchesTopic,ResourceTopicPicker} from "./classwork-topics";
@@ -13,7 +14,7 @@ import { getStreamErrorMessage } from "@/services/stream";
 import { materialService, type ClassroomMaterial } from "@/services/materials";
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
-const ACCEPTED = ".pdf,.txt,.md,.csv,.png,.jpg,.jpeg,.webp,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip";
+const ACCEPTED = ".pdf,.txt,.md,.csv,.png,.jpg,.jpeg,.webp,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.mp3,.wav,.ogg,.mp4,.webm";
 
 export function MaterialUploadForm({ classroomId, compact = false, onUploaded }: { classroomId: string; compact?: boolean; onUploaded?:()=>void }) {
   const queryClient = useQueryClient();
@@ -138,7 +139,7 @@ export function MaterialLibrary({ classroomId, canManage, topic="" }: { classroo
             <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground"><Paperclip size={13} /> {item.file_name} · {formatSize(item.file_size)} · {new Date(item.created_at).toLocaleDateString()}</p>
           </div>
           <div className="flex flex-wrap items-start gap-2">
-            <ProtectedFilePreview path={`/classrooms/${classroomId}/materials/${item.id}/download`} filename={item.file_name}/><MaterialDownloadButton classroomId={classroomId} materialId={item.id} filename={item.file_name} />
+            <ProtectedFilePreview path={`/classrooms/${classroomId}/materials/${item.id}/download`} filename={item.file_name} altText={item.image_alt}/><AccessibleMaterial classId={classroomId} id={item.id} filename={item.file_name} canManage={canManage}/><MaterialDownloadButton classroomId={classroomId} materialId={item.id} filename={item.file_name} />
             {canManage && <button type="button" disabled={remove.isPending} onClick={() => { setDeleting(item); }} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-destructive/30 px-3 text-sm text-destructive disabled:opacity-50">{remove.isPending && remove.variables?.id === item.id ? <LoaderCircle size={15} className="animate-spin"/> : <Trash2 size={15} />} {remove.isPending && remove.variables?.id === item.id ? "Deleting…" : "Delete"}</button>}
           </div>
         </div>

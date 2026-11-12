@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import {cachedResource,materialBlob} from "@/lib/offline-resources";
 
 export type ClassroomMaterial = {
+  image_alt?:string;
   id: string;
   classroom_id: string;
   title: string;
