@@ -6,8 +6,9 @@ function setup(){
  const axios={isAxiosError:error=>error?.axios===true,create:()=>{const responses=[];const client=()=>Promise.resolve("retried");client.interceptors={request:{use:()=>{}},response:{use:(ok,error)=>responses.push(error)}};client.post=()=>pending;client.responses=responses;clients.push(client);return client;}};
  const state={accessToken:"old-access",user:{id:"old-user"},setAccessToken:value=>{state.accessToken=value;},logout:()=>{logout++;state.accessToken=null;state.user=null;}};
  const localStorage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
+ const paths={};vm.runInNewContext(ts.transpileModule(fs.readFileSync("lib/return-path.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:paths,URL});
  const exports={};const source=ts.transpileModule(fs.readFileSync("lib/api.ts","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- vm.runInNewContext(source,{exports,process:{env:{}},window:{localStorage,location:{pathname:"/classrooms",replace:()=>{redirects++;}}},require:name=>name==="axios"?{default:axios}:{useAuthStore:{getState:()=>state}}});
+ vm.runInNewContext(source,{exports,process:{env:{}},window:{localStorage,location:{pathname:"/classrooms",search:"",hash:"",replace:()=>{redirects++;}}},require:name=>name==="./return-path"?paths:name==="axios"?{default:axios}:{useAuthStore:{getState:()=>state}}});
  const refresh=()=>clients[0].responses[0]({response:{status:401},config:{url:"/protected",headers:{}}});
  return {refresh,resolve,reject,state,values,logout:()=>logout,redirects:()=>redirects};
 }

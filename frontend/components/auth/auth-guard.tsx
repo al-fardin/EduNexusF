@@ -6,6 +6,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useRouter } from "next/navigation";
+import {safeReturnPath} from "@/lib/return-path";
 
 import { VerificationPrompt } from "@/components/auth/verification-prompt";
 import { authService } from "@/services/auth";
@@ -54,7 +55,7 @@ export function AuthGuard({
     }
 
     if (!savedToken) {
-      router.replace("/login");
+      router.replace("/login?next="+encodeURIComponent(safeReturnPath(window.location.pathname+window.location.search+window.location.hash)));
       return;
     }
 

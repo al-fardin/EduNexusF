@@ -1,4 +1,5 @@
 "use client";
+import {ReportMessage} from "./message-moderation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   MoreHorizontal,
@@ -245,6 +246,7 @@ export function MessageActions({
             </button>
           )}
           {error && <p role="alert">{error}</p>}
+          {!own&&!message.deleted_at&&<ReportMessage classId={classId} thread={thread} messageId={message.id}/>}
           {own && (
             <>
               {message.kind !== "voice" && (

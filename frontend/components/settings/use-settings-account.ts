@@ -1,4 +1,5 @@
 "use client";
+import {useRouter} from "next/navigation";
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -12,6 +13,7 @@ import {
 type SettingsPanel = "profile" | "password" | null;
 
 export function useSettingsAccount() {
+ const router=useRouter();
   const setUser = useAuthStore((state) => state.setUser);
 
   const [activePanel, setActivePanel] = useState<SettingsPanel>(null);
@@ -249,6 +251,7 @@ export function useSettingsAccount() {
       clearPasswordFields();
 
       setPasswordSuccess(response.message ?? "Password changed successfully.");
+      window.localStorage.removeItem("access_token");window.localStorage.removeItem("refresh_token");useAuthStore.getState().logout();router.replace("/login");
     } catch (error: unknown) {
       setPasswordError(getErrorMessage(error, "Unable to change password."));
     } finally {

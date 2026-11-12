@@ -16,6 +16,7 @@ import { SiteChrome } from "@/components/layout/site-chrome";
 import { NetworkFeedback } from "@/components/ui/network-feedback";
 import {OfflineProvider} from "@/providers/offline-provider";
 import {ErrorMonitorProvider} from "@/providers/error-monitor-provider";
+import {ReleaseGuide} from "@/components/settings/release-guide";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -48,6 +49,7 @@ export default function RootLayout({
             <AppUpdateProvider />
             <CallProvider />
             <SiteChrome>{children}</SiteChrome>
+            <ReleaseGuide/>
             <NetworkFeedback />
           </QueryProvider>
         </AppThemeProvider></PreferencesProvider>

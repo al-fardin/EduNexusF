@@ -1,4 +1,8 @@
 "use client";
+import {AcademicReports} from "./academic-reports";
+import {StaffPermissions} from "./staff-permissions";
+import {ModerationPanel} from "./moderation-panel";
+import {useAuthStore} from "@/store/auth-store";
 import {RecheckRequests} from "./recheck-requests";
 import {Localized} from "@/components/ui/localized";
 import Link from "next/link";
@@ -27,12 +31,14 @@ export function ClassroomDetailsDialog({ classroom, open, onOpenChange }: { clas
 
 export function ClassroomHeader({ classroom, kind }: { classroom: Classroom; kind: "teacher" | "student" }) {
   const [details, setDetails] = useState(false);
+  const [staff,setStaff]=useState(false),[moderation,setModeration]=useState(false);const owner=useAuthStore(s=>s.user?.id)===classroom.owner_id;
   const search=useSearchParams(),router=useRouter(),path=usePathname();
-  const rechecks=search.get("review")==="1";
+  const rechecks=search.get("review")==="1";const reports=search.get("reports")==="1";
+  function setReports(open:boolean){const next=new URLSearchParams(search.toString());if(open)next.set("reports","1");else next.delete("reports");router.push(`${path}?${next}`,{scroll:false});}
   function setRechecks(open:boolean){const next=new URLSearchParams(search.toString());if(open)next.set("review","1");else next.delete("review");router.push(`${path}?${next}`,{scroll:false});}
   return <><header className="en-classroom-heading">
     <Link className="en-icon-button" href={kind==="teacher"?"/instructor/classrooms":"/student/classrooms"} aria-label="Back to classes"><ArrowLeft size={20}/></Link>
     <div className="min-w-0 flex-1"><h1>{classroom.name}</h1>{classroom.subject&&<p>{classroom.subject}{classroom.section ? ` · ${classroom.section}` : ""}</p>}</div>
-    <MessagingLink classroomId={classroom.id}/><DropdownMenu><DropdownMenuTrigger className="en-icon-button" aria-label="Classroom options"><MoreHorizontal size={22}/></DropdownMenuTrigger><DropdownMenuContent align="end" className="en-action-menu w-52"><DropdownMenuItem onClick={()=>setRechecks(true)}>Recheck requests</DropdownMenuItem><DropdownMenuItem onClick={()=>setDetails(true)}><Info/><Localized>Class & teacher details</Localized></DropdownMenuItem></DropdownMenuContent></DropdownMenu>
-  </header><RecheckRequests classId={classroom.id} canManage={kind==="teacher"} open={rechecks} onOpenChange={setRechecks}/><ClassroomDetailsDialog classroom={classroom} open={details} onOpenChange={setDetails}/></>;
+    <MessagingLink classroomId={classroom.id}/><DropdownMenu><DropdownMenuTrigger className="en-icon-button" aria-label="Classroom options"><MoreHorizontal size={22}/></DropdownMenuTrigger><DropdownMenuContent align="end" className="en-action-menu w-52"><DropdownMenuItem onClick={()=>setReports(true)}>Academic reports</DropdownMenuItem>{kind==="teacher"&&<DropdownMenuItem onClick={()=>setModeration(true)}>Message reports</DropdownMenuItem>}{owner&&<DropdownMenuItem onClick={()=>setStaff(true)}>Co-teacher permissions</DropdownMenuItem>}<DropdownMenuItem onClick={()=>setRechecks(true)}>Recheck requests</DropdownMenuItem><DropdownMenuItem onClick={()=>setDetails(true)}><Info/><Localized>Class & teacher details</Localized></DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+  </header><AcademicReports classId={classroom.id} teacher={kind==="teacher"} open={reports} onOpenChange={setReports}/>{owner&&<StaffPermissions classId={classroom.id} open={staff} onOpenChange={setStaff}/>}<ModerationPanel classId={classroom.id} open={moderation} onOpenChange={setModeration}/><RecheckRequests classId={classroom.id} canManage={kind==="teacher"} open={rechecks} onOpenChange={setRechecks}/><ClassroomDetailsDialog classroom={classroom} open={details} onOpenChange={setDetails}/></>;
 }

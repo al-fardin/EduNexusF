@@ -12,6 +12,7 @@ export interface RegisterRequest {
 }
 
 export interface LoginRequest {
+  code?: string;
   email: string;
   password: string;
 }

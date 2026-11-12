@@ -36,9 +36,11 @@ const links = [
   { href: "/student/classrooms", label: "Learning", icon: BookOpen },
   { href: "/classrooms", label: "Classroom", icon: Layers },
   { href: "/search", label: "Search", icon: Search },
+  { href: "/tasks", label: "Task inbox", icon: BookOpen },
   { href: "/progress", label: "Progress", icon: ChartNoAxesCombined },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/semesters", label: "Semesters", icon: Layers },
+  { href: "/storage", label: "Storage", icon: Folder },
   { href: "/files", label: "Files", icon: Folder },
   { href: "/offline", label: "Saved work", icon: Download },
 ];

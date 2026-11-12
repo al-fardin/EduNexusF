@@ -1,4 +1,5 @@
 "use client";
+import {useAuthStore} from "@/store/auth-store";
 import Link from "next/link";
 import {
   Archive,
@@ -40,6 +41,7 @@ export function ClassroomCard({
   onDelete?: () => void;
   onLeave?: () => void;
 }) {
+  const owner=useAuthStore(s=>s.user?.id)===classroom.owner_id;
   const teacher = useQuery({
     queryKey: ["classroom-details", classroom.id],
     queryFn: () => classroomService.details(classroom.id),
@@ -115,7 +117,7 @@ export function ClassroomCard({
                 {copied ? "Code copied" : "Copy class code"}
               </DropdownMenuItem>
             )}
-            {onArchive && (
+            {owner&&onArchive && (
               <DropdownMenuItem onClick={onArchive}>
                 {classroom.status === "archived" ? <RotateCcw /> : <Archive />}
                 {classroom.status === "archived"
@@ -123,8 +125,8 @@ export function ClassroomCard({
                   : "Archive class"}
               </DropdownMenuItem>
             )}
-            {(onDelete || onLeave) && <DropdownMenuSeparator />}
-            {onDelete && (
+            {((owner&&onDelete) || onLeave) && <DropdownMenuSeparator />}
+            {owner&&onDelete && (
               <DropdownMenuItem variant="destructive" onClick={onDelete}>
                 <Trash2 />
                 Delete class

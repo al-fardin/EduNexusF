@@ -1,4 +1,5 @@
 "use client";
+import {api} from "@/lib/api";
 import { sendTyping } from "@/store/realtime-store";
 
 import { useCallStore } from "@/store/call-store";
@@ -100,7 +101,8 @@ export function useChatThread(classId: string, thread: string) {
     refetchInterval: connected ? false : 5000,
     refetchIntervalInBackground: false,
   });
-  const canSend = settings.data?.can_send ?? false;
+  const block=useQuery({queryKey:["conversation-block",user,classId,thread],queryFn:async()=>(await api.get<{data:{blocked:boolean}}>(`/classrooms/${classId}/conversations/${thread}/block`)).data.data,refetchInterval:15000});
+  const canSend = (settings.data?.can_send ?? false) && !block.data?.blocked;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [failedSend,setFailedSend]=useState(false);

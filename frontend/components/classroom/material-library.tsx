@@ -1,7 +1,7 @@
 "use client";
 
 import {AccessibleMaterial} from "./accessible-material";
-import {ReasonDialog} from "@/components/ui/reason-dialog";
+import {MaterialDeleteDialog} from "./material-usage";
 import {EmptyState,ErrorState,UploadState} from "@/components/ui/app-feedback";
 import {useTopics,matchesTopic,ResourceTopicPicker} from "./classwork-topics";
 import {ProtectedFilePreview} from "@/components/files/protected-preview";
@@ -120,7 +120,7 @@ export function MaterialLibrary({ classroomId, canManage, topic="" }: { classroo
     },
   });
   if(canManage&&composer==="material")return <div className="en-composer-view"><button className="en-composer-back" onClick={()=>setComposer(null)}><ArrowLeft size={17}/>Back to classwork</button><MaterialUploadForm classroomId={classroomId} onUploaded={()=>setComposer(null)}/></div>;
-  return <div className="space-y-5"><ReasonDialog open={!!deleting} onOpenChange={value=>{if(!value)setDeleting(null);}} title="Delete material" description={deleting?.title??""} onConfirm={async reason=>{if(deleting)await remove.mutateAsync({id:deleting.id,reason});}}/>
+  return <div className="space-y-5"><MaterialDeleteDialog classId={classroomId} material={deleting} close={()=>setDeleting(null)} confirm={async reason=>{if(deleting)await remove.mutateAsync({id:deleting.id,reason})}}/>
     <section className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
       <div className="mb-5 flex items-center justify-between gap-2">
         <div><h2 className="flex items-center gap-2 text-xl font-bold"><BookOpen size={20} /> Class materials</h2><p className="mt-1 text-sm text-muted-foreground">Files shared with your class.</p></div>

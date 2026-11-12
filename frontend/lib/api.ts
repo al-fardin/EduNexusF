@@ -1,3 +1,4 @@
+import {safeReturnPath} from "./return-path";
 import axios, {
   type AxiosError,
   type InternalAxiosRequestConfig,
@@ -186,9 +187,7 @@ api.interceptors.response.use(
         window.location.pathname !==
           "/login"
       ) {
-        window.location.replace(
-          "/login"
-        );
+        window.location.replace("/login?next="+encodeURIComponent(safeReturnPath(window.location.pathname+window.location.search+window.location.hash)));
       }
 
       return Promise.reject(error);
@@ -238,9 +237,7 @@ api.interceptors.response.use(
         window.location.pathname !==
           "/login"
       ) {
-        window.location.replace(
-          "/login"
-        );
+        window.location.replace("/login?next="+encodeURIComponent(safeReturnPath(window.location.pathname+window.location.search+window.location.hash)));
       }
 
       return Promise.reject(

@@ -1,5 +1,6 @@
 "use client";
 import {Localized} from "@/components/ui/localized";
+import {safeReturnPath} from "@/lib/return-path";
 
 import axios from "axios";
 import Link from "next/link";
@@ -66,6 +67,7 @@ export default function LoginPage() {
         await authService.login({
           email,
           password,
+          code: String(formData.get("code") ?? "").trim(),
         });
 
       const accessToken =
@@ -97,7 +99,7 @@ export default function LoginPage() {
       );
 
       try { window.sessionStorage.setItem("en-verification-pending","1"); } catch { /* Login works without session storage. */ }
-      router.replace("/");
+      router.replace(safeReturnPath(new URLSearchParams(window.location.search).get("next")));
     } catch (error: unknown) {
       if (
         axios.isAxiosError<ApiErrorResponse>(
@@ -195,6 +197,7 @@ export default function LoginPage() {
             </div>
           </div>
 
+          <details className="text-sm"><summary className="cursor-pointer py-2"><Localized>Two-step verification</Localized></summary><label className="mt-2 grid gap-1"><Localized>Authenticator or recovery code</Localized><input name="code" autoComplete="one-time-code" maxLength={24} disabled={loading} className="min-h-11 rounded-xl border border-border bg-background px-4 py-3"/></label></details>
           {errorMessage && (
             <p
               role="alert"
