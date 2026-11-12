@@ -18,6 +18,19 @@ type Handler struct {
 
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := &Handler{db: db}
+	app.Get("/classrooms/:id/reports", authMiddleware.JWTProtected(), h.AcademicReports)
+	app.Post("/classrooms/:id/reports", authMiddleware.JWTProtected(), h.AcademicReports)
+	app.Get("/classrooms/:id/reports/:reportID", authMiddleware.JWTProtected(), h.AcademicReport)
+	app.Post("/classrooms/:id/reports/:reportID/status", authMiddleware.JWTProtected(), h.AcademicReport)
+	app.Get("/classrooms/:id/staff-permissions", authMiddleware.JWTProtected(), h.StaffPermissions)
+	app.Post("/classrooms/:id/staff-permissions", authMiddleware.JWTProtected(), h.StaffPermissions)
+	app.Delete("/classrooms/:id/staff-permissions/:staffID", authMiddleware.JWTProtected(), h.StaffPermissions)
+	app.Put("/classrooms/:id/staff-permissions/:staffID", authMiddleware.JWTProtected(), h.StaffPermissions)
+	app.Get("/workspace/tasks", authMiddleware.JWTProtected(), h.TaskInbox)
+	app.Get("/workspace/storage", authMiddleware.JWTProtected(), h.Storage)
+	app.Get("/classrooms/:id/storage", authMiddleware.JWTProtected(), h.StorageFiles)
+	app.Put("/classrooms/:id/storage", authMiddleware.JWTProtected(), h.StorageFiles)
+	app.Get("/classrooms/:id/materials/:materialID/usage", authMiddleware.JWTProtected(), h.MaterialUsage)
 	app.Get("/workspace/terms", authMiddleware.JWTProtected(), h.Terms)
 	app.Post("/workspace/terms", authMiddleware.JWTProtected(), h.Terms)
 	app.Get("/workspace/semester-classes", authMiddleware.JWTProtected(), h.SemesterClasses)

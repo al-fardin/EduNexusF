@@ -25,6 +25,11 @@ func Register(app *fiber.App, db *pgxpool.Pool) {
 	g.Get("/classes", h.Classes)
 	g.Get("/unread", h.Unread)
 	c := app.Group("/classrooms/:id", authMiddleware.JWTProtected())
+	c.Get("/conversations/:threadID/block", h.Block)
+	c.Put("/conversations/:threadID/block", h.Block)
+	c.Post("/conversations/:threadID/messages/:messageID/report", h.ReportMessage)
+	c.Get("/message-reports", h.Reports)
+	c.Post("/message-reports/:reportID/respond", h.Reports)
 	c.Get("/message-recipients", h.Recipients)
 	c.Get("/messaging-settings", h.Settings)
 	c.Put("/messaging-policy", h.Policy)
@@ -359,6 +364,13 @@ func (h *Handler) Send(c *fiber.Ctx) error {
 	}
 	if !permitted {
 		return fiber.NewError(403, "Your teacher has paused student messages in this class.")
+	}
+	var blocked bool
+	if err = tx.QueryRow(c.UserContext(), `SELECT EXISTS(SELECT 1 FROM conversation_blocks WHERE conversation_id=$1::uuid)`, c.Params("threadID")).Scan(&blocked); err != nil {
+		return err
+	}
+	if blocked {
+		return fiber.NewError(403, "This conversation is blocked. Messages and calls are paused.")
 	}
 	var count int
 	if err = tx.QueryRow(c.UserContext(), `SELECT count(*) FROM classroom_messages WHERE sender_id=$1::uuid AND created_at>now()-interval '1 minute'`, user).Scan(&count); err != nil {

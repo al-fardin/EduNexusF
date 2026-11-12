@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/google/uuid"
 	"time"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
@@ -33,6 +34,9 @@ func (s *UserService) ResetPassword(
 		return err
 	}
 
+	if s.pool != nil {
+		return s.securePassword(ctx, uuid.UUID(tokenData.UserID.Bytes).String(), hash, req.Token, "")
+	}
 	err = s.repo.UpdatePassword(
 		ctx,
 		db.UpdatePasswordParams{

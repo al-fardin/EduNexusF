@@ -68,11 +68,17 @@ func JWTProtected() fiber.Handler {
 		}
 
 		c.Locals("user_id", claims.UserID)
+		c.Locals("session_id", claims.SessionID)
 		if claims.ExpiresAt != nil {
 			c.Locals("auth_expires", claims.ExpiresAt.Unix())
 		}
 		c.Locals("email", claims.Email)
 		c.Locals("role", claims.Role)
+		if jwtService.RequestPolicy != nil {
+			if err := jwtService.RequestPolicy(c.UserContext(), claims.UserID, c.Path(), c.Method()); err != nil {
+				return err
+			}
+		}
 
 		return c.Next()
 	}

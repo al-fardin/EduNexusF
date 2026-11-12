@@ -1,0 +1,2 @@
+DROP TABLE classroom_academic_report_events;
+DROP TABLE classroom_academic_reports;

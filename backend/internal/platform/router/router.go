@@ -38,6 +38,8 @@ func Register(
 	cfg *config.Config,
 	jwtService *security.JWTService,
 ) {
+	jwtService.ConfigureSessions(dbPool)
+	jwtService.RequestPolicy = learning.StaffPolicy(dbPool)
 	releases.Register(app)
 	app.Get(
 		"/health",
@@ -117,6 +119,8 @@ func Register(
 	authH := authHandler.New(
 		authSvc,
 	)
+	authSvc.ConfigureSecurity(dbPool)
+	authSvc.RegisterSecurity(app)
 
 	notifications.Register(app, dbPool, mailer, cfg.SMTPHost != "" && cfg.SMTPPort != "" && cfg.SMTPFrom != "")
 
@@ -129,6 +133,7 @@ func Register(
 	classroomRepo :=
 		classroomRepository.New(
 			queries,
+			dbPool,
 		)
 
 	membershipRepo :=

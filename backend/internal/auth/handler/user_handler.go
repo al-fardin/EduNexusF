@@ -95,7 +95,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	}
 
 	login, err := h.service.Login(
-		c.Context(),
+		service.LoginContext(c.UserContext(), c.Get("User-Agent")),
 		req,
 	)
 	if err != nil {

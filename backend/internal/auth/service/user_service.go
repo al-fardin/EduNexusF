@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
 	"github.com/edunexus/edunexus/internal/auth/repository"
@@ -17,6 +18,7 @@ import (
 )
 
 type UserService struct {
+	pool        *pgxpool.Pool
 	repo        *repository.UserRepository
 	refreshRepo *repository.RefreshTokenRepository
 	verifyRepo  *repository.EmailVerificationRepository
@@ -178,6 +180,9 @@ func (s *UserService) Login(
 	); err != nil {
 		return dto.LoginResponse{}, errors.New("invalid email or password")
 	}
+	if s.pool != nil {
+		return s.secureLogin(ctx, req, user)
+	}
 	id, err := uuid.FromBytes(user.ID.Bytes[:])
 	if err != nil {
 		return dto.LoginResponse{}, err
@@ -295,6 +300,9 @@ func (s *UserService) ChangePassword(
 		return err
 	}
 
+	if s.pool != nil {
+		return s.securePassword(ctx, userID, hash, "", user.PasswordHash)
+	}
 	return s.repo.UpdatePassword(
 		ctx,
 		db.UpdatePasswordParams{
@@ -366,6 +374,9 @@ func (s *UserService) Refresh(
 	ctx context.Context,
 	req dto.RefreshTokenRequest,
 ) (dto.RefreshTokenResponse, error) {
+	if s.pool != nil {
+		return s.secureRefresh(ctx, req)
+	}
 	rt, err := s.refreshRepo.GetByToken(
 		ctx,
 		req.RefreshToken,
@@ -443,6 +454,9 @@ func (s *UserService) Logout(
 	ctx context.Context,
 	req dto.LogoutRequest,
 ) error {
+	if s.pool != nil {
+		return s.secureLogout(ctx, req.RefreshToken)
+	}
 
 	rt, err := s.refreshRepo.GetByToken(
 		ctx,
@@ -465,6 +479,9 @@ func (s *UserService) LogoutAll(
 	ctx context.Context,
 	userID string,
 ) error {
+	if s.pool != nil {
+		return s.revokeAll(ctx, userID)
+	}
 
 	id, err := uuid.Parse(userID)
 	if err != nil {

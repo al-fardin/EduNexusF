@@ -89,7 +89,8 @@ func (h *Hub) ticket(c *fiber.Ctx) error {
 	if expires, ok := c.Locals("auth_expires").(int64); ok && time.Unix(expires, 0).Before(session) {
 		session = time.Unix(expires, 0)
 	}
-	_, err := h.db.Exec(ctx, `INSERT INTO realtime_tickets(ticket_hash,user_id,expires_at,session_expires_at) SELECT $1,$2::uuid,now()+interval '30 seconds',$3 WHERE EXISTS(SELECT 1 FROM users WHERE id=$2::uuid AND status='active' AND deleted_at IS NULL)`, hash(ticket), user, session)
+	sid, _ := c.Locals("session_id").(string)
+	_, err := h.db.Exec(ctx, `INSERT INTO realtime_tickets(ticket_hash,user_id,expires_at,session_expires_at,auth_session_id) SELECT $1,$2::uuid,now()+interval '30 seconds',$3,NULLIF($4,'')::uuid WHERE EXISTS(SELECT 1 FROM users WHERE id=$2::uuid AND status='active' AND deleted_at IS NULL)`, hash(ticket), user, session, sid)
 	if err != nil {
 		return err
 	}
@@ -130,13 +131,20 @@ func (h *Hub) upgrade(c *fiber.Ctx) error {
 	}
 	var user string
 	var expiry time.Time
-	err := h.db.QueryRow(c.UserContext(), `DELETE FROM realtime_tickets t USING users u WHERE t.ticket_hash=$1 AND t.expires_at>now() AND t.session_expires_at>now() AND u.id=t.user_id AND u.status='active' AND u.deleted_at IS NULL RETURNING t.user_id::text,t.session_expires_at`, hash(value)).Scan(&user, &expiry)
+	var sid *string
+	var issued time.Time
+	err := h.db.QueryRow(c.UserContext(), `DELETE FROM realtime_tickets t USING users u WHERE t.ticket_hash=$1 AND t.expires_at>now() AND t.session_expires_at>now() AND u.id=t.user_id AND u.status='active' AND u.deleted_at IS NULL RETURNING t.user_id::text,t.session_expires_at,t.auth_session_id::text,t.issued_at`, hash(value)).Scan(&user, &expiry, &sid, &issued)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fiber.NewError(401, "connection ticket expired")
 	}
 	if err != nil {
 		return err
 	}
+	if !h.sessionAllowed(user, sid, issued) {
+		return fiber.NewError(401, "Session revoked")
+	}
+	c.Locals("socket_session", sid)
+	c.Locals("socket_issued", issued)
 	c.Locals("socket_user", user)
 	c.Locals("socket_expiry", expiry)
 	return c.Next()
@@ -167,6 +175,8 @@ func (h *Hub) socket(conn *websocket.Conn) {
 		return
 	}
 	user, _ := conn.Locals("socket_user").(string)
+	sid, _ := conn.Locals("socket_session").(*string)
+	issued, _ := conn.Locals("socket_issued").(time.Time)
 	expiry, _ := conn.Locals("socket_expiry").(time.Time)
 	c := &client{user: user, events: make(chan Event, 32), done: make(chan struct{})}
 	h.mu.Lock()
@@ -203,6 +213,9 @@ func (h *Hub) socket(conn *websocket.Conn) {
 			case <-timer.C:
 				return
 			case <-ticker.C:
+				if !h.sessionAllowed(user, sid, issued) {
+					return
+				}
 				conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 				if conn.WriteMessage(websocket.PingMessage, nil) != nil {
 					return
@@ -242,6 +255,19 @@ func (h *Hub) socket(conn *websocket.Conn) {
 			h.broadcast(Event{Kind: "typing", Class: e.Class, Thread: e.Thread, User: user, Typing: e.Typing, Users: []string{peer}})
 		}
 	}
+}
+
+func (h *Hub) sessionAllowed(user string, sid *string, issued time.Time) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	var allowed bool
+	e := h.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users u LEFT JOIN account_security a ON a.user_id=u.id LEFT JOIN auth_sessions s ON s.id=NULLIF($2,'')::uuid AND s.user_id=u.id WHERE u.id=$1::uuid AND u.status='active' AND u.deleted_at IS NULL AND CASE WHEN $2<>'' THEN s.revoked_at IS NULL AND s.expires_at>now() AND (NOT COALESCE(a.enabled,false) OR s.mfa_verified) ELSE NOT COALESCE(a.enabled,false) AND (a.legacy_revoked_at IS NULL OR a.legacy_revoked_at<$3) END)`, user, func() string {
+		if sid != nil {
+			return *sid
+		}
+		return ""
+	}(), issued).Scan(&allowed)
+	return e == nil && allowed
 }
 func (h *Hub) listen(ctx context.Context) {
 	for ctx.Err() == nil {

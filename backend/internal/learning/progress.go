@@ -1,6 +1,7 @@
 package learning
 
 import (
+	"context"
 	"github.com/gofiber/fiber/v2"
 	"time"
 )
@@ -20,7 +21,15 @@ func (h *Handler) Progress(c *fiber.Ctx) error {
 	if student != "" && validID(student) != nil {
 		return fail(400, "Invalid student")
 	}
-	rows, err := h.db.Query(c.UserContext(), `WITH roster AS (
+	out, err := h.buildProgress(c.UserContext(), c.Params("id"), student, role)
+	if err != nil {
+		return err
+	}
+	c.Set("Cache-Control", "no-store")
+	return respond(c, 200, fiber.Map{"scope": role, "students": out})
+}
+func (h *Handler) buildProgress(ctx context.Context, class, student, role string) ([]fiber.Map, error) {
+	rows, err := h.db.Query(ctx, `WITH roster AS (
  SELECT u.id,trim(u.first_name||' '||u.last_name) name,COALESCE(m.student_roll,'') roll FROM classroom_memberships m JOIN users u ON u.id=m.user_id WHERE m.classroom_id=$1::uuid AND m.member_role='student' AND m.status='active' AND u.status='active' AND u.deleted_at IS NULL AND ($2='' OR u.id=NULLIF($2,'')::uuid)
  ), latest AS (
  SELECT DISTINCT ON(s.assignment_id,s.student_id) s.student_id,s.assignment_id,s.awarded_points,s.submitted_at,a.title,a.max_points FROM classroom_assignment_submissions s JOIN classroom_assignments a ON a.id=s.assignment_id JOIN roster r ON r.id=s.student_id WHERE a.classroom_id=$1::uuid AND a.status='published' ORDER BY s.assignment_id,s.student_id,s.version DESC
@@ -40,9 +49,9 @@ func (h *Handler) Progress(c *fiber.Ctx) error {
  (SELECT count(*)::int FROM classroom_exams e WHERE e.classroom_id=$1::uuid AND e.status='published' AND e.ends_at<now() AND NOT EXISTS(SELECT 1 FROM classroom_exam_attempts at WHERE at.exam_id=e.id AND at.student_id=r.id)),
  COALESCE(att.present,0),COALESCE(att.total,0),COALESCE(att.excused,0),
  CASE WHEN $2<>'' THEN COALESCE((SELECT jsonb_agg(jsonb_build_object('id',id,'kind',kind,'title',title,'at',at,'score',score,'maximum',maximum) ORDER BY at) FROM scores WHERE student_id=r.id),'[]'::jsonb) ELSE '[]'::jsonb END
- FROM roster r LEFT JOIN aggregate_scores s ON s.student_id=r.id LEFT JOIN attendance att ON att.student_id=r.id ORDER BY r.roll,r.name,r.id LIMIT 5001`, c.Params("id"), student, role)
+ FROM roster r LEFT JOIN aggregate_scores s ON s.student_id=r.id LEFT JOIN attendance att ON att.student_id=r.id ORDER BY r.roll,r.name,r.id LIMIT 5001`, class, student, role)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rows.Close()
 	out := make([]fiber.Map, 0)
@@ -52,18 +61,17 @@ func (h *Handler) Progress(c *fiber.Ctx) error {
 		var graded, missing, present, total, excused int
 		var trend any
 		if err = rows.Scan(&id, &name, &roll, &percent, &graded, &missing, &present, &total, &excused, &trend); err != nil {
-			return err
+			return nil, err
 		}
 		out = append(out, fiber.Map{"id": id, "name": name, "roll": roll, "percent": percent, "graded": graded, "missing": missing, "present": present, "attendance_total": total, "excused": excused, "trend": trend})
 	}
 	if err = rows.Err(); err != nil {
-		return err
+		return nil, err
 	}
 	if len(out) > 5000 {
-		return fail(422, "Progress supports up to 5000 active students per class")
+		return nil, fail(422, "Progress supports up to 5000 active students per class")
 	}
-	c.Set("Cache-Control", "no-store")
-	return respond(c, 200, fiber.Map{"scope": role, "students": out})
+	return out, nil
 }
 func (h *Handler) Attendance(c *fiber.Ctx) error {
 	actor, _, err := h.member(c, true)
