@@ -40,4 +40,4 @@ Release builds disable cleartext traffic, debugging and workspace changes. TLS e
 - `EDUNEXUS_TEST_DATABASE_URL` enables the isolated integration suite; `EDUNEXUS_REAL_READONLY_DATABASE_URL` enables the existing-data read-only route test. Normal tests skip these checks when the variables are absent.
 - SMTP and OpenAI delivery require server environment credentials. Tests use fakes/mocks; live email delivery and paid model calls were not exercised.
 
-The production frontend build and TypeScript checks pass. The source lint check still reports nine existing React-hook errors (each offending line also exists in the previous HEAD); the default lint command additionally scans bundled Monaco vendor files. These are not claimed as passing checks.
+The current production frontend build, lint, TypeScript and Node checks pass. See [signed Android updates and current verification limits](../quality/semester-release-verification.md) for version 1.4.0 and production release prerequisites.
