@@ -1,20 +1,14 @@
 "use client";
+import { JoinPolicyFields } from "@/components/classroom/join-policy-fields";
+import type { JoinPolicy } from "@/services/enrollment";
 
 import { useMutation } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  BookOpen,
-  LoaderCircle,
-  School,
-} from "lucide-react";
+import { ArrowLeft, BookOpen, LoaderCircle, School } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  FormEvent,
-  useState,
-} from "react";
+import { FormEvent, useState } from "react";
 
-import {AuthGuard} from "@/components/auth/auth-guard";
+import { AuthGuard } from "@/components/auth/auth-guard";
 import {
   classroomService,
   CreateClassroomInput,
@@ -31,44 +25,39 @@ const initialForm: CreateClassroomInput = {
 
 export default function CreateClassroomPage() {
   const router = useRouter();
+  const [policy, setPolicy] = useState<JoinPolicy>({
+    join_mode: "direct",
+    code_join_enabled: true,
+    class_code_expires_at: null,
+  });
 
-  const [form, setForm] =
-    useState<CreateClassroomInput>(
-      initialForm
-    );
+  const [form, setForm] = useState<CreateClassroomInput>(initialForm);
 
   const createMutation = useMutation({
     mutationFn: classroomService.create,
 
     onSuccess: () => {
-      router.push(
-        "/instructor/classrooms"
-      );
+      router.push("/instructor/classrooms");
     },
   });
 
-  function updateField(
-    field: keyof CreateClassroomInput,
-    value: string
-  ) {
+  function updateField(field: keyof CreateClassroomInput, value: string) {
     setForm((current) => ({
       ...current,
       [field]: value,
     }));
   }
 
-  function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     createMutation.mutate({
+      ...policy,
       name: form.name.trim(),
       section: form.section.trim(),
       subject: form.subject.trim(),
       room: form.room.trim(),
-      description:
-        form.description.trim(),
+      description: form.description.trim(),
     });
   }
 
@@ -90,43 +79,27 @@ export default function CreateClassroomPage() {
                 <School size={28} />
               </div>
 
-              <h1 className="text-3xl font-bold">
-                Create a class
-              </h1>
+              <h1 className="text-3xl font-bold">Create a class</h1>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
-                Students will join this
-                classroom using the
-                automatically generated class
-                code.
+                Choose class code access or invite students by email.
               </p>
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-6 p-6 sm:p-8"
-            >
+            <form onSubmit={handleSubmit} className="space-y-6 p-6 sm:p-8">
               <div>
                 <label
                   htmlFor="name"
                   className="mb-2 block text-sm font-semibold"
                 >
                   Class name
-                  <span className="text-destructive">
-                    {" "}
-                    *
-                  </span>
+                  <span className="text-destructive"> *</span>
                 </label>
 
                 <input
                   id="name"
                   value={form.name}
-                  onChange={(event) =>
-                    updateField(
-                      "name",
-                      event.target.value
-                    )
-                  }
+                  onChange={(event) => updateField("name", event.target.value)}
                   required
                   maxLength={150}
                   placeholder="CSE 2258 Numerical Methods"
@@ -147,10 +120,7 @@ export default function CreateClassroomPage() {
                     id="section"
                     value={form.section}
                     onChange={(event) =>
-                      updateField(
-                        "section",
-                        event.target.value
-                      )
+                      updateField("section", event.target.value)
                     }
                     maxLength={100}
                     placeholder="Section A"
@@ -170,10 +140,7 @@ export default function CreateClassroomPage() {
                     id="room"
                     value={form.room}
                     onChange={(event) =>
-                      updateField(
-                        "room",
-                        event.target.value
-                      )
+                      updateField("room", event.target.value)
                     }
                     maxLength={100}
                     placeholder="Room 301"
@@ -200,10 +167,7 @@ export default function CreateClassroomPage() {
                     id="subject"
                     value={form.subject}
                     onChange={(event) =>
-                      updateField(
-                        "subject",
-                        event.target.value
-                      )
+                      updateField("subject", event.target.value)
                     }
                     maxLength={150}
                     placeholder="Numerical Methods"
@@ -224,10 +188,7 @@ export default function CreateClassroomPage() {
                   id="description"
                   value={form.description}
                   onChange={(event) =>
-                    updateField(
-                      "description",
-                      event.target.value
-                    )
+                    updateField("description", event.target.value)
                   }
                   maxLength={5000}
                   rows={5}
@@ -236,11 +197,17 @@ export default function CreateClassroomPage() {
                 />
               </div>
 
+              <section className="space-y-3 rounded-2xl border border-border p-4">
+                <h2 className="font-semibold">Class enrollment</h2>
+                <JoinPolicyFields
+                  value={policy}
+                  onChange={setPolicy}
+                  disabled={createMutation.isPending}
+                />
+              </section>
               {createMutation.isError && (
                 <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  {getClassroomErrorMessage(
-                    createMutation.error
-                  )}
+                  {getClassroomErrorMessage(createMutation.error)}
                 </div>
               )}
 
@@ -254,17 +221,12 @@ export default function CreateClassroomPage() {
 
                 <button
                   type="submit"
-                  disabled={
-                    createMutation.isPending
-                  }
+                  disabled={createMutation.isPending}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {createMutation.isPending ? (
                     <>
-                      <LoaderCircle
-                        size={18}
-                        className="animate-spin"
-                      />
+                      <LoaderCircle size={18} className="animate-spin" />
                       Creating...
                     </>
                   ) : (

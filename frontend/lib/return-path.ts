@@ -2,6 +2,7 @@ const roots = new Set([
   "/",
   "/messages",
   "/notifications",
+  "/invitations",
   "/tasks",
   "/settings",
   "/progress",

@@ -36,6 +36,7 @@ const links = [
   { href: "/student/classrooms", label: "Learning", icon: BookOpen },
   { href: "/classrooms", label: "Classroom", icon: Layers },
   { href: "/search", label: "Search", icon: Search },
+  { href: "/invitations", label: "Invitations", icon: BookOpen },
   { href: "/tasks", label: "Task inbox", icon: BookOpen },
   { href: "/progress", label: "Progress", icon: ChartNoAxesCombined },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },

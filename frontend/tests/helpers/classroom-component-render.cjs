@@ -79,4 +79,4 @@ function reportMarkup(language = "en") {
   }, "\nexport { CreateReport as TestedCreateReport };\n");
   return renderToStaticMarkup(React.createElement(TestedCreateReport, { classId: "class-id", saved() {} }));
 }
-module.exports = { cardMarkup, reportMarkup };
+module.exports = { cardMarkup, reportMarkup, loadComponent };

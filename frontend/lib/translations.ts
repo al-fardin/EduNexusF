@@ -395,6 +395,74 @@ Object.assign(bengali, {
   available: "খোলা আছে",
   unread: "অপঠিত",
 });
+Object.assign(bengali, {
+  "Class enrollment": "ক্লাসে ভর্তি",
+  "Review join requests and invite students.":
+    "যোগদানের অনুরোধ দেখুন ও শিক্ষার্থীদের আমন্ত্রণ জানান।",
+  "Join requests": "যোগদানের অনুরোধ",
+  "Email invitations": "ইমেইলে আমন্ত্রণ",
+  "Join settings": "যোগদানের সেটিংস",
+  "Join approval": "যোগদানের অনুমোদন",
+  "Allow joining with class code": "ক্লাস কোড দিয়ে যোগ দেওয়ার অনুমতি",
+  "Join directly": "সরাসরি যোগদান",
+  "Teacher approval required": "শিক্ষকের অনুমোদন প্রয়োজন",
+  "Set class code expiry": "ক্লাস কোডের মেয়াদ নির্ধারণ",
+  "Class code expires at": "ক্লাস কোডের মেয়াদ শেষ হবে",
+  "Uses your device's local time. Existing members keep their access.":
+    "আপনার ডিভাইসের স্থানীয় সময় ব্যবহার হবে। বর্তমান সদস্যদের প্রবেশাধিকার থাকবে।",
+  "Email invitations can be accepted without a class code.":
+    "ক্লাস কোড ছাড়াই ইমেইলের আমন্ত্রণ গ্রহণ করা যাবে।",
+  "Save join settings": "যোগদানের সেটিংস সংরক্ষণ",
+  "Join settings saved": "যোগদানের সেটিংস সংরক্ষিত",
+  "Join request status": "অনুরোধের অবস্থা",
+  "No join requests": "যোগদানের কোনো অনুরোধ নেই",
+  "Approve join request": "যোগদানের অনুমোদন দিন",
+  "Approve join request?": "যোগদানের অনুমোদন দেবেন?",
+  "Reject join request": "যোগদানের অনুরোধ বাতিল করুন",
+  "Student email": "শিক্ষার্থীর ইমেইল",
+  "Send invitation": "আমন্ত্রণ পাঠান",
+  "Invitation created": "আমন্ত্রণ তৈরি হয়েছে",
+  "The student accepts with the same verified email and chooses their roll. Invitations expire in seven days.":
+    "শিক্ষার্থী একই যাচাইকৃত ইমেইল দিয়ে আমন্ত্রণ গ্রহণ করে রোল দেবে। আমন্ত্রণের মেয়াদ সাত দিন।",
+  "In-app invitations are available. Email delivery awaits SMTP and a valid frontend URL.":
+    "অ্যাপে আমন্ত্রণ পাওয়া যাবে। ইমেইল পাঠাতে SMTP ও frontend URL সেটআপ প্রয়োজন।",
+  "No student invitations": "কোনো শিক্ষার্থীকে আমন্ত্রণ জানানো হয়নি",
+  "Already joined": "ইতিমধ্যে যোগ দিয়েছে",
+  Expires: "মেয়াদ শেষ",
+  "Resend invitation": "আবার আমন্ত্রণ পাঠান",
+  "Revoke invitation": "আমন্ত্রণ প্রত্যাহার করুন",
+  "Revoke invitation?": "আমন্ত্রণ প্রত্যাহার করবেন?",
+  "More invitations": "আরও আমন্ত্রণ",
+  "Class invitations": "ক্লাসের আমন্ত্রণ",
+  Invitations: "আমন্ত্রণ",
+  "Invitations & join requests": "আমন্ত্রণ ও যোগদানের অনুরোধ",
+  "Join with code": "কোড দিয়ে যোগ দিন",
+  "Verify your email to see and accept invitations sent to it.":
+    "ইমেইলে পাঠানো আমন্ত্রণ দেখতে ও গ্রহণ করতে ইমেইল যাচাই করুন।",
+  "No invitations or join requests": "কোনো আমন্ত্রণ বা যোগদানের অনুরোধ নেই",
+  "Class invitation": "ক্লাসের আমন্ত্রণ",
+  "Join request": "যোগদানের অনুরোধ",
+  "Accept invitation": "আমন্ত্রণ গ্রহণ করুন",
+  "Decline invitation": "আমন্ত্রণ প্রত্যাখ্যান করুন",
+  "Decline invitation?": "আমন্ত্রণ প্রত্যাখ্যান করবেন?",
+  "Withdraw join request": "যোগদানের অনুরোধ ফিরিয়ে নিন",
+  "Withdraw join request?": "যোগদানের অনুরোধ ফিরিয়ে নেবেন?",
+  "Open classroom": "ক্লাস খুলুন",
+  "More invitations and requests": "আরও আমন্ত্রণ ও অনুরোধ",
+  "Accept & join classroom": "আমন্ত্রণ গ্রহণ করে ক্লাসে যোগ দিন",
+  accepted: "গৃহীত",
+  declined: "প্রত্যাখ্যাত",
+  revoked: "প্রত্যাহৃত",
+  expired: "মেয়াদ শেষ",
+  cancelled: "বাতিল",
+});
+Object.assign(bengali, {
+  pending: "অপেক্ষমাণ",
+  sent: "পাঠানো হয়েছে",
+  sending: "পাঠানো হচ্ছে",
+  failed: "ব্যর্থ",
+  skipped: "পাঠানো হয়নি",
+});
 export function translate(language: Language, text: string) {
   return language === "bn" ? (bengali[text] ?? text) : text;
 }

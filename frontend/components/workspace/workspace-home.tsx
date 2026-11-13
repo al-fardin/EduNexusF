@@ -1,4 +1,5 @@
 "use client";
+import {EnrollmentNotice} from "./enrollment-inbox";
 import {Localized} from "@/components/ui/localized";
 import Link from "next/link";
 import {usePreferences} from "@/providers/preferences-provider";
@@ -49,7 +50,7 @@ export function WorkspaceHome({
             </Link>
           </div>
         </header>
-        <nav className="mb-4 flex flex-wrap gap-2" aria-label="Workspace tools"><Link className="en-outline-button" href="/tasks">{t("Task inbox")}</Link><Link className="en-outline-button" href="/storage">{t("Storage")}</Link><Link className="en-outline-button" href="/semesters">{t("Semesters")}</Link><Link className="en-outline-button" href="/calendar">{t("Calendar")}</Link><Link className="en-outline-button" href="/progress">{t("Progress")}</Link><Link className="en-outline-button" href="/search">{t("Search")}</Link></nav>
+        <div className="mb-4"><EnrollmentNotice/></div><nav className="mb-4 flex flex-wrap gap-2" aria-label="Workspace tools"><Link className="en-outline-button" href="/tasks">{t("Task inbox")}</Link><Link className="en-outline-button" href="/storage">{t("Storage")}</Link><Link className="en-outline-button" href="/semesters">{t("Semesters")}</Link><Link className="en-outline-button" href="/calendar">{t("Calendar")}</Link><Link className="en-outline-button" href="/progress">{t("Progress")}</Link><Link className="en-outline-button" href="/search">{t("Search")}</Link></nav>
         <div className="en-home-filters" aria-label="Filter classes">
           {[
             ["all", "All"],
