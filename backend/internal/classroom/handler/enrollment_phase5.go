@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"github.com/edunexus/edunexus/internal/platform/mail"
 	"regexp"
 	"strings"
 	"time"
@@ -15,7 +16,11 @@ import (
 
 // EnrollmentPhase5 implements two-step classroom joining, unique per-class roll
 // and teacher-maintained course code. Never accept teacher roles from the client.
-type EnrollmentPhase5 struct{ db *pgxpool.Pool }
+type EnrollmentPhase5 struct {
+	db              *pgxpool.Pool
+	mailer          mail.Mailer
+	emailConfigured bool
+}
 
 func NewEnrollmentPhase5(db *pgxpool.Pool) *EnrollmentPhase5 { return &EnrollmentPhase5{db: db} }
 
@@ -62,14 +67,20 @@ func (h *EnrollmentPhase5) LookupCode(c *fiber.Ctx) error {
 	}
 	var id, name string
 	var course, section *string
-	err := h.db.QueryRow(c.UserContext(), `SELECT id::text,name,course_code,section FROM classrooms WHERE class_code=$1 AND status='active' AND deleted_at IS NULL`, code).Scan(&id, &name, &course, &section)
+	var mode string
+	var enabled bool
+	var expires *time.Time
+	err := h.db.QueryRow(c.UserContext(), `SELECT id::text,name,course_code,section,join_mode,code_join_enabled,class_code_expires_at FROM classrooms WHERE class_code=$1 AND status='active' AND deleted_at IS NULL`, code).Scan(&id, &name, &course, &section, &mode, &enabled, &expires)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return phase5Error(c, 404, "class code not found")
 	}
 	if err != nil {
 		return err
 	}
-	return c.JSON(fiber.Map{"success": true, "data": fiber.Map{"id": id, "name": name, "course_code": course, "section": section}})
+	if !enabled || (expires != nil && !expires.After(time.Now())) {
+		return phase5Error(c, 410, "This class code is disabled or expired. Ask your teacher for an invitation.")
+	}
+	return c.JSON(fiber.Map{"success": true, "data": fiber.Map{"id": id, "name": name, "course_code": course, "section": section, "join_mode": mode, "class_code_expires_at": expires}})
 }
 
 type joinPhase5Request struct {
@@ -103,8 +114,11 @@ func (h *EnrollmentPhase5) Join(c *fiber.Ctx) error {
 	defer tx.Rollback(c.UserContext())
 	var classID, owner, name, status string
 	var section, subject, room, description, course *string
-	err = tx.QueryRow(c.UserContext(), `SELECT id::text,owner_id::text,name,status,section,subject,room,description,course_code FROM classrooms WHERE class_code=$1 AND status='active' AND deleted_at IS NULL FOR SHARE`, code).
-		Scan(&classID, &owner, &name, &status, &section, &subject, &room, &description, &course)
+	var mode string
+	var enabled bool
+	var expires *time.Time
+	err = tx.QueryRow(c.UserContext(), `SELECT id::text,owner_id::text,name,status,section,subject,room,description,course_code,join_mode,code_join_enabled,class_code_expires_at FROM classrooms WHERE class_code=$1 AND status='active' AND deleted_at IS NULL FOR UPDATE`, code).
+		Scan(&classID, &owner, &name, &status, &section, &subject, &room, &description, &course, &mode, &enabled, &expires)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return phase5Error(c, 404, "class code not found")
 	}
@@ -113,6 +127,20 @@ func (h *EnrollmentPhase5) Join(c *fiber.Ctx) error {
 	}
 	if user == owner {
 		return phase5Error(c, 409, "you are the teacher of this classroom")
+	}
+	if !enabled || (expires != nil && !expires.After(time.Now())) {
+		return phase5Error(c, 410, "This class code is disabled or expired. Ask your teacher for an invitation.")
+	}
+	var memberRole, memberStatus string
+	e := tx.QueryRow(c.UserContext(), `SELECT member_role,status FROM classroom_memberships WHERE classroom_id=$1::uuid AND user_id=$2::uuid`, classID, user).Scan(&memberRole, &memberStatus)
+	if e != nil && !errors.Is(e, pgx.ErrNoRows) {
+		return e
+	}
+	if e == nil && (memberStatus == "active" || memberRole == "teacher") {
+		return phase5Error(c, 409, "You already belong to this classroom or have a teacher membership")
+	}
+	if mode == "approval" {
+		return h.submitJoinRequest(c, tx, classID, user, roll, name)
 	}
 	var memberID string
 	var joinedAt time.Time
@@ -132,11 +160,14 @@ func (h *EnrollmentPhase5) Join(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	if err = closePendingJoin(c.UserContext(), tx, classID, user, user, "Joined directly with the current class policy"); err != nil {
+		return err
+	}
 	if err = tx.Commit(c.UserContext()); err != nil {
 		return err
 	}
 	return c.Status(201).JSON(fiber.Map{"success": true, "message": "Classroom joined successfully", "data": fiber.Map{
-		"membership_id": memberID, "student_roll": roll, "member_role": "student", "joined_at": joinedAt,
+		"status": "joined", "membership_id": memberID, "student_roll": roll, "member_role": "student", "joined_at": joinedAt,
 		"classroom": fiber.Map{"id": classID, "owner_id": owner, "name": name, "status": status, "section": section, "subject": subject, "room": room, "description": description, "course_code": course, "class_code": code},
 	}})
 }

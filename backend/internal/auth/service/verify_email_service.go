@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"html"
+	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -64,6 +66,10 @@ func (s *UserService) ResendVerification(
 	ctx context.Context,
 	req dto.ResendVerificationRequest,
 ) error {
+	page, originErr := verificationPage()
+	if originErr != nil {
+		return originErr
+	}
 
 	user, err := s.repo.GetUserByEmail(
 		ctx,
@@ -115,7 +121,8 @@ func (s *UserService) ResendVerification(
 		return err
 	}
 
-	link := "http://localhost:3000/verify-email?token=" + token
+	page.RawQuery = url.Values{"token": {token}}.Encode()
+	link := html.EscapeString(page.String())
 
 	body := `
 <h2>Verify your email</h2>

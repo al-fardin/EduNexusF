@@ -70,6 +70,20 @@ func (s *ClassroomService) Create(
 	userID string,
 	req dto.CreateClassroomRequest,
 ) (dto.ClassroomResponse, error) {
+	mode := req.JoinMode
+	if mode == "" {
+		mode = "direct"
+	}
+	if mode != "direct" && mode != "approval" {
+		return dto.ClassroomResponse{}, validationError("Choose direct joining or teacher approval")
+	}
+	if req.CodeExpiresAt != nil && (!req.CodeExpiresAt.After(time.Now()) || req.CodeExpiresAt.After(time.Now().AddDate(1, 0, 0))) {
+		return dto.ClassroomResponse{}, validationError("Class code expiry must be in the next year")
+	}
+	enabled := true
+	if req.CodeJoinEnabled != nil {
+		enabled = *req.CodeJoinEnabled
+	}
 	ownerID, err := parseUUID(userID)
 	if err != nil {
 		return dto.ClassroomResponse{}, err
@@ -94,7 +108,7 @@ func (s *ClassroomService) Create(
 			return dto.ClassroomResponse{}, err
 		}
 
-		classroom, err := s.repo.Create(
+		classroom, err := s.repo.CreateWithEnrollment(
 			ctx,
 			db.CreateClassroomParams{
 				OwnerID: ownerID,
@@ -118,6 +132,7 @@ func (s *ClassroomService) Create(
 
 				ClassCode: classCode,
 			},
+			mode, enabled, req.CodeExpiresAt,
 		)
 
 		if err == nil {

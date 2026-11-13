@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"html"
+	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,6 +52,10 @@ func (s *UserService) Register(
 	ctx context.Context,
 	req dto.RegisterRequest,
 ) (dto.RegisterResponse, error) {
+	page, originErr := verificationPage()
+	if originErr != nil {
+		return dto.RegisterResponse{}, originErr
+	}
 
 	_, err := s.repo.GetUserByEmail(ctx, req.Email)
 	if err == nil {
@@ -119,9 +125,8 @@ func (s *UserService) Register(
 	}
 
 	// Send verification email.
-	link :=
-		"http://localhost:3000/verify-email?token=" +
-			token
+	page.RawQuery = url.Values{"token": {token}}.Encode()
+	link := html.EscapeString(page.String())
 
 	body := `
 <h2>Welcome to EduNexus</h2>

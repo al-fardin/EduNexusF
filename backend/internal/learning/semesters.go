@@ -241,7 +241,7 @@ func (h *Handler) RolloverClass(c *fiber.Ctx) error {
 		return fail(422, "Rollover supports up to 400 coursework items and topics")
 	}
 	id := uuid.NewString()
-	if _, err = tx.Exec(c.UserContext(), `INSERT INTO classrooms(id,owner_id,name,subject,section,room,description,class_code,term_id,syllabus) SELECT $3::uuid,$2::uuid,$4,subject,section,room,description,upper(substr(replace($3::text,'-',''),1,8)),$5::uuid,syllabus FROM classrooms WHERE id=$1::uuid`, c.Params("id"), user, id, strings.TrimSpace(req.Name), req.Term); err != nil {
+	if _, err = tx.Exec(c.UserContext(), `INSERT INTO classrooms(id,owner_id,name,subject,section,room,description,class_code,term_id,syllabus,join_mode,code_join_enabled,class_code_expires_at) SELECT $3::uuid,$2::uuid,$4,subject,section,room,description,upper(substr(replace($3::text,'-',''),1,8)),$5::uuid,syllabus,join_mode,code_join_enabled,class_code_expires_at FROM classrooms WHERE id=$1::uuid`, c.Params("id"), user, id, strings.TrimSpace(req.Name), req.Term); err != nil {
 		return err
 	}
 	if _, err = tx.Exec(c.UserContext(), `INSERT INTO classroom_memberships(classroom_id,user_id,member_role,status) VALUES($1::uuid,$2::uuid,'teacher','active') ON CONFLICT DO NOTHING`, id, user); err != nil {

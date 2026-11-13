@@ -192,12 +192,15 @@ func Register(
 	calling.Register(app, dbPool)
 	messaging.Register(app, dbPool)
 
+	enrollment := classroomHandler.NewEnrollmentPhase5(dbPool)
+	enrollment.ConfigureEnrollmentMail(app, mailer, cfg.SMTPHost != "" && cfg.SMTPPort != "" && cfg.SMTPFrom != "")
+	enrollment.RegisterEnrollment(app)
 	classroomRoutes.Register(
 		app,
 		classroomH,
 		membershipH,
 		streamH,
 		classroomHandler.NewMaterial(dbPool, streamSvc),
-		classroomHandler.NewEnrollmentPhase5(dbPool),
+		enrollment,
 	)
 }

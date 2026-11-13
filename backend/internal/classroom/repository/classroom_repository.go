@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	db "github.com/edunexus/edunexus/internal/platform/database/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -31,6 +32,25 @@ func (r *ClassroomRepository) Create(
 		ctx,
 		params,
 	)
+}
+
+func (r *ClassroomRepository) CreateWithEnrollment(ctx context.Context, params db.CreateClassroomParams, mode string, enabled bool, expires *time.Time) (db.Classroom, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return db.Classroom{}, err
+	}
+	defer tx.Rollback(ctx)
+	class, err := db.New(tx).CreateClassroom(ctx, params)
+	if err != nil {
+		return db.Classroom{}, err
+	}
+	if _, err = tx.Exec(ctx, `UPDATE classrooms SET join_mode=$2,code_join_enabled=$3,class_code_expires_at=$4 WHERE id=$1`, class.ID, mode, enabled, expires); err != nil {
+		return db.Classroom{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return db.Classroom{}, err
+	}
+	return class, nil
 }
 
 func (r *ClassroomRepository) GetByID(

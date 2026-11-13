@@ -151,6 +151,11 @@ func TestCoTeacherCapabilitiesCannotAlterOwnerOrPromoteStudent(t *testing.T) {
 	if policy(t.Context(), f.Outsider, base+"/materials", "POST") == nil {
 		t.Fatal("coursework permission bypassed")
 	}
+	for _, path := range []string{base + "/join-settings", base + "/enrollment/requests", base + "/enrollment/invitations"} {
+		if policy(t.Context(), f.Outsider, path, "GET") == nil {
+			t.Fatal("enrollment permissions bypassed")
+		}
+	}
 	if policy(t.Context(), f.Teacher, base+"/materials", "POST") != nil {
 		t.Fatal("owner lost permission")
 	}

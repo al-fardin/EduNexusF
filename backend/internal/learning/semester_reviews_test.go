@@ -47,6 +47,10 @@ func TestSemesterRolloverKeepsPrivateRecordsOutAndCopiesFiles(t *testing.T) {
 	base := "/workspace/semester-classes/" + f.ClassID
 	call(t, app, f.Student, "PUT", base, fiber.Map{"term_id": term, "syllabus": "Learning objectives", "status": "active"}, 403)
 	call(t, app, f.Teacher, "PUT", base, fiber.Map{"term_id": term, "syllabus": "Learning objectives", "status": "active"}, 200)
+	codeExpiry := time.Now().UTC().Add(time.Hour).Truncate(time.Second)
+	if _, e := f.DB.Exec(t.Context(), `UPDATE classrooms SET join_mode='approval',code_join_enabled=false,class_code_expires_at=$2 WHERE id=$1::uuid`, f.ClassID, codeExpiry); e != nil {
+		t.Fatal(e)
+	}
 	work := call(t, app, f.Teacher, "POST", "/classrooms/"+f.ClassID+"/assignments", Assignment{Title: "Semester assignment", DueAt: time.Now().Add(time.Hour), MaxPoints: 100}, 200)["data"].(map[string]any)["id"].(string)
 	call(t, app, f.Teacher, "POST", "/classrooms/"+f.ClassID+"/assignments/"+work+"/publish", nil, 200)
 	submitFile(t, app, f.Student, "/classrooms/"+f.ClassID+"/assignments/"+work+"/submit", uuid.NewString(), 0)
@@ -83,6 +87,12 @@ func TestSemesterRolloverKeepsPrivateRecordsOutAndCopiesFiles(t *testing.T) {
 		f.DB.Exec(ctx, `DELETE FROM academic_terms WHERE id=$1::uuid`, term)
 	})
 	replay := call(t, app, f.Teacher, "POST", base+"/rollover", payload, 200)["data"].(map[string]any)
+	var mode string
+	var enabled bool
+	var copiedExpiry time.Time
+	if e := f.DB.QueryRow(t.Context(), `SELECT join_mode,code_join_enabled,class_code_expires_at FROM classrooms WHERE id=$1::uuid`, fresh).Scan(&mode, &enabled, &copiedExpiry); e != nil || mode != "approval" || enabled || !copiedExpiry.Equal(codeExpiry) {
+		t.Fatal("Rollover changed the admission policy or expiry")
+	}
 	if replay["id"] != fresh {
 		t.Fatal("duplicate class")
 	}
