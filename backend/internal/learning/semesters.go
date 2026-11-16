@@ -161,7 +161,7 @@ func (h *Handler) ArchiveContents(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT id::text,kind,title,status FROM(SELECT id,'assignment'::text kind,title,status FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') UNION ALL SELECT id,'exam',title,status FROM classroom_exams WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') UNION ALL SELECT m.id,'material',m.title,'published' FROM classroom_materials m WHERE m.classroom_id=$1::uuid AND EXISTS(SELECT 1 FROM classroom_stream_posts p WHERE p.reference_type='material' AND p.reference_id=m.id AND p.classroom_id=m.classroom_id AND p.deleted_at IS NULL))w ORDER BY kind,title,id LIMIT 501`, c.Params("id"), role)
+	rows, err := h.db.Query(c.UserContext(), `SELECT id::text,kind,title,status FROM(SELECT id,'assignment'::text kind,title,status FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') UNION ALL SELECT id,'exam',title,status FROM classroom_exams WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') UNION ALL SELECT m.id,'material',m.title,'published' FROM classroom_materials m WHERE m.classroom_id=$1::uuid AND EXISTS(SELECT 1 FROM classroom_stream_posts p WHERE p.reference_type='material' AND p.reference_id=m.id AND p.classroom_id=m.classroom_id AND p.deleted_at IS NULL))w WHERE edunexus_resource_visible($1::uuid,w.kind,w.id,$3::uuid) ORDER BY kind,title,id LIMIT 501`, c.Params("id"), role, user)
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (h *Handler) RolloverClass(c *fiber.Ctx) error {
 		}
 		for _, old := range oldIDs {
 			fresh := uuid.NewString()
-			if _, err = tx.Exec(c.UserContext(), `INSERT INTO classroom_assignments(id,classroom_id,created_by,title,instructions,due_at,max_points,allow_late,allow_resubmit,rubric,status) SELECT $3::uuid,$4::uuid,$5::uuid,title,instructions,due_at+$6*interval '1 day',max_points,allow_late,allow_resubmit,rubric,'draft' FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid`, old, c.Params("id"), fresh, id, user, req.Shift); err != nil {
+			if _, err = tx.Exec(c.UserContext(), `INSERT INTO classroom_assignments(id,classroom_id,created_by,title,instructions,due_at,max_points,allow_late,allow_resubmit,rubric,status,audience) SELECT $3::uuid,$4::uuid,$5::uuid,title,instructions,due_at+$6*interval '1 day',max_points,allow_late,allow_resubmit,rubric,'draft',audience FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid`, old, c.Params("id"), fresh, id, user, req.Shift); err != nil {
 				return err
 			}
 			resources["assignment:"+old] = fresh
@@ -407,7 +407,7 @@ func copySemesterExams(ctx context.Context, tx pgx.Tx, source, dest, actor strin
 		}
 		fresh := uuid.NewString()
 		raw, _ := json.Marshal(item.questions)
-		if _, err = tx.Exec(ctx, `INSERT INTO classroom_exams(id,classroom_id,created_by,title,description,starts_at,ends_at,duration_minutes,questions,allow_mobile_mcq,status) SELECT $3::uuid,$4::uuid,$5::uuid,title,description,starts_at+$6*interval '1 day',ends_at+$6*interval '1 day',duration_minutes,$7::jsonb,allow_mobile_mcq,'draft' FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid`, item.id, source, fresh, dest, actor, shift, raw); err != nil {
+		if _, err = tx.Exec(ctx, `INSERT INTO classroom_exams(id,classroom_id,created_by,title,description,starts_at,ends_at,duration_minutes,questions,allow_mobile_mcq,status,audience) SELECT $3::uuid,$4::uuid,$5::uuid,title,description,starts_at+$6*interval '1 day',ends_at+$6*interval '1 day',duration_minutes,$7::jsonb,allow_mobile_mcq,'draft',audience FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid`, item.id, source, fresh, dest, actor, shift, raw); err != nil {
 			return err
 		}
 		resources["exam:"+item.id] = fresh
@@ -473,13 +473,13 @@ func copySemesterMaterials(ctx context.Context, tx pgx.Tx, source, dest, actor s
 			return fail(409, "A source material changed during copying")
 		}
 		fresh := uuid.NewString()
-		if _, err = tx.Exec(ctx, `INSERT INTO classroom_materials(id,classroom_id,uploaded_by,title,description,original_filename,storage_key,file_size,media_type) SELECT $3::uuid,$4::uuid,$5::uuid,title,description,original_filename,$6,file_size,media_type FROM classroom_materials WHERE id=$1::uuid AND classroom_id=$2::uuid`, m.id, source, fresh, dest, actor, key); err != nil {
+		if _, err = tx.Exec(ctx, `INSERT INTO classroom_materials(id,classroom_id,uploaded_by,title,description,original_filename,storage_key,file_size,media_type,audience) SELECT $3::uuid,$4::uuid,$5::uuid,title,description,original_filename,$6,file_size,media_type,audience FROM classroom_materials WHERE id=$1::uuid AND classroom_id=$2::uuid`, m.id, source, fresh, dest, actor, key); err != nil {
 			return err
 		}
 		if _, err = tx.Exec(ctx, `INSERT INTO classroom_material_accessibility(material_id,image_alt,caption,plain_text,transcript,captions_vtt,updated_by) SELECT $2::uuid,image_alt,caption,plain_text,transcript,captions_vtt,$3::uuid FROM classroom_material_accessibility WHERE material_id=$1::uuid`, m.id, fresh, actor); err != nil {
 			return err
 		}
-		if _, err = tx.Exec(ctx, `INSERT INTO classroom_stream_posts(classroom_id,author_id,post_type,title,content,reference_type,reference_id) SELECT $2::uuid,$3::uuid,'material',title,COALESCE(NULLIF(description,''),'Learning material'),'material',$1::uuid FROM classroom_materials WHERE id=$1::uuid`, fresh, dest, actor); err != nil {
+		if _, err = tx.Exec(ctx, `INSERT INTO classroom_stream_posts(classroom_id,author_id,post_type,title,content,reference_type,reference_id,audience) SELECT $2::uuid,$3::uuid,'material',title,COALESCE(NULLIF(description,''),'Learning material'),'material',$1::uuid,audience FROM classroom_materials WHERE id=$1::uuid`, fresh, dest, actor); err != nil {
 			return err
 		}
 		resources["material:"+m.id] = fresh

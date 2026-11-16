@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/edunexus/edunexus/internal/activity"
+	"github.com/edunexus/edunexus/internal/platform/audience"
 	"github.com/edunexus/edunexus/internal/platform/contentrelease"
 	"io"
 	"net/http"
@@ -36,17 +38,18 @@ type MaterialHandler struct {
 }
 
 type materialRecord struct {
-	PublishAt     *time.Time `json:"publish_at"`
-	ScheduleState string     `json:"schedule_state,omitempty"`
-	ImageAlt      string     `json:"image_alt"`
-	ID            string     `json:"id"`
-	ClassroomID   string     `json:"classroom_id"`
-	Title         string     `json:"title"`
-	Description   string     `json:"description"`
-	FileName      string     `json:"file_name"`
-	MediaType     string     `json:"media_type"`
-	FileSize      int64      `json:"file_size"`
-	CreatedAt     time.Time  `json:"created_at"`
+	Audience      json.RawMessage `json:"audience"`
+	PublishAt     *time.Time      `json:"publish_at"`
+	ScheduleState string          `json:"schedule_state,omitempty"`
+	ImageAlt      string          `json:"image_alt"`
+	ID            string          `json:"id"`
+	ClassroomID   string          `json:"classroom_id"`
+	Title         string          `json:"title"`
+	Description   string          `json:"description"`
+	FileName      string          `json:"file_name"`
+	MediaType     string          `json:"media_type"`
+	FileSize      int64           `json:"file_size"`
+	CreatedAt     time.Time       `json:"created_at"`
 }
 
 func NewMaterial(pool *pgxpool.Pool, stream *service.StreamService) *MaterialHandler {
@@ -64,6 +67,23 @@ func (h *MaterialHandler) authorize(c *fiber.Ctx, teacherOnly bool) error {
 	}
 	if err := h.stream.AuthorizeMaterialAccess(c.UserContext(), userID, role, c.Params("id"), teacherOnly); err != nil {
 		return handleStreamError(c, err)
+	}
+	if c.Params("materialID") != "" && !teacherOnly {
+		user, _, e := currentIdentity(c)
+		if e != nil {
+			return e
+		}
+		if _, e = uuid.Parse(c.Params("materialID")); e != nil {
+			return fiber.NewError(400, "Invalid material")
+		}
+		var allowed bool
+		e = h.pool.QueryRow(c.UserContext(), `SELECT edunexus_resource_visible($1::uuid,'material',$2::uuid,$3::uuid)`, c.Params("id"), c.Params("materialID"), user).Scan(&allowed)
+		if e != nil {
+			return e
+		}
+		if !allowed {
+			return fiber.NewError(403, "This material is not assigned to your roll")
+		}
 	}
 	return nil
 }
@@ -89,6 +109,16 @@ func (h *MaterialHandler) Upload(c *fiber.Ctx) error {
 	description := strings.TrimSpace(c.FormValue("description"))
 	if len(title) == 0 || len([]rune(title)) > 200 || len([]rune(description)) > 5000 {
 		return errorResponse(c, fiber.StatusBadRequest, "title is required (up to 200 characters); description up to 5000")
+	}
+	var rule *audience.Rule
+	if raw := c.FormValue("audience"); raw != "" {
+		if len(raw) > 131072 || json.Unmarshal([]byte(raw), &rule) != nil {
+			return fiber.NewError(400, "Invalid audience settings")
+		}
+	}
+	policy, e := audience.Encode(rule)
+	if e != nil {
+		return fiber.NewError(400, e.Error())
 	}
 	var publishAt *time.Time
 	if raw := c.FormValue("publish_at"); raw != "" {
@@ -153,12 +183,13 @@ func (h *MaterialHandler) Upload(c *fiber.Ctx) error {
 	}
 	defer tx.Rollback(context.Background())
 	var result materialRecord
+	result.Audience = policy
 	err = tx.QueryRow(c.UserContext(), `
         INSERT INTO classroom_materials
-          (classroom_id, uploaded_by, title, description, original_filename, storage_key, file_size, media_type)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+          (classroom_id, uploaded_by, title, description, original_filename, storage_key, file_size, media_type,audience)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
         RETURNING id::text, classroom_id::text, title, description, original_filename, media_type, file_size, created_at`,
-		classID.String(), authorID.String(), title, description, original, storageKey, bytesWritten, mime,
+		classID.String(), authorID.String(), title, description, original, storageKey, bytesWritten, mime, policy,
 	).Scan(&result.ID, &result.ClassroomID, &result.Title, &result.Description, &result.FileName, &result.MediaType, &result.FileSize, &result.CreatedAt)
 	if err == nil && publishAt != nil {
 		err = contentrelease.Save(c.UserContext(), tx, classID.String(), authorID.String(), "material", result.ID, publishAt)
@@ -171,9 +202,9 @@ func (h *MaterialHandler) Upload(c *fiber.Ctx) error {
 			postContent = "New learning material: " + title
 		}
 		_, err = tx.Exec(c.UserContext(), `
-            INSERT INTO classroom_stream_posts(classroom_id, author_id, post_type, title, content, reference_type, reference_id)
-            VALUES($1,$2,'material',$3,$4,'material',$5::uuid)`,
-			classID.String(), authorID.String(), title, postContent, result.ID,
+            INSERT INTO classroom_stream_posts(classroom_id, author_id, post_type, title, content, reference_type, reference_id,audience)
+            VALUES($1,$2,'material',$3,$4,'material',$5::uuid,$6::jsonb)`,
+			classID.String(), authorID.String(), title, postContent, result.ID, policy,
 		)
 	}
 	if err == nil {
@@ -202,11 +233,11 @@ func (h *MaterialHandler) List(c *fiber.Ctx) error {
 		return identityErr
 	}
 	rows, err := h.pool.Query(c.UserContext(), `
-        SELECT m.id::text, m.classroom_id::text, m.title, m.description, m.original_filename, m.media_type, m.file_size, m.created_at,COALESCE(x.image_alt,''),CASE WHEN s.state='scheduled' THEN s.publish_at END,COALESCE(s.state,'')
+        SELECT m.id::text, m.classroom_id::text, m.title, m.description, m.original_filename, m.media_type, m.file_size, m.created_at,COALESCE(x.image_alt,''),CASE WHEN s.state='scheduled' THEN s.publish_at END,COALESCE(s.state,''),m.audience
         FROM classroom_materials m
         LEFT JOIN classroom_material_accessibility x ON x.material_id=m.id
         LEFT JOIN classroom_content_schedules s ON s.material_id=m.id
-        WHERE m.classroom_id=$1::uuid AND (EXISTS(SELECT 1 FROM classroom_stream_posts p WHERE p.reference_type='material' AND p.reference_id=m.id AND p.classroom_id=m.classroom_id AND p.deleted_at IS NULL) OR (s.state IN ('scheduled','blocked','cancelled') AND EXISTS(SELECT 1 FROM classroom_memberships mbr WHERE mbr.classroom_id=m.classroom_id AND mbr.user_id=$2::uuid AND mbr.member_role='teacher' AND mbr.status='active')))
+        WHERE m.classroom_id=$1::uuid AND edunexus_resource_visible(m.classroom_id,'material',m.id,$2::uuid) AND (EXISTS(SELECT 1 FROM classroom_stream_posts p WHERE p.reference_type='material' AND p.reference_id=m.id AND p.classroom_id=m.classroom_id AND p.deleted_at IS NULL) OR (s.state IN ('scheduled','blocked','cancelled') AND EXISTS(SELECT 1 FROM classroom_memberships mbr WHERE mbr.classroom_id=m.classroom_id AND mbr.user_id=$2::uuid AND mbr.member_role='teacher' AND mbr.status='active')))
         ORDER BY m.created_at DESC LIMIT 200`, c.Params("id"), user)
 	if err != nil {
 		return err
@@ -215,7 +246,7 @@ func (h *MaterialHandler) List(c *fiber.Ctx) error {
 	items := make([]materialRecord, 0)
 	for rows.Next() {
 		var item materialRecord
-		if err := rows.Scan(&item.ID, &item.ClassroomID, &item.Title, &item.Description, &item.FileName, &item.MediaType, &item.FileSize, &item.CreatedAt, &item.ImageAlt, &item.PublishAt, &item.ScheduleState); err != nil {
+		if err := rows.Scan(&item.ID, &item.ClassroomID, &item.Title, &item.Description, &item.FileName, &item.MediaType, &item.FileSize, &item.CreatedAt, &item.ImageAlt, &item.PublishAt, &item.ScheduleState, &item.Audience); err != nil {
 			return err
 		}
 		items = append(items, item)

@@ -1,16 +1,18 @@
 package learning
 
 import (
+	"github.com/edunexus/edunexus/internal/platform/audience"
 	"github.com/gofiber/fiber/v2"
 	"time"
 )
 
 type gradeColumn struct {
-	ID      string    `json:"id"`
-	Kind    string    `json:"kind"`
-	Title   string    `json:"title"`
-	Maximum int       `json:"maximum"`
-	Due     time.Time `json:"due_at"`
+	Audience *audience.Rule `json:"audience"`
+	ID       string         `json:"id"`
+	Kind     string         `json:"kind"`
+	Title    string         `json:"title"`
+	Maximum  int            `json:"maximum"`
+	Due      time.Time      `json:"due_at"`
 }
 type gradeCell struct {
 	Score     *int   `json:"score"`
@@ -35,16 +37,16 @@ func (h *Handler) Gradebook(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	class := c.Params("id")
 	columns := make([]gradeColumn, 0)
-	rows, err := h.db.Query(ctx, `SELECT id::text,kind,title,maximum,due_at FROM (
- SELECT id,'assignment' kind,title,max_points maximum,due_at FROM classroom_assignments WHERE classroom_id=$1::uuid AND status='published'
- UNION ALL SELECT id,'exam',title,(SELECT COALESCE(sum((q->>'points')::int),0)::int FROM jsonb_array_elements(questions) q),ends_at FROM classroom_exams WHERE classroom_id=$1::uuid AND status='published'
+	rows, err := h.db.Query(ctx, `SELECT id::text,kind,title,maximum,due_at,audience FROM (
+ SELECT id,'assignment' kind,title,max_points maximum,due_at,audience FROM classroom_assignments WHERE classroom_id=$1::uuid AND status='published'
+ UNION ALL SELECT id,'exam',title,(SELECT COALESCE(sum((q->>'points')::int),0)::int FROM jsonb_array_elements(questions) q),ends_at,audience FROM classroom_exams WHERE classroom_id=$1::uuid AND status='published'
  ) work ORDER BY due_at,id LIMIT 201`, class)
 	if err != nil {
 		return err
 	}
 	for rows.Next() {
 		var col gradeColumn
-		if err = rows.Scan(&col.ID, &col.Kind, &col.Title, &col.Maximum, &col.Due); err != nil {
+		if err = rows.Scan(&col.ID, &col.Kind, &col.Title, &col.Maximum, &col.Due, &col.Audience); err != nil {
 			rows.Close()
 			return err
 		}
@@ -143,10 +145,18 @@ func (h *Handler) Gradebook(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	predicates := map[string]func(string) bool{}
+	for _, col := range columns {
+		predicates[col.Kind+":"+col.ID] = audience.Compile(col.Audience)
+	}
 	now := time.Now()
 	for i := range students {
 		for _, col := range columns {
 			key := col.Kind + ":" + col.ID
+			if !predicates[key](students[i].Roll) {
+				students[i].Cells[key] = gradeCell{Status: "not_assigned"}
+				continue
+			}
 			cell, ok := students[i].Cells[key]
 			if !ok {
 				cell.Status = "pending"

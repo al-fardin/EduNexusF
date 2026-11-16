@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/edunexus/edunexus/internal/activity"
+	"github.com/edunexus/edunexus/internal/platform/audience"
 	"math"
 	"strconv"
 	"strings"
@@ -68,6 +69,13 @@ func (h *Handler) EditExam(c *fiber.Ctx) error {
 	if err != nil {
 		return failure(c, 400, err.Error())
 	}
+	var policy []byte
+	if req.Audience != nil {
+		policy, err = audience.Encode(req.Audience)
+		if err != nil {
+			return failure(c, 400, err.Error())
+		}
+	}
 	tx, err := h.db.Begin(c.UserContext())
 	if err != nil {
 		return err
@@ -84,9 +92,9 @@ func (h *Handler) EditExam(c *fiber.Ctx) error {
 	if _, err = tx.Exec(c.UserContext(), `SELECT id FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid FOR UPDATE`, e.ID, c.Params("id")); err != nil {
 		return err
 	}
-	tag, err := tx.Exec(c.UserContext(), `UPDATE classroom_exams SET title=$3,description=$4,starts_at=$5,ends_at=$6,duration_minutes=$7,questions=$8::jsonb,allow_mobile_mcq=$9
+	tag, err := tx.Exec(c.UserContext(), `UPDATE classroom_exams SET title=$3,description=$4,starts_at=$5,ends_at=$6,duration_minutes=$7,questions=$8::jsonb,allow_mobile_mcq=$9,audience=COALESCE($10::jsonb,audience)
         WHERE id=$1::uuid AND classroom_id=$2::uuid AND closed_at IS NULL
-          AND NOT EXISTS(SELECT 1 FROM classroom_exam_attempts WHERE exam_id=$1::uuid)`, e.ID, c.Params("id"), req.Title, req.Description, req.StartsAt, req.EndsAt, req.DurationMinutes, raw, req.AllowMobileMCQ)
+          AND NOT EXISTS(SELECT 1 FROM classroom_exam_attempts WHERE exam_id=$1::uuid)`, e.ID, c.Params("id"), req.Title, req.Description, req.StartsAt, req.EndsAt, req.DurationMinutes, raw, req.AllowMobileMCQ, policy)
 	if err != nil {
 		return err
 	}
@@ -537,14 +545,15 @@ func (h *Handler) PublicResults(c *fiber.Ctx) error {
 	if _, err := h.member(c, false); err != nil {
 		return err
 	}
+	user, _ := identity(c)
 	rows, err := h.db.Query(c.UserContext(), `SELECT e.id::text,e.title,a.id::text,trim(u.first_name||' '||u.last_name),COALESCE(membership.student_roll,''),
       COALESCE(SUM(m.awarded_points),0)::int,p.published_at,e.questions
       FROM classroom_exam_result_publications p JOIN classroom_exam_attempts a ON a.id=p.attempt_id
       JOIN classroom_exams e ON e.id=a.exam_id JOIN users u ON u.id=a.student_id
       LEFT JOIN classroom_memberships membership ON membership.classroom_id=e.classroom_id AND membership.user_id=a.student_id AND membership.member_role='student'
       LEFT JOIN classroom_exam_question_marks m ON m.attempt_id=a.id
-      WHERE e.classroom_id=$1::uuid GROUP BY e.id,a.id,p.published_at,u.first_name,u.last_name,membership.student_roll
-      ORDER BY e.starts_at DESC,u.first_name LIMIT 500`, c.Params("id"))
+      WHERE e.classroom_id=$1::uuid AND edunexus_resource_visible(e.classroom_id,'exam',e.id,$2::uuid) GROUP BY e.id,a.id,p.published_at,u.first_name,u.last_name,membership.student_roll
+      ORDER BY e.starts_at DESC,u.first_name LIMIT 500`, c.Params("id"), user)
 	if err != nil {
 		return err
 	}

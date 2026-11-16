@@ -32,15 +32,15 @@ func (h *Handler) TaskInbox(c *fiber.Ctx) error {
  SELECT 'assignment:'||a.id id,'assignment' kind,a.title,cl.id classroom_id,cl.name classroom_name,cl.member_role role,a.due_at at,
  CASE WHEN cl.member_role='student' THEN CASE WHEN a.due_at<now() THEN 'overdue' ELSE 'pending' END ELSE 'needs_grading' END state,
  'classwork&work=assignments&assignment='||a.id tab
- FROM classroom_assignments a JOIN access cl ON cl.id=a.classroom_id WHERE a.status='published' AND
+ FROM classroom_assignments a JOIN access cl ON cl.id=a.classroom_id WHERE a.status='published' AND edunexus_resource_visible(a.classroom_id,'assignment',a.id,$1::uuid) AND
  ((cl.member_role='student' AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions s WHERE s.assignment_id=a.id AND s.student_id=$1::uuid)) OR
  (cl.member_role='teacher' AND EXISTS(SELECT 1 FROM classroom_assignment_submissions s WHERE s.assignment_id=a.id AND s.awarded_points IS NULL AND s.version=(SELECT max(s2.version) FROM classroom_assignment_submissions s2 WHERE s2.assignment_id=s.assignment_id AND s2.student_id=s.student_id))))
  UNION ALL
- SELECT 'exam:'||e.id,'exam',e.title,cl.id,cl.name,cl.member_role,e.starts_at,CASE WHEN e.starts_at<=now() THEN 'available' ELSE 'upcoming' END,'exam' FROM classroom_exams e JOIN access cl ON cl.id=e.classroom_id WHERE e.status='published' AND e.closed_at IS NULL AND e.ends_at>now() AND e.starts_at<now()+interval '30 days' AND (cl.member_role='teacher' OR NOT EXISTS(SELECT 1 FROM classroom_exam_attempts a WHERE a.exam_id=e.id AND a.student_id=$1::uuid AND (a.status='submitted' OR a.expires_at<=now())))
+ SELECT 'exam:'||e.id,'exam',e.title,cl.id,cl.name,cl.member_role,e.starts_at,CASE WHEN e.starts_at<=now() THEN 'available' ELSE 'upcoming' END,'exam' FROM classroom_exams e JOIN access cl ON cl.id=e.classroom_id WHERE e.status='published' AND edunexus_resource_visible(e.classroom_id,'exam',e.id,$1::uuid) AND e.closed_at IS NULL AND e.ends_at>now() AND e.starts_at<now()+interval '30 days' AND (cl.member_role='teacher' OR NOT EXISTS(SELECT 1 FROM classroom_exam_attempts a WHERE a.exam_id=e.id AND a.student_id=$1::uuid AND (a.status='submitted' OR a.expires_at<=now())))
  UNION ALL
  SELECT 'recheck:'||r.id,'recheck',r.title,cl.id,cl.name,cl.member_role,r.created_at,r.status,'results&review=1' FROM classroom_rechecks r JOIN access cl ON cl.id=r.classroom_id WHERE r.status IN ('open','reviewing') AND (cl.member_role='teacher' OR r.student_id=$1::uuid)
  UNION ALL
- SELECT 'update:'||n.id,'update',n.title,cl.id,cl.name,cl.member_role,n.created_at,'unread',n.url FROM user_notifications n JOIN access cl ON cl.id=n.classroom_id WHERE n.user_id=$1::uuid AND n.read_at IS NULL
+ SELECT 'update:'||n.id,'update',n.title,cl.id,cl.name,cl.member_role,n.created_at,'unread',n.url FROM user_notifications n JOIN access cl ON cl.id=n.classroom_id WHERE n.user_id=$1::uuid AND n.read_at IS NULL AND edunexus_notification_visible(n.classroom_id,n.event_key,n.user_id)
  ) SELECT id,kind,title,classroom_id::text,classroom_name,role,at,state,tab FROM tasks WHERE ($3='' OR kind=$3) ORDER BY CASE WHEN state='overdue' THEN 0 WHEN state IN ('needs_grading','open','reviewing') THEN 1 ELSE 2 END,at,id LIMIT 51 OFFSET $4`, user, class, kind, offset)
 	if err != nil {
 		return err

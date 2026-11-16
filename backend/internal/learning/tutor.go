@@ -63,7 +63,7 @@ func (h *Handler) TutorSources(c *fiber.Ctx) error {
 	if _, _, err := h.member(c, false); err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT id::text,title,kind,material_id::text FROM classroom_tutor_sources WHERE classroom_id=$1::uuid ORDER BY created_at DESC LIMIT 50`, c.Params("id"))
+	rows, err := h.db.Query(c.UserContext(), `SELECT id::text,title,kind,material_id::text FROM classroom_tutor_sources WHERE classroom_id=$1::uuid AND (material_id IS NULL OR edunexus_resource_visible(classroom_id,'material',material_id,$2::uuid)) ORDER BY created_at DESC LIMIT 50`, c.Params("id"), c.Locals("user_id"))
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func (h *Handler) TutorAsk(c *fiber.Ctx) error {
 	if req.SourceIDs == nil {
 		req.SourceIDs = []string{}
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT s.id::text,s.title,s.kind,s.material_id::text,s.content,COALESCE(m.storage_key,''),COALESCE(m.original_filename,'') FROM classroom_tutor_sources s LEFT JOIN classroom_materials m ON m.id=s.material_id WHERE s.classroom_id=$1::uuid AND (cardinality($3::uuid[])=0 OR s.id=ANY($3::uuid[])) ORDER BY ts_rank(to_tsvector('simple',s.title||' '||s.content),plainto_tsquery('simple',$2)) DESC,s.created_at DESC LIMIT 6`, c.Params("id"), req.Question, req.SourceIDs)
+	rows, err := h.db.Query(c.UserContext(), `SELECT s.id::text,s.title,s.kind,s.material_id::text,s.content,COALESCE(m.storage_key,''),COALESCE(m.original_filename,'') FROM classroom_tutor_sources s LEFT JOIN classroom_materials m ON m.id=s.material_id WHERE s.classroom_id=$1::uuid AND (s.material_id IS NULL OR edunexus_resource_visible(s.classroom_id,'material',s.material_id,$4::uuid)) AND (cardinality($3::uuid[])=0 OR s.id=ANY($3::uuid[])) ORDER BY ts_rank(to_tsvector('simple',s.title||' '||s.content),plainto_tsquery('simple',$2)) DESC,s.created_at DESC LIMIT 6`, c.Params("id"), req.Question, req.SourceIDs, user)
 	if err != nil {
 		return err
 	}

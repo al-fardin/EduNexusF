@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/edunexus/edunexus/internal/activity"
+	"github.com/edunexus/edunexus/internal/platform/audience"
 	"github.com/edunexus/edunexus/internal/platform/contentrelease"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
@@ -16,6 +17,7 @@ import (
 )
 
 type Assignment struct {
+	Audience      *audience.Rule    `json:"audience,omitempty"`
 	PublishAt     *time.Time        `json:"publish_at"`
 	Rubric        []RubricCriterion `json:"rubric"`
 	ID            string            `json:"id"`
@@ -36,14 +38,17 @@ func validAssignment(a Assignment) error {
 	if a.PublishAt != nil && (!a.PublishAt.After(time.Now()) || a.PublishAt.After(time.Now().AddDate(1, 0, 0)) || !a.PublishAt.Before(a.DueAt)) {
 		return fail(400, "Publish time must be in the next year and before the deadline")
 	}
+	if _, err := audience.Normalize(a.Audience); err != nil {
+		return fail(400, err.Error())
+	}
 	return validRubric(a.Rubric, a.MaxPoints)
 }
 func (h *Handler) ListAssignments(c *fiber.Ctx) error {
-	_, role, err := h.member(c, false)
+	user, role, err := h.member(c, false)
 	if err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT a.id::text,a.title,a.instructions,a.due_at,a.max_points,a.allow_late,a.allow_resubmit,a.status,a.rubric,CASE WHEN s.state='scheduled' THEN s.publish_at END FROM classroom_assignments a LEFT JOIN classroom_content_schedules s ON s.resource_id=a.id WHERE a.classroom_id=$1::uuid AND ($2='teacher' OR a.status='published') ORDER BY a.due_at DESC LIMIT 200`, c.Params("id"), role)
+	rows, err := h.db.Query(c.UserContext(), `SELECT a.id::text,a.title,a.instructions,a.due_at,a.max_points,a.allow_late,a.allow_resubmit,a.status,a.rubric,CASE WHEN s.state='scheduled' THEN s.publish_at END,a.audience FROM classroom_assignments a LEFT JOIN classroom_content_schedules s ON s.resource_id=a.id WHERE a.classroom_id=$1::uuid AND ($2='teacher' OR a.status='published') AND edunexus_resource_visible(a.classroom_id,'assignment',a.id,$3::uuid) ORDER BY a.due_at DESC LIMIT 200`, c.Params("id"), role, user)
 	if err != nil {
 		return err
 	}
@@ -51,7 +56,7 @@ func (h *Handler) ListAssignments(c *fiber.Ctx) error {
 	out := make([]Assignment, 0)
 	for rows.Next() {
 		var a Assignment
-		if err = rows.Scan(&a.ID, &a.Title, &a.Instructions, &a.DueAt, &a.MaxPoints, &a.AllowLate, &a.AllowResubmit, &a.Status, &a.Rubric, &a.PublishAt); err != nil {
+		if err = rows.Scan(&a.ID, &a.Title, &a.Instructions, &a.DueAt, &a.MaxPoints, &a.AllowLate, &a.AllowResubmit, &a.Status, &a.Rubric, &a.PublishAt, &a.Audience); err != nil {
 			return err
 		}
 		out = append(out, a)
@@ -77,6 +82,11 @@ func (h *Handler) SaveAssignment(c *fiber.Ctx) error {
 		a.Rubric = []RubricCriterion{}
 	}
 	rubricJSON, _ := json.Marshal(a.Rubric)
+	policy, _ := audience.Encode(a.Audience)
+	var updatePolicy []byte
+	if a.Audience != nil {
+		updatePolicy = policy
+	}
 	tx, err := h.db.Begin(c.UserContext())
 	if err != nil {
 		return err
@@ -86,7 +96,7 @@ func (h *Handler) SaveAssignment(c *fiber.Ctx) error {
 		return err
 	}
 	if c.Params("assignmentID") == "" {
-		err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_assignments(classroom_id,created_by,title,instructions,due_at,max_points,allow_late,allow_resubmit,rubric) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9::jsonb) RETURNING id::text`, c.Params("id"), user, strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit, rubricJSON).Scan(&a.ID)
+		err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_assignments(classroom_id,created_by,title,instructions,due_at,max_points,allow_late,allow_resubmit,rubric,audience) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb) RETURNING id::text`, c.Params("id"), user, strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit, rubricJSON, policy).Scan(&a.ID)
 	} else {
 		if err = validID(c.Params("assignmentID")); err != nil {
 			return err
@@ -102,7 +112,7 @@ func (h *Handler) SaveAssignment(c *fiber.Ctx) error {
 		if a.PublishAt != nil && status != "draft" {
 			return fail(409, "Published work cannot be scheduled")
 		}
-		tag, e := tx.Exec(c.UserContext(), `UPDATE classroom_assignments SET title=$3,instructions=$4,due_at=$5,max_points=$6,allow_late=$7,allow_resubmit=$8,rubric=$9::jsonb WHERE id=$1::uuid AND classroom_id=$2::uuid AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions WHERE assignment_id=$1::uuid)`, a.ID, c.Params("id"), strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit, rubricJSON)
+		tag, e := tx.Exec(c.UserContext(), `UPDATE classroom_assignments SET title=$3,instructions=$4,due_at=$5,max_points=$6,allow_late=$7,allow_resubmit=$8,rubric=$9::jsonb,audience=COALESCE($10::jsonb,audience) WHERE id=$1::uuid AND classroom_id=$2::uuid AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions WHERE assignment_id=$1::uuid)`, a.ID, c.Params("id"), strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit, rubricJSON, updatePolicy)
 		err = e
 		if err == nil && tag.RowsAffected() == 0 {
 			return fail(409, "assignment is unavailable or already has submissions")

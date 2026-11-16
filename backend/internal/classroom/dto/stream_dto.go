@@ -1,15 +1,21 @@
 package dto
 
-import "time"
+import (
+	"encoding/json"
+	"github.com/edunexus/edunexus/internal/platform/audience"
+	"time"
+)
 
 type CreateAnnouncementRequest struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	Audience *audience.Rule `json:"audience,omitempty"`
+	Title    string         `json:"title"`
+	Content  string         `json:"content"`
 }
 
 type UpdateAnnouncementRequest struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	Audience *audience.Rule `json:"audience,omitempty"`
+	Title    string         `json:"title"`
+	Content  string         `json:"content"`
 }
 
 type StreamAuthorResponse struct {
@@ -22,6 +28,7 @@ type StreamAuthorResponse struct {
 }
 
 type StreamPostResponse struct {
+	Audience      json.RawMessage       `json:"audience"`
 	ID            string                `json:"id"`
 	ClassroomID   string                `json:"classroom_id"`
 	AuthorID      *string               `json:"author_id,omitempty"`

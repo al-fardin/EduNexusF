@@ -8,20 +8,454 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Classroom struct {
+type AcademicTerm struct {
+	ID        pgtype.UUID        `json:"id"`
+	OwnerID   pgtype.UUID        `json:"owner_id"`
+	Title     string             `json:"title"`
+	StartsOn  pgtype.Date        `json:"starts_on"`
+	EndsOn    pgtype.Date        `json:"ends_on"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type AccountSecurity struct {
+	UserID          pgtype.UUID        `json:"user_id"`
+	Enabled         bool               `json:"enabled"`
+	Secret          []byte             `json:"secret"`
+	PendingSecret   []byte             `json:"pending_secret"`
+	PendingExpires  pgtype.Timestamptz `json:"pending_expires"`
+	LastStep        int64              `json:"last_step"`
+	RecoveryHashes  []string           `json:"recovery_hashes"`
+	Failures        int32              `json:"failures"`
+	LockedUntil     pgtype.Timestamptz `json:"locked_until"`
+	LegacyRevokedAt pgtype.Timestamptz `json:"legacy_revoked_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AuthSession struct {
 	ID          pgtype.UUID        `json:"id"`
-	OwnerID     pgtype.UUID        `json:"owner_id"`
-	Name        string             `json:"name"`
-	Section     pgtype.Text        `json:"section"`
-	Subject     pgtype.Text        `json:"subject"`
-	Room        pgtype.Text        `json:"room"`
-	Description pgtype.Text        `json:"description"`
-	ClassCode   string             `json:"class_code"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	Device      string             `json:"device"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	LastSeenAt  pgtype.Timestamptz `json:"last_seen_at"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	RevokedAt   pgtype.Timestamptz `json:"revoked_at"`
+	MfaVerified bool               `json:"mfa_verified"`
+}
+
+type CalendarReminder struct {
+	UserID      pgtype.UUID        `json:"user_id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	Kind        string             `json:"kind"`
+	ResourceID  pgtype.UUID        `json:"resource_id"`
+	LeadMinutes int32              `json:"lead_minutes"`
+	SentAt      pgtype.Timestamptz `json:"sent_at"`
+}
+
+type Classroom struct {
+	ID                  pgtype.UUID        `json:"id"`
+	OwnerID             pgtype.UUID        `json:"owner_id"`
+	Name                string             `json:"name"`
+	Section             pgtype.Text        `json:"section"`
+	Subject             pgtype.Text        `json:"subject"`
+	Room                pgtype.Text        `json:"room"`
+	Description         pgtype.Text        `json:"description"`
+	ClassCode           string             `json:"class_code"`
+	Status              string             `json:"status"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	ArchivedAt          pgtype.Timestamptz `json:"archived_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+	CourseCode          pgtype.Text        `json:"course_code"`
+	TermID              pgtype.UUID        `json:"term_id"`
+	Syllabus            string             `json:"syllabus"`
+	StorageQuotaBytes   int64              `json:"storage_quota_bytes"`
+	JoinMode            string             `json:"join_mode"`
+	CodeJoinEnabled     bool               `json:"code_join_enabled"`
+	ClassCodeExpiresAt  pgtype.Timestamptz `json:"class_code_expires_at"`
+	JoinSettingsVersion int32              `json:"join_settings_version"`
+}
+
+type ClassroomAcademicReport struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	StudentID   pgtype.UUID        `json:"student_id"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	RequestID   pgtype.UUID        `json:"request_id"`
+	PayloadHash string             `json:"payload_hash"`
+	Snapshot    []byte             `json:"snapshot"`
 	Status      string             `json:"status"`
+	Version     int32              `json:"version"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+}
+
+type ClassroomAcademicReportEvent struct {
+	ID        int64              `json:"id"`
+	ReportID  pgtype.UUID        `json:"report_id"`
+	ActorID   pgtype.UUID        `json:"actor_id"`
+	Status    string             `json:"status"`
+	Reason    string             `json:"reason"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomActivity struct {
+	ID          int64              `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	ActorID     pgtype.UUID        `json:"actor_id"`
+	ActorName   string             `json:"actor_name"`
+	Action      string             `json:"action"`
+	TargetID    string             `json:"target_id"`
+	Title       string             `json:"title"`
+	BeforeValue []byte             `json:"before_value"`
+	AfterValue  []byte             `json:"after_value"`
+	Reason      string             `json:"reason"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomAnnouncementDraft struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	AuthorID    pgtype.UUID        `json:"author_id"`
+	Title       string             `json:"title"`
+	Content     string             `json:"content"`
+	State       string             `json:"state"`
+	PublishAt   pgtype.Timestamptz `json:"publish_at"`
+	PostID      pgtype.UUID        `json:"post_id"`
+	Version     int32              `json:"version"`
+	Error       string             `json:"error"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	ArchivedAt  pgtype.Timestamptz `json:"archived_at"`
-	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+	Audience    []byte             `json:"audience"`
+}
+
+type ClassroomAssignment struct {
+	ID            pgtype.UUID        `json:"id"`
+	ClassroomID   pgtype.UUID        `json:"classroom_id"`
+	CreatedBy     pgtype.UUID        `json:"created_by"`
+	Title         string             `json:"title"`
+	Instructions  string             `json:"instructions"`
+	DueAt         pgtype.Timestamptz `json:"due_at"`
+	MaxPoints     int32              `json:"max_points"`
+	AllowLate     bool               `json:"allow_late"`
+	AllowResubmit bool               `json:"allow_resubmit"`
+	Status        string             `json:"status"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	Rubric        []byte             `json:"rubric"`
+	Audience      []byte             `json:"audience"`
+}
+
+type ClassroomAssignmentSubmission struct {
+	ID            pgtype.UUID        `json:"id"`
+	AssignmentID  pgtype.UUID        `json:"assignment_id"`
+	StudentID     pgtype.UUID        `json:"student_id"`
+	Version       int32              `json:"version"`
+	RequestID     pgtype.UUID        `json:"request_id"`
+	Answer        string             `json:"answer"`
+	FileName      string             `json:"file_name"`
+	FileBytes     []byte             `json:"file_bytes"`
+	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	AwardedPoints pgtype.Int4        `json:"awarded_points"`
+	Feedback      string             `json:"feedback"`
+	GradedBy      pgtype.UUID        `json:"graded_by"`
+	GradedAt      pgtype.Timestamptz `json:"graded_at"`
+	RubricScores  []byte             `json:"rubric_scores"`
+}
+
+type ClassroomAttendance struct {
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	StudentID   pgtype.UUID        `json:"student_id"`
+	Day         pgtype.Date        `json:"day"`
+	Status      string             `json:"status"`
+	MarkedBy    pgtype.UUID        `json:"marked_by"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomBulkOperation struct {
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	RequestID   pgtype.UUID        `json:"request_id"`
+	ActorID     pgtype.UUID        `json:"actor_id"`
+	PayloadHash string             `json:"payload_hash"`
+	Result      []byte             `json:"result"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomCalendarEvent struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	StartsAt    pgtype.Timestamptz `json:"starts_at"`
+	EndsAt      pgtype.Timestamptz `json:"ends_at"`
+	Version     int32              `json:"version"`
+}
+
+type ClassroomCall struct {
+	ID              pgtype.UUID        `json:"id"`
+	ClassroomID     pgtype.UUID        `json:"classroom_id"`
+	ConversationID  pgtype.UUID        `json:"conversation_id"`
+	CallerID        pgtype.UUID        `json:"caller_id"`
+	CalleeID        pgtype.UUID        `json:"callee_id"`
+	ClientRequestID pgtype.UUID        `json:"client_request_id"`
+	CallerSession   pgtype.UUID        `json:"caller_session"`
+	CalleeSession   pgtype.UUID        `json:"callee_session"`
+	Media           string             `json:"media"`
+	State           string             `json:"state"`
+	Reason          string             `json:"reason"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	AcceptedAt      pgtype.Timestamptz `json:"accepted_at"`
+	ConnectedAt     pgtype.Timestamptz `json:"connected_at"`
+	EndedAt         pgtype.Timestamptz `json:"ended_at"`
+	CallerSeenAt    pgtype.Timestamptz `json:"caller_seen_at"`
+	CalleeSeenAt    pgtype.Timestamptz `json:"callee_seen_at"`
+}
+
+type ClassroomCallSignal struct {
+	ID        int64              `json:"id"`
+	CallID    pgtype.UUID        `json:"call_id"`
+	SenderID  pgtype.UUID        `json:"sender_id"`
+	RequestID pgtype.UUID        `json:"request_id"`
+	Kind      string             `json:"kind"`
+	Payload   []byte             `json:"payload"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomContentSchedule struct {
+	ResourceID   pgtype.UUID        `json:"resource_id"`
+	ClassroomID  pgtype.UUID        `json:"classroom_id"`
+	Kind         string             `json:"kind"`
+	AssignmentID pgtype.UUID        `json:"assignment_id"`
+	MaterialID   pgtype.UUID        `json:"material_id"`
+	ActorID      pgtype.UUID        `json:"actor_id"`
+	PublishAt    pgtype.Timestamptz `json:"publish_at"`
+	State        string             `json:"state"`
+	Version      int32              `json:"version"`
+	Error        string             `json:"error"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomConversation struct {
+	ID           pgtype.UUID        `json:"id"`
+	ClassroomID  pgtype.UUID        `json:"classroom_id"`
+	UserLow      pgtype.UUID        `json:"user_low"`
+	UserHigh     pgtype.UUID        `json:"user_high"`
+	LowLastRead  int64              `json:"low_last_read"`
+	HighLastRead int64              `json:"high_last_read"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomExam struct {
+	ID              pgtype.UUID        `json:"id"`
+	ClassroomID     pgtype.UUID        `json:"classroom_id"`
+	CreatedBy       pgtype.UUID        `json:"created_by"`
+	Title           string             `json:"title"`
+	Description     string             `json:"description"`
+	StartsAt        pgtype.Timestamptz `json:"starts_at"`
+	EndsAt          pgtype.Timestamptz `json:"ends_at"`
+	DurationMinutes int32              `json:"duration_minutes"`
+	Status          string             `json:"status"`
+	Questions       []byte             `json:"questions"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	PublishedAt     pgtype.Timestamptz `json:"published_at"`
+	ClosedAt        pgtype.Timestamptz `json:"closed_at"`
+	AllowMobileMcq  bool               `json:"allow_mobile_mcq"`
+	Audience        []byte             `json:"audience"`
+}
+
+type ClassroomExamActivityEvent struct {
+	ID         int64              `json:"id"`
+	AttemptID  pgtype.UUID        `json:"attempt_id"`
+	QuestionID pgtype.Text        `json:"question_id"`
+	EventKind  string             `json:"event_kind"`
+	Magnitude  int32              `json:"magnitude"`
+	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
+}
+
+type ClassroomExamAttempt struct {
+	ID          pgtype.UUID        `json:"id"`
+	ExamID      pgtype.UUID        `json:"exam_id"`
+	StudentID   pgtype.UUID        `json:"student_id"`
+	StartedAt   pgtype.Timestamptz `json:"started_at"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	Answers     []byte             `json:"answers"`
+	Status      string             `json:"status"`
+	SubmittedAt pgtype.Timestamptz `json:"submitted_at"`
+	Revision    int64              `json:"revision"`
+	LastSavedAt pgtype.Timestamptz `json:"last_saved_at"`
+	EntryMode   string             `json:"entry_mode"`
+}
+
+type ClassroomExamCodeRun struct {
+	ID            pgtype.UUID        `json:"id"`
+	AttemptID     pgtype.UUID        `json:"attempt_id"`
+	QuestionID    string             `json:"question_id"`
+	Language      string             `json:"language"`
+	SourceSha256  string             `json:"source_sha256"`
+	Status        string             `json:"status"`
+	DurationMs    int32              `json:"duration_ms"`
+	StdoutPreview string             `json:"stdout_preview"`
+	StderrPreview string             `json:"stderr_preview"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomExamDesktopEvent struct {
+	ID         pgtype.UUID        `json:"id"`
+	AttemptID  pgtype.UUID        `json:"attempt_id"`
+	Kind       string             `json:"kind"`
+	AppName    pgtype.Text        `json:"app_name"`
+	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
+	ObservedAt pgtype.Timestamptz `json:"observed_at"`
+}
+
+type ClassroomExamDesktopPreflight struct {
+	ExamID          pgtype.UUID        `json:"exam_id"`
+	StudentID       pgtype.UUID        `json:"student_id"`
+	PairHash        []byte             `json:"pair_hash"`
+	PairExpiresAt   pgtype.Timestamptz `json:"pair_expires_at"`
+	ClientHash      []byte             `json:"client_hash"`
+	ClientExpiresAt pgtype.Timestamptz `json:"client_expires_at"`
+	Platform        pgtype.Text        `json:"platform"`
+	LastSeen        pgtype.Timestamptz `json:"last_seen"`
+	StoppedAt       pgtype.Timestamptz `json:"stopped_at"`
+}
+
+type ClassroomExamDesktopSession struct {
+	AttemptID       pgtype.UUID        `json:"attempt_id"`
+	PairHash        []byte             `json:"pair_hash"`
+	PairExpiresAt   pgtype.Timestamptz `json:"pair_expires_at"`
+	ClientHash      []byte             `json:"client_hash"`
+	ClientExpiresAt pgtype.Timestamptz `json:"client_expires_at"`
+	Platform        pgtype.Text        `json:"platform"`
+	ConnectedAt     pgtype.Timestamptz `json:"connected_at"`
+	LastSeen        pgtype.Timestamptz `json:"last_seen"`
+	StoppedAt       pgtype.Timestamptz `json:"stopped_at"`
+}
+
+type ClassroomExamMarksheet struct {
+	ExamID      pgtype.UUID        `json:"exam_id"`
+	PdfBytes    []byte             `json:"pdf_bytes"`
+	GeneratedAt pgtype.Timestamptz `json:"generated_at"`
+}
+
+type ClassroomExamMonitorAdmission struct {
+	ExamID      pgtype.UUID        `json:"exam_id"`
+	StudentID   pgtype.UUID        `json:"student_id"`
+	ConsentedAt pgtype.Timestamptz `json:"consented_at"`
+}
+
+type ClassroomExamMonitorEvent struct {
+	ID              pgtype.UUID        `json:"id"`
+	AttemptID       pgtype.UUID        `json:"attempt_id"`
+	EventKind       string             `json:"event_kind"`
+	Source          string             `json:"source"`
+	Domain          pgtype.Text        `json:"domain"`
+	DurationSeconds int32              `json:"duration_seconds"`
+	ReportedAt      pgtype.Timestamptz `json:"reported_at"`
+	RecordedAt      pgtype.Timestamptz `json:"recorded_at"`
+	EventText       pgtype.Text        `json:"event_text"`
+}
+
+type ClassroomExamMonitorHeartbeat struct {
+	AttemptID          pgtype.UUID        `json:"attempt_id"`
+	ConsentedAt        pgtype.Timestamptz `json:"consented_at"`
+	LastSeen           pgtype.Timestamptz `json:"last_seen"`
+	ExtensionConnected bool               `json:"extension_connected"`
+}
+
+type ClassroomExamMonitorPolicy struct {
+	ExamID         pgtype.UUID        `json:"exam_id"`
+	Enabled        bool               `json:"enabled"`
+	FlagAfterExits int16              `json:"flag_after_exits"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomExamQuestionMark struct {
+	AttemptID     pgtype.UUID        `json:"attempt_id"`
+	QuestionID    string             `json:"question_id"`
+	AwardedPoints int32              `json:"awarded_points"`
+	Feedback      string             `json:"feedback"`
+	GraderKind    string             `json:"grader_kind"`
+	GradedBy      pgtype.UUID        `json:"graded_by"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomExamResultPublication struct {
+	AttemptID   pgtype.UUID        `json:"attempt_id"`
+	PublishedBy pgtype.UUID        `json:"published_by"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+}
+
+type ClassroomExamReviewSetting struct {
+	ExamID           pgtype.UUID        `json:"exam_id"`
+	ShowExplanations bool               `json:"show_explanations"`
+	UpdatedBy        pgtype.UUID        `json:"updated_by"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomGradingTemplate struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	Kind        string             `json:"kind"`
+	Title       string             `json:"title"`
+	Payload     []byte             `json:"payload"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomInvitationEvent struct {
+	ID           int64              `json:"id"`
+	InvitationID pgtype.UUID        `json:"invitation_id"`
+	ActorID      pgtype.UUID        `json:"actor_id"`
+	Status       string             `json:"status"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomJoinRequest struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	StudentRoll string             `json:"student_roll"`
+	Status      string             `json:"status"`
+	Version     int32              `json:"version"`
+	Reason      string             `json:"reason"`
+	ReviewedBy  pgtype.UUID        `json:"reviewed_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomJoinRequestEvent struct {
+	ID        int64              `json:"id"`
+	RequestID pgtype.UUID        `json:"request_id"`
+	ActorID   pgtype.UUID        `json:"actor_id"`
+	Status    string             `json:"status"`
+	Reason    string             `json:"reason"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomMaterial struct {
+	ID               pgtype.UUID        `json:"id"`
+	ClassroomID      pgtype.UUID        `json:"classroom_id"`
+	UploadedBy       pgtype.UUID        `json:"uploaded_by"`
+	Title            string             `json:"title"`
+	Description      string             `json:"description"`
+	OriginalFilename string             `json:"original_filename"`
+	StorageKey       string             `json:"storage_key"`
+	FileSize         int64              `json:"file_size"`
+	MediaType        string             `json:"media_type"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	Audience         []byte             `json:"audience"`
+}
+
+type ClassroomMaterialAccessibility struct {
+	MaterialID  pgtype.UUID        `json:"material_id"`
+	ImageAlt    string             `json:"image_alt"`
+	Caption     string             `json:"caption"`
+	PlainText   string             `json:"plain_text"`
+	Transcript  string             `json:"transcript"`
+	CaptionsVtt string             `json:"captions_vtt"`
+	Version     int32              `json:"version"`
+	UpdatedBy   pgtype.UUID        `json:"updated_by"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ClassroomMembership struct {
@@ -32,6 +466,166 @@ type ClassroomMembership struct {
 	Status      string             `json:"status"`
 	JoinedAt    pgtype.Timestamptz `json:"joined_at"`
 	RemovedAt   pgtype.Timestamptz `json:"removed_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	StudentRoll pgtype.Text        `json:"student_roll"`
+}
+
+type ClassroomMessage struct {
+	ID              int64              `json:"id"`
+	ConversationID  pgtype.UUID        `json:"conversation_id"`
+	SenderID        pgtype.UUID        `json:"sender_id"`
+	ClientRequestID pgtype.UUID        `json:"client_request_id"`
+	Body            string             `json:"body"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	FileName        string             `json:"file_name"`
+	FileSize        int64              `json:"file_size"`
+	MediaType       string             `json:"media_type"`
+	StorageKey      string             `json:"storage_key"`
+	FileHash        string             `json:"file_hash"`
+	ReplyToID       pgtype.Int8        `json:"reply_to_id"`
+	EditedAt        pgtype.Timestamptz `json:"edited_at"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+	Kind            string             `json:"kind"`
+	EmojiSize       int32              `json:"emoji_size"`
+	DurationMs      int32              `json:"duration_ms"`
+}
+
+type ClassroomMessageReaction struct {
+	MessageID int64              `json:"message_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Emoji     string             `json:"emoji"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomMessageReport struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	MessageID   int64              `json:"message_id"`
+	ReporterID  pgtype.UUID        `json:"reporter_id"`
+	SenderID    pgtype.UUID        `json:"sender_id"`
+	MessageText string             `json:"message_text"`
+	FileName    string             `json:"file_name"`
+	Reason      string             `json:"reason"`
+	Status      string             `json:"status"`
+	Decision    string             `json:"decision"`
+	ReviewedBy  pgtype.UUID        `json:"reviewed_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ReviewedAt  pgtype.Timestamptz `json:"reviewed_at"`
+	Version     int32              `json:"version"`
+}
+
+type ClassroomMessageReportEvent struct {
+	ID        int64              `json:"id"`
+	ReportID  pgtype.UUID        `json:"report_id"`
+	ActorID   pgtype.UUID        `json:"actor_id"`
+	Status    string             `json:"status"`
+	Reason    string             `json:"reason"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomMessageStar struct {
+	UserID    pgtype.UUID        `json:"user_id"`
+	MessageID int64              `json:"message_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomMessageTheme struct {
+	ClassroomID pgtype.UUID `json:"classroom_id"`
+	UserID      pgtype.UUID `json:"user_id"`
+	Theme       string      `json:"theme"`
+}
+
+type ClassroomMessagingPolicy struct {
+	ClassroomID        pgtype.UUID        `json:"classroom_id"`
+	StudentsCanMessage bool               `json:"students_can_message"`
+	UpdatedBy          pgtype.UUID        `json:"updated_by"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomMessagingRestriction struct {
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	UpdatedBy   pgtype.UUID        `json:"updated_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomQuestionBank struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	Question    []byte             `json:"question"`
+	Topic       string             `json:"topic"`
+	Difficulty  string             `json:"difficulty"`
+	Version     int64              `json:"version"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomQuestionTester struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	UploadedBy  pgtype.UUID        `json:"uploaded_by"`
+	Name        string             `json:"name"`
+	Sha256      string             `json:"sha256"`
+	Executable  []byte             `json:"executable"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomRecheck struct {
+	ID            pgtype.UUID        `json:"id"`
+	ClassroomID   pgtype.UUID        `json:"classroom_id"`
+	StudentID     pgtype.UUID        `json:"student_id"`
+	ResourceKind  string             `json:"resource_kind"`
+	ResourceID    pgtype.UUID        `json:"resource_id"`
+	Title         string             `json:"title"`
+	GradeSnapshot string             `json:"grade_snapshot"`
+	GradeSummary  []byte             `json:"grade_summary"`
+	Reason        string             `json:"reason"`
+	Status        string             `json:"status"`
+	Version       int32              `json:"version"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomRecheckEvent struct {
+	ID        int64              `json:"id"`
+	RequestID pgtype.UUID        `json:"request_id"`
+	ActorID   pgtype.UUID        `json:"actor_id"`
+	ActorName string             `json:"actor_name"`
+	Status    string             `json:"status"`
+	Reason    string             `json:"reason"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomRollover struct {
+	SourceClassroomID pgtype.UUID `json:"source_classroom_id"`
+	ActorID           pgtype.UUID `json:"actor_id"`
+	RequestID         pgtype.UUID `json:"request_id"`
+	NewClassroomID    pgtype.UUID `json:"new_classroom_id"`
+	PayloadHash       string      `json:"payload_hash"`
+}
+
+type ClassroomSharedMessageTheme struct {
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	Theme       string             `json:"theme"`
+	UpdatedBy   pgtype.UUID        `json:"updated_by"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomSimilarityReview struct {
+	AssignmentID   pgtype.UUID        `json:"assignment_id"`
+	SubmissionLow  pgtype.UUID        `json:"submission_low"`
+	SubmissionHigh pgtype.UUID        `json:"submission_high"`
+	ReviewedBy     pgtype.UUID        `json:"reviewed_by"`
+	Note           string             `json:"note"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomStaffPermission struct {
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	Permissions []byte             `json:"permissions"`
+	UpdatedBy   pgtype.UUID        `json:"updated_by"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
@@ -48,6 +642,102 @@ type ClassroomStreamPost struct {
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
+	Audience      []byte             `json:"audience"`
+}
+
+type ClassroomStudentInvitation struct {
+	ID            pgtype.UUID        `json:"id"`
+	ClassroomID   pgtype.UUID        `json:"classroom_id"`
+	Email         string             `json:"email"`
+	InvitedBy     pgtype.UUID        `json:"invited_by"`
+	Status        string             `json:"status"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	Version       int32              `json:"version"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	EmailStatus   string             `json:"email_status"`
+	EmailAttempts int32              `json:"email_attempts"`
+	EmailNextAt   pgtype.Timestamptz `json:"email_next_at"`
+	EmailLease    pgtype.UUID        `json:"email_lease"`
+	EmailSentAt   pgtype.Timestamptz `json:"email_sent_at"`
+}
+
+type ClassroomTesterTicket struct {
+	TokenHash string             `json:"token_hash"`
+	TesterID  pgtype.UUID        `json:"tester_id"`
+	AttemptID pgtype.UUID        `json:"attempt_id"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomTopic struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	Title       string             `json:"title"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomTopicResource struct {
+	ClassroomID  pgtype.UUID `json:"classroom_id"`
+	TopicID      pgtype.UUID `json:"topic_id"`
+	ResourceKind string      `json:"resource_kind"`
+	ResourceID   pgtype.UUID `json:"resource_id"`
+}
+
+type ClassroomTutorMessage struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	RequestID   pgtype.UUID        `json:"request_id"`
+	Question    string             `json:"question"`
+	Answer      string             `json:"answer"`
+	Citations   []byte             `json:"citations"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomTutorSource struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	MaterialID  pgtype.UUID        `json:"material_id"`
+	Title       string             `json:"title"`
+	Content     string             `json:"content"`
+	Kind        string             `json:"kind"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ConversationBlock struct {
+	ConversationID pgtype.UUID        `json:"conversation_id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type ConversationMessageTheme struct {
+	ConversationID pgtype.UUID `json:"conversation_id"`
+	UserID         pgtype.UUID `json:"user_id"`
+	Theme          string      `json:"theme"`
+}
+
+type ConversationPin struct {
+	ConversationID pgtype.UUID        `json:"conversation_id"`
+	MessageID      int64              `json:"message_id"`
+	PinnedBy       pgtype.UUID        `json:"pinned_by"`
+	PinnedAt       pgtype.Timestamptz `json:"pinned_at"`
+}
+
+type ConversationPreference struct {
+	ConversationID pgtype.UUID        `json:"conversation_id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	MutedUntil     pgtype.Timestamptz `json:"muted_until"`
+}
+
+type ConversationSharedMessageTheme struct {
+	ConversationID pgtype.UUID        `json:"conversation_id"`
+	Theme          string             `json:"theme"`
+	UpdatedBy      pgtype.UUID        `json:"updated_by"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type EmailVerificationToken struct {
@@ -59,6 +749,49 @@ type EmailVerificationToken struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type NotificationDevice struct {
+	ID           pgtype.UUID        `json:"id"`
+	UserID       pgtype.UUID        `json:"user_id"`
+	BindingID    pgtype.UUID        `json:"binding_id"`
+	Platform     string             `json:"platform"`
+	Token        string             `json:"token"`
+	Subscription []byte             `json:"subscription"`
+	TokenHash    string             `json:"token_hash"`
+	Enabled      bool               `json:"enabled"`
+	RegisteredAt pgtype.Timestamptz `json:"registered_at"`
+	LastSeenAt   pgtype.Timestamptz `json:"last_seen_at"`
+}
+
+type NotificationEmailDigest struct {
+	ID              pgtype.UUID        `json:"id"`
+	UserID          pgtype.UUID        `json:"user_id"`
+	Frequency       string             `json:"frequency"`
+	NotificationIds []pgtype.UUID      `json:"notification_ids"`
+	State           string             `json:"state"`
+	Attempts        int32              `json:"attempts"`
+	NextAt          pgtype.Timestamptz `json:"next_at"`
+	Lease           pgtype.UUID        `json:"lease"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type NotificationPreference struct {
+	UserID         pgtype.UUID        `json:"user_id"`
+	AppEnabled     bool               `json:"app_enabled"`
+	EmailEnabled   bool               `json:"email_enabled"`
+	PushEnabled    bool               `json:"push_enabled"`
+	EmailFrequency string             `json:"email_frequency"`
+	EmailDigestAt  pgtype.Timestamptz `json:"email_digest_at"`
+}
+
+type NotificationPushOutbox struct {
+	ID             int64              `json:"id"`
+	NotificationID pgtype.UUID        `json:"notification_id"`
+	DeviceID       pgtype.UUID        `json:"device_id"`
+	Status         string             `json:"status"`
+	Attempts       int32              `json:"attempts"`
+	NextAt         pgtype.Timestamptz `json:"next_at"`
+}
+
 type PasswordResetToken struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
@@ -68,6 +801,15 @@ type PasswordResetToken struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type RealtimeTicket struct {
+	TicketHash       string             `json:"ticket_hash"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	ExpiresAt        pgtype.Timestamptz `json:"expires_at"`
+	SessionExpiresAt pgtype.Timestamptz `json:"session_expires_at"`
+	AuthSessionID    pgtype.UUID        `json:"auth_session_id"`
+	IssuedAt         pgtype.Timestamptz `json:"issued_at"`
+}
+
 type RefreshToken struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
@@ -75,6 +817,7 @@ type RefreshToken struct {
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 	Revoked   bool               `json:"revoked"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	SessionID pgtype.UUID        `json:"session_id"`
 }
 
 type User struct {
@@ -92,4 +835,21 @@ type User struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
 	Role          string             `json:"role"`
+}
+
+type UserNotification struct {
+	ID            pgtype.UUID        `json:"id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	ClassroomID   pgtype.UUID        `json:"classroom_id"`
+	EventKey      string             `json:"event_key"`
+	Kind          string             `json:"kind"`
+	Title         string             `json:"title"`
+	Body          string             `json:"body"`
+	Url           string             `json:"url"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	ReadAt        pgtype.Timestamptz `json:"read_at"`
+	EmailStatus   string             `json:"email_status"`
+	EmailAttempts int32              `json:"email_attempts"`
+	EmailNextAt   pgtype.Timestamptz `json:"email_next_at"`
+	EmailSentAt   pgtype.Timestamptz `json:"email_sent_at"`
 }

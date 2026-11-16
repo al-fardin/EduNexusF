@@ -1,6 +1,7 @@
 package learning
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -11,7 +12,7 @@ import (
 )
 
 func (h *Handler) Classwork(c *fiber.Ctx) error {
-	_, role, err := h.member(c, false)
+	user, role, err := h.member(c, false)
 	if err != nil {
 		return err
 	}
@@ -38,12 +39,12 @@ func (h *Handler) Classwork(c *fiber.Ctx) error {
 		return fail(400, "Invalid sort order")
 	}
 	rows, err := h.db.Query(c.UserContext(), `WITH work AS(
- SELECT id,'assignment' kind,title,instructions description,due_at,created_at,status,'' filename,0::bigint file_size FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published')
- UNION ALL SELECT m.id,'material',m.title,m.description,NULL,m.created_at,'published',m.original_filename,m.file_size FROM classroom_materials m WHERE m.classroom_id=$1::uuid AND EXISTS(SELECT 1 FROM classroom_stream_posts p WHERE p.classroom_id=m.classroom_id AND p.reference_type='material' AND p.reference_id=m.id AND p.deleted_at IS NULL)
- UNION ALL SELECT id,'exam',title,description,ends_at,created_at,status,'',0 FROM classroom_exams WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published')
- )SELECT w.id::text,w.kind,w.title,w.description,w.due_at,w.created_at,w.status,w.filename,w.file_size,COALESCE(r.topic_id::text,'') FROM work w LEFT JOIN classroom_topic_resources r ON r.resource_kind=w.kind AND r.resource_id=w.id AND r.classroom_id=$1::uuid
+ SELECT id,'assignment' kind,title,instructions description,due_at,created_at,status,'' filename,0::bigint file_size,audience FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') AND edunexus_resource_visible(classroom_id,'assignment',id,$7::uuid)
+ UNION ALL SELECT m.id,'material',m.title,m.description,NULL,m.created_at,'published',m.original_filename,m.file_size,m.audience FROM classroom_materials m WHERE m.classroom_id=$1::uuid AND edunexus_resource_visible(m.classroom_id,'material',m.id,$7::uuid) AND EXISTS(SELECT 1 FROM classroom_stream_posts p WHERE p.classroom_id=m.classroom_id AND p.reference_type='material' AND p.reference_id=m.id AND p.deleted_at IS NULL)
+ UNION ALL SELECT id,'exam',title,description,ends_at,created_at,status,'',0,audience FROM classroom_exams WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') AND edunexus_resource_visible(classroom_id,'exam',id,$7::uuid)
+ )SELECT w.id::text,w.kind,w.title,w.description,w.due_at,w.created_at,w.status,w.filename,w.file_size,COALESCE(r.topic_id::text,''),w.audience FROM work w LEFT JOIN classroom_topic_resources r ON r.resource_kind=w.kind AND r.resource_id=w.id AND r.classroom_id=$1::uuid
  WHERE ($3='' OR w.title ILIKE '%'||$3||'%' OR w.description ILIKE '%'||$3||'%') AND ($4='' OR w.kind=$4) AND ($5='' OR ($5='unfiled' AND r.topic_id IS NULL) OR r.topic_id::text=$5)
- ORDER BY `+ordering+` LIMIT 51 OFFSET $6`, c.Params("id"), role, q, kind, topic, offset)
+ ORDER BY `+ordering+` LIMIT 51 OFFSET $6`, c.Params("id"), role, q, kind, topic, offset, user)
 	if err != nil {
 		return err
 	}
@@ -52,17 +53,18 @@ func (h *Handler) Classwork(c *fiber.Ctx) error {
 	next := -1
 	for rows.Next() {
 		var id, kind, title, description, status, filename, topic string
+		var policy json.RawMessage
 		var due *time.Time
 		var created time.Time
 		var size int64
-		if err = rows.Scan(&id, &kind, &title, &description, &due, &created, &status, &filename, &size, &topic); err != nil {
+		if err = rows.Scan(&id, &kind, &title, &description, &due, &created, &status, &filename, &size, &topic, &policy); err != nil {
 			return err
 		}
 		if len(out) == 50 {
 			next = offset + 50
 			break
 		}
-		out = append(out, fiber.Map{"id": id, "kind": kind, "title": title, "description": description, "due_at": due, "created_at": created, "status": status, "file_name": filename, "file_size": size, "topic_id": topic})
+		out = append(out, fiber.Map{"id": id, "kind": kind, "title": title, "description": description, "due_at": due, "created_at": created, "status": status, "file_name": filename, "file_size": size, "topic_id": topic, "audience": policy})
 	}
 	if err = rows.Err(); err != nil {
 		return err
@@ -90,9 +92,9 @@ func (h *Handler) DuplicateCoursework(c *fiber.Ctx) error {
 	copy := uuid.NewString()
 	var copied string
 	if kind == "assignment" {
-		err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_assignments(id,classroom_id,created_by,title,instructions,due_at,max_points,allow_late,allow_resubmit,rubric,status) SELECT $3::uuid,classroom_id,$4::uuid,left(title,190)||' (copy)',instructions,due_at,max_points,allow_late,allow_resubmit,rubric,'draft' FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid RETURNING id::text`, id, c.Params("id"), copy, actor).Scan(&copied)
+		err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_assignments(id,classroom_id,created_by,title,instructions,due_at,max_points,allow_late,allow_resubmit,rubric,status,audience) SELECT $3::uuid,classroom_id,$4::uuid,left(title,190)||' (copy)',instructions,due_at,max_points,allow_late,allow_resubmit,rubric,'draft',audience FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid RETURNING id::text`, id, c.Params("id"), copy, actor).Scan(&copied)
 	} else {
-		err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_exams(id,classroom_id,created_by,title,description,starts_at,ends_at,duration_minutes,questions,allow_mobile_mcq,status) SELECT $3::uuid,classroom_id,$4::uuid,left(title,190)||' (copy)',description,starts_at,ends_at,duration_minutes,(SELECT jsonb_agg(jsonb_set(q,'{id}',to_jsonb(gen_random_uuid()::text))) FROM jsonb_array_elements(questions) q),allow_mobile_mcq,'draft' FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid RETURNING id::text`, id, c.Params("id"), copy, actor).Scan(&copied)
+		err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_exams(id,classroom_id,created_by,title,description,starts_at,ends_at,duration_minutes,questions,allow_mobile_mcq,status,audience) SELECT $3::uuid,classroom_id,$4::uuid,left(title,190)||' (copy)',description,starts_at,ends_at,duration_minutes,(SELECT jsonb_agg(jsonb_set(q,'{id}',to_jsonb(gen_random_uuid()::text))) FROM jsonb_array_elements(questions) q),allow_mobile_mcq,'draft',audience FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid RETURNING id::text`, id, c.Params("id"), copy, actor).Scan(&copied)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fail(404, "Coursework not found")

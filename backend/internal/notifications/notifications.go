@@ -51,7 +51,7 @@ func result(c *fiber.Ctx, data any) error {
 	return c.JSON(fiber.Map{"success": true, "data": data})
 }
 
-const visible = ` EXISTS(SELECT 1 FROM classroom_memberships m JOIN classrooms cl ON cl.id=m.classroom_id WHERE m.classroom_id=n.classroom_id AND m.user_id=n.user_id AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL) AND COALESCE((SELECT app_enabled FROM notification_preferences WHERE user_id=n.user_id),true)`
+const visible = ` edunexus_notification_visible(n.classroom_id,n.event_key,n.user_id) AND EXISTS(SELECT 1 FROM classroom_memberships m JOIN classrooms cl ON cl.id=m.classroom_id WHERE m.classroom_id=n.classroom_id AND m.user_id=n.user_id AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL) AND COALESCE((SELECT app_enabled FROM notification_preferences WHERE user_id=n.user_id),true)`
 
 func (h *Handler) List(c *fiber.Ctx) error { return h.listFiltered(c) }
 func (h *Handler) Preferences(c *fiber.Ctx) error {

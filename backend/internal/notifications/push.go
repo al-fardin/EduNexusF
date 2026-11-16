@@ -179,7 +179,7 @@ func (h *pushHandler) pollPush(parent context.Context) {
 	ctx, cancel := context.WithTimeout(parent, 25*time.Second)
 	defer cancel()
 	_, _ = h.db.Exec(ctx, `UPDATE notification_push_outbox SET status='failed' WHERE status='sending' AND attempts>=5 AND next_at<=now()`)
-	_, err := h.db.Exec(ctx, `INSERT INTO notification_push_outbox(notification_id,device_id) SELECT n.id,d.id FROM user_notifications n JOIN notification_devices d ON d.user_id=n.user_id JOIN notification_preferences p ON p.user_id=n.user_id JOIN classroom_memberships m ON m.classroom_id=n.classroom_id AND m.user_id=n.user_id JOIN classrooms c ON c.id=n.classroom_id WHERE d.enabled AND p.push_enabled AND p.app_enabled AND n.read_at IS NULL AND n.created_at>=d.registered_at AND n.created_at>now()-interval '1 day' AND m.status='active' AND c.status='active' AND c.deleted_at IS NULL AND((d.platform='web' AND $1)OR(d.platform='android' AND $2)) ON CONFLICT(notification_id,device_id) DO NOTHING`, h.sender.webConfigured(), h.sender.androidConfigured())
+	_, err := h.db.Exec(ctx, `INSERT INTO notification_push_outbox(notification_id,device_id) SELECT n.id,d.id FROM user_notifications n JOIN notification_devices d ON d.user_id=n.user_id JOIN notification_preferences p ON p.user_id=n.user_id JOIN classroom_memberships m ON m.classroom_id=n.classroom_id AND m.user_id=n.user_id JOIN classrooms c ON c.id=n.classroom_id WHERE d.enabled AND p.push_enabled AND p.app_enabled AND edunexus_notification_visible(n.classroom_id,n.event_key,n.user_id) AND n.read_at IS NULL AND n.created_at>=d.registered_at AND n.created_at>now()-interval '1 day' AND m.status='active' AND c.status='active' AND c.deleted_at IS NULL AND((d.platform='web' AND $1)OR(d.platform='android' AND $2)) ON CONFLICT(notification_id,device_id) DO NOTHING`, h.sender.webConfigured(), h.sender.androidConfigured())
 	if err != nil {
 		return
 	}
@@ -201,7 +201,7 @@ func (h *pushHandler) deliverPush(ctx context.Context) error {
 		return err
 	}
 	var allowed bool
-	err = h.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM user_notifications n JOIN notification_devices d ON d.id=$2::uuid AND d.user_id=n.user_id JOIN notification_preferences p ON p.user_id=n.user_id JOIN classroom_memberships m ON m.classroom_id=n.classroom_id AND m.user_id=n.user_id JOIN classrooms c ON c.id=n.classroom_id JOIN users u ON u.id=n.user_id WHERE n.id=$1::uuid AND d.enabled AND p.push_enabled AND p.app_enabled AND n.read_at IS NULL AND n.created_at>=d.registered_at AND n.created_at>now()-interval '1 day' AND m.status='active' AND c.status='active' AND c.deleted_at IS NULL AND u.status='active' AND u.deleted_at IS NULL)`, p.ID, d.ID).Scan(&allowed)
+	err = h.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM user_notifications n JOIN notification_devices d ON d.id=$2::uuid AND d.user_id=n.user_id JOIN notification_preferences p ON p.user_id=n.user_id JOIN classroom_memberships m ON m.classroom_id=n.classroom_id AND m.user_id=n.user_id JOIN classrooms c ON c.id=n.classroom_id JOIN users u ON u.id=n.user_id WHERE n.id=$1::uuid AND d.enabled AND p.push_enabled AND p.app_enabled AND edunexus_notification_visible(n.classroom_id,n.event_key,n.user_id) AND n.read_at IS NULL AND n.created_at>=d.registered_at AND n.created_at>now()-interval '1 day' AND m.status='active' AND c.status='active' AND c.deleted_at IS NULL AND u.status='active' AND u.deleted_at IS NULL)`, p.ID, d.ID).Scan(&allowed)
 	if err != nil {
 		return err
 	}

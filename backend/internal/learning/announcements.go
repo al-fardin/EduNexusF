@@ -2,7 +2,9 @@ package learning
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/edunexus/edunexus/internal/platform/audience"
 	"github.com/edunexus/edunexus/internal/platform/contentrelease"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -19,7 +21,7 @@ func (h *Handler) Announcements(c *fiber.Ctx) error {
 	}
 	ctx := c.UserContext()
 	if c.Method() == "GET" {
-		rows, e := h.db.Query(ctx, `SELECT id::text,title,content,state,publish_at,version,error,updated_at FROM classroom_announcement_drafts WHERE classroom_id=$1::uuid ORDER BY CASE WHEN state IN ('draft','scheduled','blocked') THEN 0 ELSE 1 END,updated_at DESC,id DESC LIMIT 200`, c.Params("id"))
+		rows, e := h.db.Query(ctx, `SELECT id::text,title,content,state,publish_at,version,error,updated_at,audience FROM classroom_announcement_drafts WHERE classroom_id=$1::uuid ORDER BY CASE WHEN state IN ('draft','scheduled','blocked') THEN 0 ELSE 1 END,updated_at DESC,id DESC LIMIT 200`, c.Params("id"))
 		if e != nil {
 			return e
 		}
@@ -27,13 +29,14 @@ func (h *Handler) Announcements(c *fiber.Ctx) error {
 		out := make([]fiber.Map, 0)
 		for rows.Next() {
 			var id, title, content, state, message string
+			var policy json.RawMessage
 			var publish *time.Time
 			var updated time.Time
 			var version int
-			if e = rows.Scan(&id, &title, &content, &state, &publish, &version, &message, &updated); e != nil {
+			if e = rows.Scan(&id, &title, &content, &state, &publish, &version, &message, &updated, &policy); e != nil {
 				return e
 			}
-			out = append(out, fiber.Map{"id": id, "title": title, "content": content, "state": state, "publish_at": publish, "version": version, "error": message, "updated_at": updated})
+			out = append(out, fiber.Map{"id": id, "title": title, "content": content, "state": state, "publish_at": publish, "version": version, "error": message, "updated_at": updated, "audience": policy})
 		}
 		if e = rows.Err(); e != nil {
 			return e
@@ -41,12 +44,13 @@ func (h *Handler) Announcements(c *fiber.Ctx) error {
 		return respond(c, 200, out)
 	}
 	var req struct {
-		ID      string     `json:"id"`
-		Title   string     `json:"title"`
-		Content string     `json:"content"`
-		State   string     `json:"state"`
-		Publish *time.Time `json:"publish_at"`
-		Version int        `json:"version"`
+		Audience *audience.Rule `json:"audience"`
+		ID       string         `json:"id"`
+		Title    string         `json:"title"`
+		Content  string         `json:"content"`
+		State    string         `json:"state"`
+		Publish  *time.Time     `json:"publish_at"`
+		Version  int            `json:"version"`
 	}
 	if c.BodyParser(&req) != nil || len(req.Title) > 200 || len(strings.TrimSpace(req.Content)) < 1 || len(req.Content) > 20000 {
 		return fail(400, "Provide announcement content up to 20000 bytes and a title up to 200 bytes")
@@ -56,6 +60,14 @@ func (h *Handler) Announcements(c *fiber.Ctx) error {
 	}
 	if req.State == "scheduled" && (req.Publish == nil || !req.Publish.After(time.Now()) || req.Publish.After(time.Now().Add(366*24*time.Hour))) {
 		return fail(400, "Choose a future publish time within one year")
+	}
+	policy, err := audience.Encode(req.Audience)
+	if err != nil {
+		return fail(400, err.Error())
+	}
+	var updatePolicy []byte
+	if req.Audience != nil {
+		updatePolicy = policy
 	}
 	tx, err := h.db.Begin(ctx)
 	if err != nil {
@@ -74,12 +86,12 @@ func (h *Handler) Announcements(c *fiber.Ctx) error {
 			return fail(409, "Publish or cancel an existing draft before adding more")
 		}
 		req.ID = uuid.NewString()
-		_, err = tx.Exec(ctx, `INSERT INTO classroom_announcement_drafts(id,classroom_id,author_id,title,content,state,publish_at) VALUES($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7)`, req.ID, c.Params("id"), actor, strings.TrimSpace(req.Title), strings.TrimSpace(req.Content), req.State, req.Publish)
+		_, err = tx.Exec(ctx, `INSERT INTO classroom_announcement_drafts(id,classroom_id,author_id,title,content,state,publish_at,audience) VALUES($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8::jsonb)`, req.ID, c.Params("id"), actor, strings.TrimSpace(req.Title), strings.TrimSpace(req.Content), req.State, req.Publish, policy)
 	} else {
 		if err = validID(req.ID); err != nil {
 			return err
 		}
-		tag, e := tx.Exec(ctx, `UPDATE classroom_announcement_drafts SET title=$3,content=$4,state=$5,publish_at=$6,author_id=$7::uuid,version=version+1,error='',updated_at=now() WHERE id=$1::uuid AND classroom_id=$2::uuid AND version=$8 AND state NOT IN ('published','cancelled')`, req.ID, c.Params("id"), strings.TrimSpace(req.Title), strings.TrimSpace(req.Content), req.State, req.Publish, actor, req.Version)
+		tag, e := tx.Exec(ctx, `UPDATE classroom_announcement_drafts SET title=$3,content=$4,state=$5,publish_at=$6,author_id=$7::uuid,version=version+1,error='',updated_at=now(),audience=COALESCE($9::jsonb,audience) WHERE id=$1::uuid AND classroom_id=$2::uuid AND version=$8 AND state NOT IN ('published','cancelled')`, req.ID, c.Params("id"), strings.TrimSpace(req.Title), strings.TrimSpace(req.Content), req.State, req.Publish, actor, req.Version, updatePolicy)
 		err = e
 		if err == nil && tag.RowsAffected() == 0 {
 			return fail(409, "Announcement changed or was published. Refresh before editing")
@@ -114,7 +126,8 @@ func (h *Handler) PublishAnnouncement(c *fiber.Ctx) error {
 	}
 	defer tx.Rollback(c.UserContext())
 	var title, content string
-	err = tx.QueryRow(c.UserContext(), `SELECT title,content FROM classroom_announcement_drafts WHERE id=$1::uuid AND classroom_id=$2::uuid AND version=$3 AND state NOT IN ('published','cancelled') FOR UPDATE`, c.Params("draftID"), c.Params("id"), req.Version).Scan(&title, &content)
+	var policy json.RawMessage
+	err = tx.QueryRow(c.UserContext(), `SELECT title,content,audience FROM classroom_announcement_drafts WHERE id=$1::uuid AND classroom_id=$2::uuid AND version=$3 AND state NOT IN ('published','cancelled') FOR UPDATE`, c.Params("draftID"), c.Params("id"), req.Version).Scan(&title, &content, &policy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fail(409, "Draft changed or already published. Refresh first")
 	}
@@ -122,7 +135,7 @@ func (h *Handler) PublishAnnouncement(c *fiber.Ctx) error {
 		return err
 	}
 	var post string
-	if err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_stream_posts(classroom_id,author_id,post_type,title,content) VALUES($1::uuid,$2::uuid,'announcement',$3,$4) RETURNING id::text`, c.Params("id"), actor, title, content).Scan(&post); err != nil {
+	if err = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_stream_posts(classroom_id,author_id,post_type,title,content,audience) VALUES($1::uuid,$2::uuid,'announcement',$3,$4,$5::jsonb) RETURNING id::text`, c.Params("id"), actor, title, content, policy).Scan(&post); err != nil {
 		return err
 	}
 	if _, err = tx.Exec(c.UserContext(), `UPDATE classroom_announcement_drafts SET author_id=$2::uuid,state='published',post_id=$3::uuid,version=version+1,error='',updated_at=now() WHERE id=$1::uuid`, c.Params("draftID"), actor, post); err != nil {
@@ -140,7 +153,8 @@ func (h *Handler) publishScheduled(ctx context.Context) error {
 	}
 	defer tx.Rollback(ctx)
 	var id, class, actor, title, content string
-	err = tx.QueryRow(ctx, `SELECT id::text,classroom_id::text,COALESCE(author_id::text,''),title,content FROM classroom_announcement_drafts WHERE state='scheduled' AND publish_at<=now() ORDER BY publish_at,id FOR UPDATE SKIP LOCKED LIMIT 1`).Scan(&id, &class, &actor, &title, &content)
+	var policy json.RawMessage
+	err = tx.QueryRow(ctx, `SELECT id::text,classroom_id::text,COALESCE(author_id::text,''),title,content,audience FROM classroom_announcement_drafts WHERE state='scheduled' AND publish_at<=now() ORDER BY publish_at,id FOR UPDATE SKIP LOCKED LIMIT 1`).Scan(&id, &class, &actor, &title, &content, &policy)
 	if err != nil {
 		return err
 	}
@@ -155,7 +169,7 @@ func (h *Handler) publishScheduled(ctx context.Context) error {
 		_, err = tx.Exec(ctx, `UPDATE classroom_announcement_drafts SET state='blocked',error='Teacher or classroom access changed',version=version+1,updated_at=now() WHERE id=$1::uuid`, id)
 	} else {
 		var post string
-		err = tx.QueryRow(ctx, `INSERT INTO classroom_stream_posts(classroom_id,author_id,post_type,title,content) VALUES($1::uuid,$2::uuid,'announcement',$3,$4) RETURNING id::text`, class, actor, title, content).Scan(&post)
+		err = tx.QueryRow(ctx, `INSERT INTO classroom_stream_posts(classroom_id,author_id,post_type,title,content,audience) VALUES($1::uuid,$2::uuid,'announcement',$3,$4,$5::jsonb) RETURNING id::text`, class, actor, title, content, policy).Scan(&post)
 		if err == nil {
 			_, err = tx.Exec(ctx, `UPDATE classroom_announcement_drafts SET state='published',post_id=$2::uuid,version=version+1,updated_at=now() WHERE id=$1::uuid`, id, post)
 		}

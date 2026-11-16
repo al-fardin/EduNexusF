@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const emailMembership = `EXISTS(SELECT 1 FROM classroom_memberships m JOIN classrooms cl ON cl.id=m.classroom_id WHERE m.classroom_id=n.classroom_id AND m.user_id=n.user_id AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL)`
+const emailMembership = `edunexus_notification_visible(n.classroom_id,n.event_key,n.user_id) AND EXISTS(SELECT 1 FROM classroom_memberships m JOIN classrooms cl ON cl.id=m.classroom_id WHERE m.classroom_id=n.classroom_id AND m.user_id=n.user_id AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL)`
 
 func (h *Handler) prepareDigest(ctx context.Context) error {
 	tx, err := h.db.Begin(ctx)

@@ -22,7 +22,7 @@ VALUES (
     $2,
     $3
 )
-RETURNING id, classroom_id, user_id, member_role, status, joined_at, removed_at, updated_at
+RETURNING id, classroom_id, user_id, member_role, status, joined_at, removed_at, updated_at, student_roll
 `
 
 type CreateClassroomMembershipParams struct {
@@ -43,6 +43,7 @@ func (q *Queries) CreateClassroomMembership(ctx context.Context, arg CreateClass
 		&i.JoinedAt,
 		&i.RemovedAt,
 		&i.UpdatedAt,
+		&i.StudentRoll,
 	)
 	return i, err
 }
@@ -67,7 +68,7 @@ func (q *Queries) DeleteClassroomMembership(ctx context.Context, arg DeleteClass
 }
 
 const getActiveClassroomMembership = `-- name: GetActiveClassroomMembership :one
-SELECT id, classroom_id, user_id, member_role, status, joined_at, removed_at, updated_at
+SELECT id, classroom_id, user_id, member_role, status, joined_at, removed_at, updated_at, student_roll
 FROM classroom_memberships
 WHERE classroom_id = $1
   AND user_id = $2
@@ -92,12 +93,13 @@ func (q *Queries) GetActiveClassroomMembership(ctx context.Context, arg GetActiv
 		&i.JoinedAt,
 		&i.RemovedAt,
 		&i.UpdatedAt,
+		&i.StudentRoll,
 	)
 	return i, err
 }
 
 const getClassroomMembership = `-- name: GetClassroomMembership :one
-SELECT id, classroom_id, user_id, member_role, status, joined_at, removed_at, updated_at
+SELECT id, classroom_id, user_id, member_role, status, joined_at, removed_at, updated_at, student_roll
 FROM classroom_memberships
 WHERE classroom_id = $1
   AND user_id = $2
@@ -121,6 +123,7 @@ func (q *Queries) GetClassroomMembership(ctx context.Context, arg GetClassroomMe
 		&i.JoinedAt,
 		&i.RemovedAt,
 		&i.UpdatedAt,
+		&i.StudentRoll,
 	)
 	return i, err
 }
@@ -213,7 +216,7 @@ func (q *Queries) ListClassroomMembers(ctx context.Context, arg ListClassroomMem
 
 const listJoinedClassrooms = `-- name: ListJoinedClassrooms :many
 SELECT
-    classrooms.id, classrooms.owner_id, classrooms.name, classrooms.section, classrooms.subject, classrooms.room, classrooms.description, classrooms.class_code, classrooms.status, classrooms.created_at, classrooms.updated_at, classrooms.archived_at, classrooms.deleted_at
+    classrooms.id, classrooms.owner_id, classrooms.name, classrooms.section, classrooms.subject, classrooms.room, classrooms.description, classrooms.class_code, classrooms.status, classrooms.created_at, classrooms.updated_at, classrooms.archived_at, classrooms.deleted_at, classrooms.course_code, classrooms.term_id, classrooms.syllabus, classrooms.storage_quota_bytes, classrooms.join_mode, classrooms.code_join_enabled, classrooms.class_code_expires_at, classrooms.join_settings_version
 FROM classroom_memberships
 JOIN classrooms
     ON classrooms.id =
@@ -258,6 +261,14 @@ func (q *Queries) ListJoinedClassrooms(ctx context.Context, arg ListJoinedClassr
 			&i.UpdatedAt,
 			&i.ArchivedAt,
 			&i.DeletedAt,
+			&i.CourseCode,
+			&i.TermID,
+			&i.Syllabus,
+			&i.StorageQuotaBytes,
+			&i.JoinMode,
+			&i.CodeJoinEnabled,
+			&i.ClassCodeExpiresAt,
+			&i.JoinSettingsVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -303,7 +314,7 @@ SET
     updated_at = NOW()
 WHERE classroom_id = $1
   AND user_id = $2
-RETURNING id, classroom_id, user_id, member_role, status, joined_at, removed_at, updated_at
+RETURNING id, classroom_id, user_id, member_role, status, joined_at, removed_at, updated_at, student_roll
 `
 
 type RestoreClassroomMembershipParams struct {
@@ -324,6 +335,7 @@ func (q *Queries) RestoreClassroomMembership(ctx context.Context, arg RestoreCla
 		&i.JoinedAt,
 		&i.RemovedAt,
 		&i.UpdatedAt,
+		&i.StudentRoll,
 	)
 	return i, err
 }

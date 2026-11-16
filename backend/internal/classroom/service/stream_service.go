@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/edunexus/edunexus/internal/platform/audience"
 	"strings"
 	"time"
 
@@ -81,6 +82,10 @@ func (s *StreamService) CreateAnnouncement(
 		return dto.StreamPostResponse{}, err
 	}
 
+	policy, e := audience.Encode(req.Audience)
+	if e != nil {
+		return dto.StreamPostResponse{}, validationError(e.Error())
+	}
 	post, err := s.repo.CreateAnnouncement(
 		ctx,
 		db.CreateClassroomAnnouncementParams{
@@ -88,6 +93,7 @@ func (s *StreamService) CreateAnnouncement(
 			AuthorID:    authorUUID,
 			Title:       textValue(input.title),
 			Content:     input.content,
+			Audience:    policy,
 		},
 	)
 	if err != nil {
@@ -134,6 +140,7 @@ func (s *StreamService) List(
 			ClassroomID: classroomUUID,
 			Limit:       queryLimit,
 			Offset:      offset,
+			Viewer:      mustAudienceViewer(userID),
 		},
 	)
 	if err != nil {
@@ -182,6 +189,14 @@ func (s *StreamService) UpdateAnnouncement(
 		return dto.StreamPostResponse{}, err
 	}
 
+	var policy []byte
+	if req.Audience != nil {
+		var e error
+		policy, e = audience.Encode(req.Audience)
+		if e != nil {
+			return dto.StreamPostResponse{}, validationError(e.Error())
+		}
+	}
 	post, err := s.repo.UpdateAnnouncement(
 		ctx,
 		db.UpdateClassroomAnnouncementParams{
@@ -189,6 +204,7 @@ func (s *StreamService) UpdateAnnouncement(
 			ClassroomID: classroomUUID,
 			Title:       textValue(input.title),
 			Content:     input.content,
+			Audience:    policy,
 		},
 	)
 	if err != nil {
@@ -472,6 +488,7 @@ func mapStreamPost(
 	}
 
 	return dto.StreamPostResponse{
+		Audience: post.Audience,
 		ID: uuid.UUID(
 			post.ID.Bytes,
 		).String(),
@@ -523,6 +540,7 @@ func mapStreamPostRow(
 	)
 
 	return dto.StreamPostResponse{
+		Audience: post.Audience,
 		ID: uuid.UUID(
 			post.ID.Bytes,
 		).String(),
@@ -624,3 +642,5 @@ func (s *StreamService) AuthorizeMaterialAccess(ctx context.Context, userID, rol
 	_, err := s.requireStreamAccess(ctx, userID, role, classroomID)
 	return err
 }
+
+func mustAudienceViewer(user string) pgtype.UUID { id, _ := parseUUID(user); return id }

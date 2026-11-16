@@ -19,7 +19,7 @@ SET
     updated_at = NOW()
 WHERE id = $1
   AND deleted_at IS NULL
-RETURNING id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at
+RETURNING id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at, course_code, term_id, syllabus, storage_quota_bytes, join_mode, code_join_enabled, class_code_expires_at, join_settings_version
 `
 
 func (q *Queries) ArchiveClassroom(ctx context.Context, id pgtype.UUID) (Classroom, error) {
@@ -39,6 +39,14 @@ func (q *Queries) ArchiveClassroom(ctx context.Context, id pgtype.UUID) (Classro
 		&i.UpdatedAt,
 		&i.ArchivedAt,
 		&i.DeletedAt,
+		&i.CourseCode,
+		&i.TermID,
+		&i.Syllabus,
+		&i.StorageQuotaBytes,
+		&i.JoinMode,
+		&i.CodeJoinEnabled,
+		&i.ClassCodeExpiresAt,
+		&i.JoinSettingsVersion,
 	)
 	return i, err
 }
@@ -62,7 +70,7 @@ VALUES (
     $6,
     $7
 )
-RETURNING id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at
+RETURNING id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at, course_code, term_id, syllabus, storage_quota_bytes, join_mode, code_join_enabled, class_code_expires_at, join_settings_version
 `
 
 type CreateClassroomParams struct {
@@ -100,6 +108,14 @@ func (q *Queries) CreateClassroom(ctx context.Context, arg CreateClassroomParams
 		&i.UpdatedAt,
 		&i.ArchivedAt,
 		&i.DeletedAt,
+		&i.CourseCode,
+		&i.TermID,
+		&i.Syllabus,
+		&i.StorageQuotaBytes,
+		&i.JoinMode,
+		&i.CodeJoinEnabled,
+		&i.ClassCodeExpiresAt,
+		&i.JoinSettingsVersion,
 	)
 	return i, err
 }
@@ -122,7 +138,7 @@ func (q *Queries) DeleteClassroom(ctx context.Context, id pgtype.UUID) (int64, e
 }
 
 const getClassroomByCode = `-- name: GetClassroomByCode :one
-SELECT id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at
+SELECT id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at, course_code, term_id, syllabus, storage_quota_bytes, join_mode, code_join_enabled, class_code_expires_at, join_settings_version
 FROM classrooms
 WHERE class_code = $1
   AND status = 'active'
@@ -147,12 +163,20 @@ func (q *Queries) GetClassroomByCode(ctx context.Context, classCode string) (Cla
 		&i.UpdatedAt,
 		&i.ArchivedAt,
 		&i.DeletedAt,
+		&i.CourseCode,
+		&i.TermID,
+		&i.Syllabus,
+		&i.StorageQuotaBytes,
+		&i.JoinMode,
+		&i.CodeJoinEnabled,
+		&i.ClassCodeExpiresAt,
+		&i.JoinSettingsVersion,
 	)
 	return i, err
 }
 
 const getClassroomByID = `-- name: GetClassroomByID :one
-SELECT id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at
+SELECT id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at, course_code, term_id, syllabus, storage_quota_bytes, join_mode, code_join_enabled, class_code_expires_at, join_settings_version
 FROM classrooms
 WHERE id = $1
   AND deleted_at IS NULL
@@ -176,12 +200,20 @@ func (q *Queries) GetClassroomByID(ctx context.Context, id pgtype.UUID) (Classro
 		&i.UpdatedAt,
 		&i.ArchivedAt,
 		&i.DeletedAt,
+		&i.CourseCode,
+		&i.TermID,
+		&i.Syllabus,
+		&i.StorageQuotaBytes,
+		&i.JoinMode,
+		&i.CodeJoinEnabled,
+		&i.ClassCodeExpiresAt,
+		&i.JoinSettingsVersion,
 	)
 	return i, err
 }
 
 const listClassroomsByOwner = `-- name: ListClassroomsByOwner :many
-SELECT id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at
+SELECT id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at, course_code, term_id, syllabus, storage_quota_bytes, join_mode, code_join_enabled, class_code_expires_at, join_settings_version
 FROM classrooms
 WHERE owner_id = $1
   AND deleted_at IS NULL
@@ -224,6 +256,14 @@ func (q *Queries) ListClassroomsByOwner(ctx context.Context, arg ListClassroomsB
 			&i.UpdatedAt,
 			&i.ArchivedAt,
 			&i.DeletedAt,
+			&i.CourseCode,
+			&i.TermID,
+			&i.Syllabus,
+			&i.StorageQuotaBytes,
+			&i.JoinMode,
+			&i.CodeJoinEnabled,
+			&i.ClassCodeExpiresAt,
+			&i.JoinSettingsVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -243,7 +283,7 @@ SET
     updated_at = NOW()
 WHERE id = $1
   AND deleted_at IS NULL
-RETURNING id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at
+RETURNING id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at, course_code, term_id, syllabus, storage_quota_bytes, join_mode, code_join_enabled, class_code_expires_at, join_settings_version
 `
 
 func (q *Queries) UnarchiveClassroom(ctx context.Context, id pgtype.UUID) (Classroom, error) {
@@ -263,6 +303,14 @@ func (q *Queries) UnarchiveClassroom(ctx context.Context, id pgtype.UUID) (Class
 		&i.UpdatedAt,
 		&i.ArchivedAt,
 		&i.DeletedAt,
+		&i.CourseCode,
+		&i.TermID,
+		&i.Syllabus,
+		&i.StorageQuotaBytes,
+		&i.JoinMode,
+		&i.CodeJoinEnabled,
+		&i.ClassCodeExpiresAt,
+		&i.JoinSettingsVersion,
 	)
 	return i, err
 }
@@ -278,7 +326,7 @@ SET
     updated_at = NOW()
 WHERE id = $1
   AND deleted_at IS NULL
-RETURNING id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at
+RETURNING id, owner_id, name, section, subject, room, description, class_code, status, created_at, updated_at, archived_at, deleted_at, course_code, term_id, syllabus, storage_quota_bytes, join_mode, code_join_enabled, class_code_expires_at, join_settings_version
 `
 
 type UpdateClassroomParams struct {
@@ -314,6 +362,14 @@ func (q *Queries) UpdateClassroom(ctx context.Context, arg UpdateClassroomParams
 		&i.UpdatedAt,
 		&i.ArchivedAt,
 		&i.DeletedAt,
+		&i.CourseCode,
+		&i.TermID,
+		&i.Syllabus,
+		&i.StorageQuotaBytes,
+		&i.JoinMode,
+		&i.CodeJoinEnabled,
+		&i.ClassCodeExpiresAt,
+		&i.JoinSettingsVersion,
 	)
 	return i, err
 }

@@ -4,14 +4,16 @@ INSERT INTO classroom_stream_posts (
     author_id,
     post_type,
     title,
-    content
+    content,
+    audience
 )
 VALUES (
     $1,
     $2,
     'announcement',
     $3,
-    $4
+    $4,
+    sqlc.arg(audience)::jsonb
 )
 RETURNING *;
 
@@ -32,6 +34,7 @@ SELECT
     classroom_stream_posts.post_type,
     classroom_stream_posts.title,
     classroom_stream_posts.content,
+    classroom_stream_posts.audience,
     classroom_stream_posts.reference_type,
     classroom_stream_posts.reference_id,
     classroom_stream_posts.is_pinned,
@@ -53,6 +56,7 @@ LEFT JOIN users
 
 WHERE classroom_stream_posts.classroom_id = $1
   AND classroom_stream_posts.deleted_at IS NULL
+  AND edunexus_resource_visible(classroom_stream_posts.classroom_id,'post',classroom_stream_posts.id,sqlc.arg(viewer)::uuid)
 
 ORDER BY
     classroom_stream_posts.is_pinned DESC,
@@ -67,6 +71,7 @@ UPDATE classroom_stream_posts
 SET
     title = $3,
     content = $4,
+    audience = COALESCE(sqlc.narg(audience)::jsonb,audience),
     updated_at = NOW()
 WHERE id = $1
   AND classroom_id = $2

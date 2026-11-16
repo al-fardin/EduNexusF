@@ -12,7 +12,7 @@ func (h *Handler) Analytics(c *fiber.Ctx) error {
 		return err
 	}
 	var students, exams, assignments int
-	err = h.db.QueryRow(c.UserContext(), `SELECT (SELECT count(*) FROM classroom_memberships WHERE classroom_id=$1::uuid AND member_role='student' AND status='active'),(SELECT count(*) FROM classroom_exams WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published')),(SELECT count(*) FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published'))`, c.Params("id"), role).Scan(&students, &exams, &assignments)
+	err = h.db.QueryRow(c.UserContext(), `SELECT (SELECT count(*) FROM classroom_memberships WHERE classroom_id=$1::uuid AND member_role='student' AND status='active'),(SELECT count(*) FROM classroom_exams WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') AND edunexus_resource_visible(classroom_id,'exam',id,$3::uuid)),(SELECT count(*) FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') AND edunexus_resource_visible(classroom_id,'assignment',id,$3::uuid))`, c.Params("id"), role, user).Scan(&students, &exams, &assignments)
 	if err != nil {
 		return err
 	}

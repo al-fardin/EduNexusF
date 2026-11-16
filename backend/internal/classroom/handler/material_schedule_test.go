@@ -23,6 +23,12 @@ import (
 
 func TestScheduledMaterialUploadPrivacyAndPublication(t *testing.T) {
 	f := testsupport.Database(t)
+	if _, err := f.DB.Exec(t.Context(), `UPDATE classroom_memberships SET student_roll='002' WHERE classroom_id=$1::uuid AND user_id=$2::uuid`, f.ClassID, f.Student); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.DB.Exec(t.Context(), `INSERT INTO classroom_memberships(classroom_id,user_id,member_role,status,student_roll) VALUES($1::uuid,$2::uuid,'student','active','003')`, f.ClassID, f.Outsider); err != nil {
+		t.Fatal(err)
+	}
 	q := db.New(f.DB)
 	classes := repository.New(q, f.DB)
 	members := repository.NewMembershipRepository(q)
@@ -66,6 +72,7 @@ func TestScheduledMaterialUploadPrivacyAndPublication(t *testing.T) {
 	var body bytes.Buffer
 	form := multipart.NewWriter(&body)
 	form.WriteField("title", "Scheduled lecture")
+	form.WriteField("audience", `{"mode":"even"}`)
 	form.WriteField("publish_at", time.Now().Add(time.Hour).Format(time.RFC3339))
 	part, err := form.CreateFormFile("file", "lecture.txt")
 	if err != nil {
@@ -136,6 +143,10 @@ func TestScheduledMaterialUploadPrivacyAndPublication(t *testing.T) {
 		t.Fatal("published material missing")
 	}
 	download(f.Student, 200)
+	download(f.Outsider, 403)
+	if len(list(f.Outsider)) != 0 {
+		t.Fatal("scheduled audience was not preserved")
+	}
 	var n int
 	if err = f.DB.QueryRow(t.Context(), `SELECT count(*) FROM classroom_stream_posts WHERE reference_type='material' AND reference_id=$1::uuid`, id).Scan(&n); err != nil || n != 1 {
 		t.Fatal(n, err)

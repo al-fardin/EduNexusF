@@ -18,6 +18,7 @@ type Handler struct {
 
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := &Handler{db: db}
+	app.Post("/classrooms/:id/audience/preview", authMiddleware.JWTProtected(), h.AudiencePreview)
 	app.Get("/classrooms/:id/reports", authMiddleware.JWTProtected(), h.AcademicReports)
 	app.Post("/classrooms/:id/reports", authMiddleware.JWTProtected(), h.AcademicReports)
 	app.Get("/classrooms/:id/reports/:reportID", authMiddleware.JWTProtected(), h.AcademicReport)
@@ -124,6 +125,32 @@ func (h *Handler) member(c *fiber.Ctx, teacher bool) (string, string, error) {
 	}
 	if teacher && role != "teacher" {
 		return "", "", fail(403, "classroom teacher permission required")
+	}
+	if role != "teacher" {
+		kind, resource := "", ""
+		switch {
+		case c.Params("assignmentID") != "":
+			kind, resource = "assignment", c.Params("assignmentID")
+		case c.Params("materialID") != "":
+			kind, resource = "material", c.Params("materialID")
+		case c.Params("examID") != "":
+			kind, resource = "exam", c.Params("examID")
+		case c.Params("resourceID") != "":
+			kind, resource = c.Params("kind"), c.Params("resourceID")
+		}
+		if resource != "" && (kind == "assignment" || kind == "material" || kind == "exam") {
+			if validID(resource) != nil {
+				return "", "", fail(400, "Invalid resource")
+			}
+			var allowed bool
+			err = h.db.QueryRow(c.UserContext(), `SELECT edunexus_resource_visible($1::uuid,$2,$3::uuid,$4::uuid)`, c.Params("id"), kind, resource, user).Scan(&allowed)
+			if err != nil {
+				return "", "", err
+			}
+			if !allowed {
+				return "", "", fail(403, "This item is not assigned to your roll")
+			}
+		}
 	}
 	return user, role, nil
 }

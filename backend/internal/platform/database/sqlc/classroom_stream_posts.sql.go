@@ -17,16 +17,18 @@ INSERT INTO classroom_stream_posts (
     author_id,
     post_type,
     title,
-    content
+    content,
+    audience
 )
 VALUES (
     $1,
     $2,
     'announcement',
     $3,
-    $4
+    $4,
+    $5::jsonb
 )
-RETURNING id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at
+RETURNING id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at, audience
 `
 
 type CreateClassroomAnnouncementParams struct {
@@ -34,6 +36,7 @@ type CreateClassroomAnnouncementParams struct {
 	AuthorID    pgtype.UUID `json:"author_id"`
 	Title       pgtype.Text `json:"title"`
 	Content     string      `json:"content"`
+	Audience    []byte      `json:"audience"`
 }
 
 func (q *Queries) CreateClassroomAnnouncement(ctx context.Context, arg CreateClassroomAnnouncementParams) (ClassroomStreamPost, error) {
@@ -42,6 +45,7 @@ func (q *Queries) CreateClassroomAnnouncement(ctx context.Context, arg CreateCla
 		arg.AuthorID,
 		arg.Title,
 		arg.Content,
+		arg.Audience,
 	)
 	var i ClassroomStreamPost
 	err := row.Scan(
@@ -57,6 +61,7 @@ func (q *Queries) CreateClassroomAnnouncement(ctx context.Context, arg CreateCla
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Audience,
 	)
 	return i, err
 }
@@ -85,7 +90,7 @@ func (q *Queries) DeleteClassroomStreamPost(ctx context.Context, arg DeleteClass
 }
 
 const getClassroomStreamPostByID = `-- name: GetClassroomStreamPostByID :one
-SELECT id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at
+SELECT id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at, audience
 FROM classroom_stream_posts
 WHERE id = $1
   AND deleted_at IS NULL
@@ -108,6 +113,7 @@ func (q *Queries) GetClassroomStreamPostByID(ctx context.Context, id pgtype.UUID
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Audience,
 	)
 	return i, err
 }
@@ -120,6 +126,7 @@ SELECT
     classroom_stream_posts.post_type,
     classroom_stream_posts.title,
     classroom_stream_posts.content,
+    classroom_stream_posts.audience,
     classroom_stream_posts.reference_type,
     classroom_stream_posts.reference_id,
     classroom_stream_posts.is_pinned,
@@ -141,6 +148,7 @@ LEFT JOIN users
 
 WHERE classroom_stream_posts.classroom_id = $1
   AND classroom_stream_posts.deleted_at IS NULL
+  AND edunexus_resource_visible(classroom_stream_posts.classroom_id,'post',classroom_stream_posts.id,$4::uuid)
 
 ORDER BY
     classroom_stream_posts.is_pinned DESC,
@@ -154,6 +162,7 @@ type ListClassroomStreamPostsParams struct {
 	ClassroomID pgtype.UUID `json:"classroom_id"`
 	Limit       int32       `json:"limit"`
 	Offset      int32       `json:"offset"`
+	Viewer      pgtype.UUID `json:"viewer"`
 }
 
 type ListClassroomStreamPostsRow struct {
@@ -163,6 +172,7 @@ type ListClassroomStreamPostsRow struct {
 	PostType      string             `json:"post_type"`
 	Title         pgtype.Text        `json:"title"`
 	Content       string             `json:"content"`
+	Audience      []byte             `json:"audience"`
 	ReferenceType pgtype.Text        `json:"reference_type"`
 	ReferenceID   pgtype.UUID        `json:"reference_id"`
 	IsPinned      bool               `json:"is_pinned"`
@@ -177,7 +187,12 @@ type ListClassroomStreamPostsRow struct {
 }
 
 func (q *Queries) ListClassroomStreamPosts(ctx context.Context, arg ListClassroomStreamPostsParams) ([]ListClassroomStreamPostsRow, error) {
-	rows, err := q.db.Query(ctx, listClassroomStreamPosts, arg.ClassroomID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listClassroomStreamPosts,
+		arg.ClassroomID,
+		arg.Limit,
+		arg.Offset,
+		arg.Viewer,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -192,6 +207,7 @@ func (q *Queries) ListClassroomStreamPosts(ctx context.Context, arg ListClassroo
 			&i.PostType,
 			&i.Title,
 			&i.Content,
+			&i.Audience,
 			&i.ReferenceType,
 			&i.ReferenceID,
 			&i.IsPinned,
@@ -222,7 +238,7 @@ SET
 WHERE id = $1
   AND classroom_id = $2
   AND deleted_at IS NULL
-RETURNING id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at
+RETURNING id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at, audience
 `
 
 type PinClassroomStreamPostParams struct {
@@ -246,6 +262,7 @@ func (q *Queries) PinClassroomStreamPost(ctx context.Context, arg PinClassroomSt
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Audience,
 	)
 	return i, err
 }
@@ -258,7 +275,7 @@ SET
 WHERE id = $1
   AND classroom_id = $2
   AND deleted_at IS NULL
-RETURNING id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at
+RETURNING id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at, audience
 `
 
 type UnpinClassroomStreamPostParams struct {
@@ -282,6 +299,7 @@ func (q *Queries) UnpinClassroomStreamPost(ctx context.Context, arg UnpinClassro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Audience,
 	)
 	return i, err
 }
@@ -291,12 +309,13 @@ UPDATE classroom_stream_posts
 SET
     title = $3,
     content = $4,
+    audience = COALESCE($5::jsonb,audience),
     updated_at = NOW()
 WHERE id = $1
   AND classroom_id = $2
   AND post_type = 'announcement'
   AND deleted_at IS NULL
-RETURNING id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at
+RETURNING id, classroom_id, author_id, post_type, title, content, reference_type, reference_id, is_pinned, created_at, updated_at, deleted_at, audience
 `
 
 type UpdateClassroomAnnouncementParams struct {
@@ -304,6 +323,7 @@ type UpdateClassroomAnnouncementParams struct {
 	ClassroomID pgtype.UUID `json:"classroom_id"`
 	Title       pgtype.Text `json:"title"`
 	Content     string      `json:"content"`
+	Audience    []byte      `json:"audience"`
 }
 
 func (q *Queries) UpdateClassroomAnnouncement(ctx context.Context, arg UpdateClassroomAnnouncementParams) (ClassroomStreamPost, error) {
@@ -312,6 +332,7 @@ func (q *Queries) UpdateClassroomAnnouncement(ctx context.Context, arg UpdateCla
 		arg.ClassroomID,
 		arg.Title,
 		arg.Content,
+		arg.Audience,
 	)
 	var i ClassroomStreamPost
 	err := row.Scan(
@@ -327,6 +348,7 @@ func (q *Queries) UpdateClassroomAnnouncement(ctx context.Context, arg UpdateCla
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Audience,
 	)
 	return i, err
 }

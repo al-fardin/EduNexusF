@@ -3,6 +3,7 @@ package exam
 import (
 	"encoding/json"
 	"errors"
+	"github.com/edunexus/edunexus/internal/platform/audience"
 	"strconv"
 	"strings"
 	"time"
@@ -86,6 +87,19 @@ func (h *Handler) member(c *fiber.Ctx, teacher bool) (string, error) {
 	if teacher && role != "teacher" {
 		return "", fiber.NewError(fiber.StatusForbidden, "classroom teacher permission required")
 	}
+	if role != "teacher" && c.Params("examID") != "" {
+		if _, e := uuid.Parse(c.Params("examID")); e != nil {
+			return "", fiber.NewError(400, "Invalid exam")
+		}
+		var allowed bool
+		err = h.db.QueryRow(c.UserContext(), `SELECT edunexus_resource_visible($1::uuid,'exam',$2::uuid,$3::uuid)`, classID, c.Params("examID"), user).Scan(&allowed)
+		if err != nil {
+			return "", err
+		}
+		if !allowed {
+			return "", fiber.NewError(403, "This exam is not assigned to your roll")
+		}
+	}
 	return role, nil
 }
 func examID(c *fiber.Ctx) (string, error) {
@@ -129,13 +143,14 @@ func publicQuestions(questions []Question) []PublicQuestion {
 }
 
 type CreateRequest struct {
-	AllowMobileMCQ  bool       `json:"allow_mobile_mcq"`
-	Title           string     `json:"title"`
-	Description     string     `json:"description"`
-	StartsAt        time.Time  `json:"starts_at"`
-	EndsAt          time.Time  `json:"ends_at"`
-	DurationMinutes int        `json:"duration_minutes"`
-	Questions       []Question `json:"questions"`
+	Audience        *audience.Rule `json:"audience,omitempty"`
+	AllowMobileMCQ  bool           `json:"allow_mobile_mcq"`
+	Title           string         `json:"title"`
+	Description     string         `json:"description"`
+	StartsAt        time.Time      `json:"starts_at"`
+	EndsAt          time.Time      `json:"ends_at"`
+	DurationMinutes int            `json:"duration_minutes"`
+	Questions       []Question     `json:"questions"`
 }
 
 func normalizeQuestions(questions []Question) (string, error) {
@@ -196,17 +211,18 @@ func normalizeQuestions(questions []Question) (string, error) {
 }
 
 type Exam struct {
-	AllowMobileMCQ  bool      `json:"allow_mobile_mcq"`
-	ID              string    `json:"id"`
-	ClassroomID     string    `json:"classroom_id"`
-	Title           string    `json:"title"`
-	Description     string    `json:"description"`
-	StartsAt        time.Time `json:"starts_at"`
-	EndsAt          time.Time `json:"ends_at"`
-	DurationMinutes int       `json:"duration_minutes"`
-	Status          string    `json:"status"`
-	QuestionCount   int       `json:"question_count"`
-	CreatedAt       time.Time `json:"created_at"`
+	Audience        json.RawMessage `json:"audience"`
+	AllowMobileMCQ  bool            `json:"allow_mobile_mcq"`
+	ID              string          `json:"id"`
+	ClassroomID     string          `json:"classroom_id"`
+	Title           string          `json:"title"`
+	Description     string          `json:"description"`
+	StartsAt        time.Time       `json:"starts_at"`
+	EndsAt          time.Time       `json:"ends_at"`
+	DurationMinutes int             `json:"duration_minutes"`
+	Status          string          `json:"status"`
+	QuestionCount   int             `json:"question_count"`
+	CreatedAt       time.Time       `json:"created_at"`
 }
 
 func (h *Handler) List(c *fiber.Ctx) error {
@@ -214,13 +230,14 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	query := `SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq
-      FROM classroom_exams WHERE classroom_id=$1::uuid`
+	user, _ := identity(c)
+	query := `SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq,audience
+      FROM classroom_exams WHERE classroom_id=$1::uuid AND edunexus_resource_visible(classroom_id,'exam',id,$2::uuid)`
 	if role != "teacher" {
 		query += ` AND status='published'`
 	}
 	query += ` ORDER BY starts_at DESC LIMIT 150`
-	rows, err := h.db.Query(c.UserContext(), query, c.Params("id"))
+	rows, err := h.db.Query(c.UserContext(), query, c.Params("id"), user)
 	if err != nil {
 		return err
 	}
@@ -228,7 +245,7 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	items := make([]Exam, 0)
 	for rows.Next() {
 		var e Exam
-		if err = rows.Scan(&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt, &e.AllowMobileMCQ); err != nil {
+		if err = rows.Scan(&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt, &e.AllowMobileMCQ, &e.Audience); err != nil {
 			return err
 		}
 		items = append(items, e)
@@ -268,9 +285,13 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	if err != nil {
 		return failure(c, 400, err.Error())
 	}
+	policy, err := audience.Encode(req.Audience)
+	if err != nil {
+		return failure(c, 400, err.Error())
+	}
 	var id string
-	err = h.db.QueryRow(c.UserContext(), `INSERT INTO classroom_exams(classroom_id,created_by,title,description,starts_at,ends_at,duration_minutes,questions,allow_mobile_mcq)
-      VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8::jsonb,$9) RETURNING id::text`, c.Params("id"), user, req.Title, req.Description, req.StartsAt, req.EndsAt, req.DurationMinutes, raw, req.AllowMobileMCQ).Scan(&id)
+	err = h.db.QueryRow(c.UserContext(), `INSERT INTO classroom_exams(classroom_id,created_by,title,description,starts_at,ends_at,duration_minutes,questions,allow_mobile_mcq,audience)
+      VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8::jsonb,$9,$10::jsonb) RETURNING id::text`, c.Params("id"), user, req.Title, req.Description, req.StartsAt, req.EndsAt, req.DurationMinutes, raw, req.AllowMobileMCQ, policy).Scan(&id)
 	if err != nil {
 		return err
 	}
@@ -284,9 +305,9 @@ func (h *Handler) examWithKeys(c *fiber.Ctx) (Exam, []Question, error) {
 	var e Exam
 	var raw []byte
 	err = h.db.QueryRow(c.UserContext(), `
-      SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq,questions
+      SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq,questions,audience
       FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid`, id, c.Params("id")).Scan(
-		&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt, &e.AllowMobileMCQ, &raw)
+		&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt, &e.AllowMobileMCQ, &raw, &e.Audience)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Exam{}, nil, fiber.NewError(fiber.StatusNotFound, "exam not found")
 	}

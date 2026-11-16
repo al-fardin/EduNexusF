@@ -301,7 +301,7 @@ func (h *Handler) RemindStudents(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(c.UserContext(), `SELECT m.user_id::text FROM classroom_memberships m JOIN users u ON u.id=m.user_id WHERE m.classroom_id=$1::uuid AND m.user_id=ANY($2::uuid[]) AND m.status='active' AND m.member_role='student' AND u.status='active' AND u.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions s WHERE s.assignment_id=$3::uuid AND s.student_id=m.user_id)`, c.Params("id"), req.Students, c.Params("assignmentID"))
+	rows, err := tx.Query(c.UserContext(), `SELECT m.user_id::text FROM classroom_memberships m JOIN users u ON u.id=m.user_id WHERE m.classroom_id=$1::uuid AND m.user_id=ANY($2::uuid[]) AND m.status='active' AND m.member_role='student' AND u.status='active' AND u.deleted_at IS NULL AND edunexus_resource_visible(m.classroom_id,'assignment',$3::uuid,m.user_id) AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions s WHERE s.assignment_id=$3::uuid AND s.student_id=m.user_id)`, c.Params("id"), req.Students, c.Params("assignmentID"))
 	if err != nil {
 		return err
 	}

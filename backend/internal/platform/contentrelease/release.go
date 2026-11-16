@@ -44,8 +44,8 @@ func Publish(ctx context.Context, tx pgx.Tx, kind, id, class, actor string) erro
 			return err
 		}
 	} else if kind == "material" {
-		_, err := tx.Exec(ctx, `INSERT INTO classroom_stream_posts(classroom_id,author_id,post_type,title,content,reference_type,reference_id)
- SELECT classroom_id,$3::uuid,'material',title,COALESCE(NULLIF(description,''),'New learning material: '||title),'material',id FROM classroom_materials m
+		_, err := tx.Exec(ctx, `INSERT INTO classroom_stream_posts(classroom_id,author_id,post_type,title,content,reference_type,reference_id,audience)
+ SELECT classroom_id,$3::uuid,'material',title,COALESCE(NULLIF(description,''),'New learning material: '||title),'material',id,audience FROM classroom_materials m
  WHERE m.id=$1::uuid AND m.classroom_id=$2::uuid AND NOT EXISTS(SELECT 1 FROM classroom_stream_posts p WHERE p.reference_type='material' AND p.reference_id=m.id)`, id, class, actor)
 		if err != nil {
 			return err

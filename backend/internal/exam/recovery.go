@@ -14,7 +14,7 @@ func (h *Handler) ActiveAttempts(c *fiber.Ctx) error {
 	rows, err := h.db.Query(c.UserContext(), `SELECT e.id::text,e.title,a.id::text,a.expires_at,a.last_saved_at,a.revision
       FROM classroom_exam_attempts a JOIN classroom_exams e ON e.id=a.exam_id
       WHERE e.classroom_id=$1::uuid AND a.student_id=$2::uuid AND a.status='in_progress'
-        AND e.status='published' AND e.closed_at IS NULL AND e.ends_at>now() AND a.expires_at>now()
+        AND edunexus_resource_visible(e.classroom_id,'exam',e.id,$2::uuid) AND e.status='published' AND e.closed_at IS NULL AND e.ends_at>now() AND a.expires_at>now()
       ORDER BY a.started_at DESC LIMIT 20`, c.Params("id"), user)
 	if err != nil {
 		return err

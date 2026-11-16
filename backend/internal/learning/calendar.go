@@ -31,7 +31,7 @@ func (h *Handler) Calendar(c *fiber.Ctx) error {
  FROM resources r JOIN classrooms cl ON cl.id=r.classroom_id JOIN classroom_memberships m ON m.classroom_id=cl.id
  LEFT JOIN calendar_reminders rem ON rem.user_id=m.user_id AND rem.resource_id=r.id AND rem.kind=r.kind
  LEFT JOIN classroom_calendar_events ev ON ev.id=r.id AND r.kind='event'
- WHERE m.user_id=$1::uuid AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL AND r.at>=$2 AND r.at<$3 ORDER BY r.at,r.kind,r.id LIMIT 501`, user, from, to)
+ WHERE m.user_id=$1::uuid AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL AND edunexus_resource_visible(r.classroom_id,r.kind,r.id,$1::uuid) AND r.at>=$2 AND r.at<$3 ORDER BY r.at,r.kind,r.id LIMIT 501`, user, from, to)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func (h *Handler) CalendarReminder(c *fiber.Ctx) error {
 	if c.BodyParser(&req) != nil || (req.Lead != 15 && req.Lead != 60 && req.Lead != 1440) {
 		return fail(400, "Choose 15 minutes, one hour or one day")
 	}
-	tag, err := h.db.Exec(c.UserContext(), `WITH resources AS (`+calendarResources+`) INSERT INTO calendar_reminders(user_id,classroom_id,kind,resource_id,lead_minutes) SELECT $1::uuid,classroom_id,kind,id,$5 FROM resources WHERE id=$4::uuid AND classroom_id=$2::uuid AND kind=$3 AND at>now() ON CONFLICT(user_id,kind,resource_id) DO UPDATE SET lead_minutes=excluded.lead_minutes WHERE calendar_reminders.sent_at IS NULL`, user, c.Params("id"), kind, c.Params("resourceID"), req.Lead)
+	tag, err := h.db.Exec(c.UserContext(), `WITH resources AS (`+calendarResources+`) INSERT INTO calendar_reminders(user_id,classroom_id,kind,resource_id,lead_minutes) SELECT $1::uuid,classroom_id,kind,id,$5 FROM resources WHERE id=$4::uuid AND classroom_id=$2::uuid AND kind=$3 AND edunexus_resource_visible(classroom_id,kind,id,$1::uuid) AND at>now() ON CONFLICT(user_id,kind,resource_id) DO UPDATE SET lead_minutes=excluded.lead_minutes WHERE calendar_reminders.sent_at IS NULL`, user, c.Params("id"), kind, c.Params("resourceID"), req.Lead)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func (h *Handler) deliverCalendarReminder(ctx context.Context) error {
 	}
 	defer tx.Rollback(ctx)
 	var user, class, kind, id, title string
-	err = tx.QueryRow(ctx, `WITH resources AS (`+calendarResources+`) SELECT r.user_id::text,r.classroom_id::text,r.kind,r.resource_id::text,e.title FROM calendar_reminders r JOIN resources e ON e.id=r.resource_id AND e.classroom_id=r.classroom_id AND e.kind=r.kind JOIN classroom_memberships m ON m.user_id=r.user_id AND m.classroom_id=r.classroom_id JOIN classrooms cl ON cl.id=m.classroom_id JOIN users u ON u.id=m.user_id WHERE r.sent_at IS NULL AND e.at>now() AND e.at<=now()+r.lead_minutes*interval '1 minute' AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL AND u.status='active' AND u.deleted_at IS NULL ORDER BY e.at FOR UPDATE OF r SKIP LOCKED LIMIT 1`).Scan(&user, &class, &kind, &id, &title)
+	err = tx.QueryRow(ctx, `WITH resources AS (`+calendarResources+`) SELECT r.user_id::text,r.classroom_id::text,r.kind,r.resource_id::text,e.title FROM calendar_reminders r JOIN resources e ON e.id=r.resource_id AND e.classroom_id=r.classroom_id AND e.kind=r.kind JOIN classroom_memberships m ON m.user_id=r.user_id AND m.classroom_id=r.classroom_id JOIN classrooms cl ON cl.id=m.classroom_id JOIN users u ON u.id=m.user_id WHERE r.sent_at IS NULL AND edunexus_resource_visible(e.classroom_id,e.kind,e.id,r.user_id) AND e.at>now() AND e.at<=now()+r.lead_minutes*interval '1 minute' AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL AND u.status='active' AND u.deleted_at IS NULL ORDER BY e.at FOR UPDATE OF r SKIP LOCKED LIMIT 1`).Scan(&user, &class, &kind, &id, &title)
 	if err != nil {
 		return err
 	}
