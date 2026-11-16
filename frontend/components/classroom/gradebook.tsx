@@ -1,4 +1,6 @@
 "use client";
+import { AudienceFields } from "./audience-fields";
+import { type AudienceRule, EVERYONE } from "@/services/audience";
 import { Localized } from "@/components/ui/localized";
 import { BulkTools } from "./bulk-tools";
 import { GradingTemplateManager } from "./grading-template-manager";
@@ -19,9 +21,10 @@ const labels: Record<string, string> = {
   in_progress: "In progress",
 };
 export function Gradebook({ classroomId }: { classroomId: string }) {
+  const [audience, setAudience] = useState<AudienceRule>(EVERYONE);
   const query = useQuery({
-    queryKey: ["gradebook", classroomId],
-    queryFn: () => getGradebook(classroomId),
+    queryKey: ["gradebook", classroomId, audience],
+    queryFn: () => getGradebook(classroomId, audience),
   });
   const [search, setSearch] = useState(""),
     [filter, setFilter] = useState("all"),
@@ -102,6 +105,15 @@ export function Gradebook({ classroomId }: { classroomId: string }) {
           <option value="grading">Needs grading</option>
         </select>
       </div>
+      <AudienceFields
+        classId={classroomId}
+        value={audience}
+        onChange={(value) => {
+          setAudience(value);
+          setPage(0);
+        }}
+        filterMode
+      />
       {query.isPending ? (
         <ContentSkeleton rows={3} />
       ) : query.isError ? (

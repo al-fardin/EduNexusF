@@ -1,4 +1,6 @@
 "use client";
+import { AudienceFields } from "@/components/classroom/audience-fields";
+import { type AudienceRule, EVERYONE } from "@/services/audience";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { StudentCoursework } from "./student-coursework";
@@ -75,6 +77,7 @@ function ClassProgress({
 }) {
   const { t } = usePreferences(),
     user = useAuthStore((s) => s.user?.id);
+  const [audience, setAudience] = useState<AudienceRule>(EVERYONE);
   const [filter, setFilter] = useState(false),
     [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
@@ -88,9 +91,10 @@ function ClassProgress({
       offset,
       deferred,
       filter,
+      audience,
     ],
     queryFn: () =>
-      academic.progress(classId, student, offset, deferred, filter),
+      academic.progress(classId, student, offset, deferred, filter, audience),
   });
   const rows = query.data?.students ?? [];
   return (
@@ -136,6 +140,17 @@ function ClassProgress({
             judgements.
           </p>
         </div>
+      )}
+      {teacher && !student && (
+        <AudienceFields
+          classId={classId}
+          value={audience}
+          onChange={(value) => {
+            setAudience(value);
+            setOffset(0);
+          }}
+          filterMode
+        />
       )}
       {query.isPending ? (
         <ContentSkeleton rows={4} />

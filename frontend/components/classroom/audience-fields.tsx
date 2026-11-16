@@ -1,4 +1,5 @@
 "use client";
+import { SectionPicker } from "./section-picker";
 import { useState, useEffect, useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth-store";
@@ -28,7 +29,12 @@ const splitRolls = (raw: string) =>
 
 export function AudienceBadge({ value }: { value?: AudienceRule | null }) {
   const { t } = usePreferences();
-  if (!value || (value.mode === "all" && !value.exclude_rolls?.length))
+  if (
+    !value ||
+    (value.mode === "all" &&
+      !value.exclude_rolls?.length &&
+      !value.section_ids?.length)
+  )
     return null;
   return (
     <p className="my-2 break-words text-xs font-medium text-primary">
@@ -54,11 +60,13 @@ export function AudienceFields({
   value,
   onChange,
   disabled = false,
+  filterMode = false,
 }: {
   classId: string;
   value?: AudienceRule | null;
   onChange: (rule: AudienceRule) => void;
   disabled?: boolean;
+  filterMode?: boolean;
 }) {
   const { t } = usePreferences(),
     id = useId(),
@@ -75,17 +83,26 @@ export function AudienceFields({
     queryKey: ["audience-preview", user, classId, debounced],
     queryFn: ({ signal }) =>
       previewAudience(classId, JSON.parse(debounced), signal),
-    enabled: open && !!classId && !!user,
+    enabled: !filterMode && open && !!classId && !!user,
     retry: false,
   });
   const ranges = rule.ranges ?? [];
   function choose(mode: AudienceRule["mode"]) {
     onChange(
-      mode === "ranges"
-        ? { mode, ranges: [{ from: 1, to: 50 }] }
-        : mode === "mixed"
-          ? { mode, parity: "any", ranges: [{ from: 1, to: 50 }] }
-          : { mode },
+      mode === "all"
+        ? { mode }
+        : {
+            ...(mode === "ranges"
+              ? { mode, ranges: [{ from: 1, to: 50 }] }
+              : mode === "mixed"
+                ? {
+                    mode,
+                    parity: "any" as const,
+                    ranges: [{ from: 1, to: 50 }],
+                  }
+                : { mode }),
+            section_ids: rule.section_ids,
+          },
     );
   }
   return (
@@ -114,15 +131,40 @@ export function AudienceFields({
             onChange={(e) => choose(e.target.value as AudienceRule["mode"])}
             className={field}
           >
-            {(["all", "odd", "even", "ranges", "custom", "mixed"] as const).map(
-              (mode) => (
-                <option key={mode} value={mode}>
-                  {t(audienceLabel({ mode }))}
-                </option>
-              ),
-            )}
+            {(
+              [
+                "all",
+                "sections",
+                "odd",
+                "even",
+                "ranges",
+                "custom",
+                "mixed",
+              ] as const
+            ).map((mode) => (
+              <option key={mode} value={mode}>
+                {t(audienceLabel({ mode }))}
+              </option>
+            ))}
           </select>
         </label>
+        <SectionPicker
+          classId={classId}
+          value={rule.section_ids ?? []}
+          onChange={(section_ids) =>
+            onChange({
+              ...rule,
+              section_ids,
+              mode:
+                rule.mode === "all" && section_ids.length
+                  ? "sections"
+                  : rule.mode === "sections" && !section_ids.length
+                    ? "all"
+                    : rule.mode,
+            })
+          }
+          enabled={open}
+        />
         {(rule.mode === "odd" ||
           rule.mode === "even" ||
           rule.mode === "ranges" ||
@@ -286,11 +328,12 @@ export function AudienceFields({
           />
         </label>
       </fieldset>
-      {open && (preview.isPending || encoded !== debounced) ? (
+      {!filterMode && open && (preview.isPending || encoded !== debounced) ? (
         <ContentSkeleton rows={1} />
-      ) : open && preview.isError ? (
+      ) : !filterMode && open && preview.isError ? (
         <ErrorState message={examError(preview.error)} />
       ) : (
+        !filterMode &&
         open &&
         preview.data && (
           <section

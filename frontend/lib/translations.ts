@@ -557,6 +557,59 @@ Object.assign(bengali, {
     "বর্তমানে কোনো শিক্ষার্থী মিলছে না। রোল যাচাই করুন, অথবা পরে যোগ দেওয়া শিক্ষার্থীদের জন্য সংরক্ষণ করুন।",
   "Not assigned": "এই কাজ দেওয়া হয়নি",
 });
+Object.assign(bengali, {
+  "Advanced class settings": "ক্লাসের অ্যাডভান্সড সেটিংস",
+  "Optional tools. Your class works normally without sections or filters.":
+    "ঐচ্ছিক সুবিধা। সেকশন বা ফিল্টার ছাড়াই ক্লাস স্বাভাবিকভাবে চলবে।",
+  Sections: "সেকশন",
+  "Student sections": "শিক্ষার্থীদের সেকশন",
+  "CSV roster import": "CSV দিয়ে রোস্টার আপডেট",
+  "Student-view preview": "শিক্ষার্থীর ভিউ প্রিভিউ",
+  "Section name": "সেকশনের নাম",
+  "Create section": "সেকশন তৈরি করুন",
+  "No sections. Add one only if needed.":
+    "কোনো সেকশন নেই। প্রয়োজন হলেই যোগ করুন।",
+  Students: "শিক্ষার্থী",
+  Rename: "নাম পরিবর্তন",
+  "Delete section?": "সেকশন মুছবেন?",
+  "No students found": "কোনো শিক্ষার্থী পাওয়া যায়নি",
+  "No roll": "রোল নেই",
+  Unassigned: "সেকশন নির্ধারিত নয়",
+  "Reason for roster change": "পরিবর্তনের কারণ",
+  "Save section": "সেকশন সংরক্ষণ",
+  "Update enrolled students only. Invite other students through Class enrollment first. Blank section clears a section; existing rolls with participation are protected.":
+    "শুধু ক্লাসে যোগ দেওয়া শিক্ষার্থীদের আপডেট করা যাবে। অন্যদের আগে Class enrollment থেকে আমন্ত্রণ দিন। ফাঁকা section দিলে সেকশন সরবে; পরীক্ষায় অংশ নেওয়া বা কাজ জমা দেওয়ার পর রোল বদলানো যাবে না।",
+  "CSV must be at most 100 KB": "CSV সর্বোচ্চ ১০০ KB হতে পারবে",
+  "Preview roster changes": "পরিবর্তনের প্রিভিউ",
+  "Confirm roster changes": "পরিবর্তন নিশ্চিত করুন",
+  "Updated students": "আপডেট করা শিক্ষার্থী",
+  "Read-only visibility preview. Normal exam timing and entry rules still apply.":
+    "শুধু কী দেখা যাবে তার প্রিভিউ। পরীক্ষার সময় ও প্রবেশের নিয়ম যথারীতি প্রযোজ্য।",
+  "Full student roll": "শিক্ষার্থীর পুরো রোল",
+  "Preview student view": "শিক্ষার্থীর ভিউ দেখুন",
+  Visible: "দেখা যাবে",
+  Hidden: "দেখা যাবে না",
+  Unpublished: "প্রকাশিত নয়",
+  "Sections (optional)": "সেকশন (ঐচ্ছিক)",
+  "No sections. Everyone remains available; create sections only if needed.":
+    "সেকশন নেই। সবাইকে দেওয়া যাবে; প্রয়োজন হলেই সেকশন তৈরি করুন।",
+  "No section selected means the whole class. Section selection is combined with roll rules.":
+    "কোনো সেকশন বেছে না নিলে পুরো ক্লাস। সেকশন ও রোলের শর্ত একসঙ্গে প্রযোজ্য।",
+  "Optional. No filters means the whole class.":
+    "ঐচ্ছিক। ফিল্টার না দিলে পুরো ক্লাস।",
+  "Selected sections": "নির্বাচিত সেকশন",
+  unchanged: "পরিবর্তন নেই",
+  not_enrolled: "ক্লাসে যোগ দেয়নি",
+  unknown_section: "সেকশন পাওয়া যায়নি",
+  name_mismatch: "নাম মিলছে না",
+  roll_locked: "অংশগ্রহণের কারণে রোল পরিবর্তন বন্ধ",
+  roll_conflict: "রোলটি অন্যজনের",
+  duplicate_roll: "একই রোল একাধিকবার",
+  duplicate_email: "একই ইমেইল একাধিকবার",
+  invalid_email: "ভুল ইমেইল",
+  invalid_roll: "ভুল রোল",
+  ready: "প্রস্তুত",
+});
 export function translate(language: Language, text: string) {
   return language === "bn" ? (bengali[text] ?? text) : text;
 }

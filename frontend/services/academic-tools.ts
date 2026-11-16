@@ -1,3 +1,4 @@
+import type { AudienceRule } from "./audience";
 import { api } from "@/lib/api";
 import type { WorkspaceEvent } from "./workspace";
 export type CalendarItem = Omit<WorkspaceEvent, "kind"> & {
@@ -106,6 +107,7 @@ export const academic = {
     offset?: number,
     q = "",
     needs_support = false,
+    audience?: AudienceRule,
   ): Promise<{
     scope: string;
     students: StudentProgress[];
@@ -113,7 +115,13 @@ export const academic = {
   }> =>
     (
       await api.get(`/classrooms/${classId}/progress`, {
-        params: { student, offset, q, needs_support },
+        params: {
+          student,
+          offset,
+          q,
+          needs_support,
+          audience: audience ? JSON.stringify(audience) : undefined,
+        },
       })
     ).data.data,
   coursework: async (
@@ -126,15 +134,35 @@ export const academic = {
         params: { offset },
       })
     ).data.data,
-  attendance: async (classId: string, day: string): Promise<AttendanceRow[]> =>
-    (await api.get(`/classrooms/${classId}/attendance`, { params: { day } }))
-      .data.data,
+  attendance: async (
+    classId: string,
+    day: string,
+    audience?: AudienceRule,
+  ): Promise<AttendanceRow[]> =>
+    (
+      await api.get(`/classrooms/${classId}/attendance`, {
+        params: {
+          day,
+          audience: audience ? JSON.stringify(audience) : undefined,
+        },
+      })
+    ).data.data,
   saveAttendance: async (
     classId: string,
     day: string,
     rows: Array<{ id: string; status: string }>,
+    audience?: AudienceRule,
   ) =>
-    api.put(`/classrooms/${classId}/attendance`, { rows }, { params: { day } }),
+    api.put(
+      `/classrooms/${classId}/attendance`,
+      { rows },
+      {
+        params: {
+          day,
+          audience: audience ? JSON.stringify(audience) : undefined,
+        },
+      },
+    ),
   importGrades: async (
     classId: string,
     assignment: string,

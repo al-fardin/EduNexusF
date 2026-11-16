@@ -7,7 +7,7 @@ const {Button:wrap}=loadComponent("components/ui/button.tsx",{"@base-ui/react/bu
 function audienceHarness(value,locale="en"){
  let changed,options;
  const {AudienceFields}=loadComponent("components/classroom/audience-fields.tsx",{
-  "@/services/audience":audience,"@/store/auth-store":{useAuthStore:select=>select({user:{id:"teacher"}})},"@/providers/preferences-provider":{usePreferences:()=>({t:text=>translate(locale,text)})},"@tanstack/react-query":{useQuery:input=>{options=input;return {}}},"@/components/ui/button":{Button:wrap},"@/components/ui/app-feedback":{},"@/components/ui/content-skeleton":{},"@/services/exams":{},
+  "./section-picker":{SectionPicker:()=>null},"@/services/audience":audience,"@/store/auth-store":{useAuthStore:select=>select({user:{id:"teacher"}})},"@/providers/preferences-provider":{usePreferences:()=>({t:text=>translate(locale,text)})},"@tanstack/react-query":{useQuery:input=>{options=input;return {}}},"@/components/ui/button":{Button:wrap},"@/components/ui/app-feedback":{},"@/components/ui/content-skeleton":{},"@/services/exams":{},
  });
  const html=renderToStaticMarkup(React.createElement(AudienceFields,{classId:"class",value,onChange:rule=>changed=rule}));
  return {html,get options(){return options},get changed(){return changed}};

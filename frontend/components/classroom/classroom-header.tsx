@@ -1,4 +1,5 @@
 "use client";
+import { SectionSettings } from "./section-settings";
 import { ContentSchedules } from "./content-schedules";
 import { ClassEnrollment } from "./class-enrollment";
 import { AcademicReports } from "./academic-reports";
@@ -140,6 +141,7 @@ export function ClassroomHeader({
   kind: "teacher" | "student";
 }) {
   const [details, setDetails] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
   const [scheduled, setScheduled] = useState(false);
   const [staff, setStaff] = useState(false),
     [moderation, setModeration] = useState(false);
@@ -213,6 +215,11 @@ export function ClassroomHeader({
               Student progress
             </DropdownMenuItem>
             {kind === "teacher" && (
+              <DropdownMenuItem onClick={() => setAdvanced(true)}>
+                <Localized>Advanced class settings</Localized>
+              </DropdownMenuItem>
+            )}
+            {kind === "teacher" && (
               <DropdownMenuItem onClick={() => setScheduled(true)}>
                 Scheduled content
               </DropdownMenuItem>
@@ -245,6 +252,13 @@ export function ClassroomHeader({
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+      {kind === "teacher" && (
+        <SectionSettings
+          classId={classroom.id}
+          open={advanced}
+          onOpenChange={setAdvanced}
+        />
+      )}
       {kind === "teacher" && (
         <ContentSchedules
           classId={classroom.id}

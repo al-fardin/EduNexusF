@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 export type AudienceRule = {
-  mode: "all" | "odd" | "even" | "ranges" | "custom" | "mixed";
+  section_ids?: string[];
+  mode: "all" | "odd" | "even" | "ranges" | "custom" | "mixed" | "sections";
   parity?: "any" | "odd" | "even";
   ranges?: Array<{ from: number; to: number }>;
   rolls?: string[];
@@ -23,9 +24,12 @@ export async function previewAudience(
   ).data.data;
 }
 export function audienceLabel(rule?: AudienceRule | null) {
+  if (rule?.mode === "all" && rule.section_ids?.length)
+    return "Selected sections";
   return (
     {
       all: "Everyone",
+      sections: "Sections",
       odd: "Odd rolls",
       even: "Even rolls",
       ranges: "Roll ranges",

@@ -1,3 +1,4 @@
+import type { AudienceRule } from "./audience";
 import { api } from "@/lib/api";
 export type GradeColumn = {
   id: string;
@@ -20,6 +21,7 @@ export type GradeCell = {
   late: boolean;
 };
 export type GradeStudent = {
+  section_name?: string;
   id: string;
   name: string;
   roll: string;
@@ -32,6 +34,13 @@ export type GradebookData = {
   students: GradeStudent[];
   generated_at: string;
 };
-export async function getGradebook(classId: string): Promise<GradebookData> {
-  return (await api.get(`/classrooms/${classId}/gradebook`)).data.data;
+export async function getGradebook(
+  classId: string,
+  audience?: AudienceRule,
+): Promise<GradebookData> {
+  return (
+    await api.get(`/classrooms/${classId}/gradebook`, {
+      params: { audience: audience ? JSON.stringify(audience) : undefined },
+    })
+  ).data.data;
 }

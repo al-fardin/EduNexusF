@@ -1,4 +1,6 @@
 "use client";
+import { AudienceFields } from "./audience-fields";
+import { type AudienceRule, EVERYONE } from "@/services/audience";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { academic, type AttendanceRow } from "@/services/academic-tools";
@@ -20,11 +22,12 @@ const today = () => {
 };
 export function AttendanceEditor({ classId }: { classId: string }) {
   const { t } = usePreferences();
+  const [audience, setAudience] = useState<AudienceRule>(EVERYONE);
   const [open, setOpen] = useState(false),
     [day, setDay] = useState(today);
   const query = useQuery({
-    queryKey: ["attendance-entry", classId, day],
-    queryFn: () => academic.attendance(classId, day),
+    queryKey: ["attendance-entry", classId, day, audience],
+    queryFn: () => academic.attendance(classId, day, audience),
     enabled: open,
   });
   return (
@@ -48,6 +51,12 @@ export function AttendanceEditor({ classId }: { classId: string }) {
               className="rounded-xl border border-border bg-card p-3"
             />
           </label>
+          <AudienceFields
+            classId={classId}
+            value={audience}
+            onChange={setAudience}
+            filterMode
+          />
           {query.isPending ? (
             <ContentSkeleton rows={3} />
           ) : query.isError ? (
@@ -57,9 +66,12 @@ export function AttendanceEditor({ classId }: { classId: string }) {
             />
           ) : (
             <AttendanceRows
-              key={classId + day + query.dataUpdatedAt}
+              key={
+                classId + day + query.dataUpdatedAt + JSON.stringify(audience)
+              }
               classId={classId}
               day={day}
+              audience={audience}
               initial={query.data}
             />
           )}
@@ -72,10 +84,12 @@ function AttendanceRows({
   classId,
   day,
   initial,
+  audience,
 }: {
   classId: string;
   day: string;
   initial: AttendanceRow[];
+  audience: AudienceRule;
 }) {
   const { t } = usePreferences(),
     client = useQueryClient();
@@ -97,6 +111,7 @@ function AttendanceRows({
             rows
               .filter((r) => r.status)
               .map((r) => ({ id: r.id, status: r.status })),
+            audience,
           )
           .then(() => {
             setSaved(true);
