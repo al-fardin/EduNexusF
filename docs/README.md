@@ -11,6 +11,7 @@
 - [Class join approval, code expiry and student email invitations](guides/class-enrollment.md)
 - [QR join, CSV invitations, progress, rubrics, scheduled content and class search](guides/classwork-and-onboarding.md)
 - [Optional roll audiences: Everyone, odd/even, ranges and custom groups](guides/roll-audiences.md)
+- [Optional sections, roster reconciliation, filters and student-view preview](guides/optional-sections.md)
 - [Violet interface and messaging](guides/violet-messaging.md)
 - [Audio/video calls and rich messages](guides/calling-and-rich-messages.md)
 - [Android and mobile setup](guides/mobile-android.md)
