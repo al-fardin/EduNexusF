@@ -3,6 +3,8 @@ package learning
 import (
 	"context"
 	"github.com/gofiber/fiber/v2"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,16 +23,37 @@ func (h *Handler) Progress(c *fiber.Ctx) error {
 	if student != "" && validID(student) != nil {
 		return fail(400, "Invalid student")
 	}
-	out, err := h.buildProgress(c.UserContext(), c.Params("id"), student, role)
+	offset, err := strconv.Atoi(c.Query("offset", "0"))
+	if err != nil || offset < 0 || offset > 10000 {
+		return fail(400, "Invalid page")
+	}
+	search := strings.TrimSpace(c.Query("q"))
+	if len([]rune(search)) > 100 {
+		return fail(400, "Search is too long")
+	}
+	limit := 51
+	if c.Query("offset") == "" {
+		limit = 5001
+	}
+	out, err := h.buildProgressPage(c.UserContext(), c.Params("id"), student, role, limit, offset, search, c.Query("needs_support") == "true")
 	if err != nil {
 		return err
 	}
 	c.Set("Cache-Control", "no-store")
-	return respond(c, 200, fiber.Map{"scope": role, "students": out})
+	next := -1
+	if limit == 51 && len(out) > 50 {
+		out = out[:50]
+		next = offset + 50
+	}
+	return respond(c, 200, fiber.Map{"scope": role, "students": out, "next_offset": next})
 }
 func (h *Handler) buildProgress(ctx context.Context, class, student, role string) ([]fiber.Map, error) {
+	return h.buildProgressPage(ctx, class, student, role, 5001, 0, "", false)
+}
+func (h *Handler) buildProgressPage(ctx context.Context, class, student, role string, limit, offset int, search string, support bool) ([]fiber.Map, error) {
+	pattern := "%" + strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(search) + "%"
 	rows, err := h.db.Query(ctx, `WITH roster AS (
- SELECT u.id,trim(u.first_name||' '||u.last_name) name,COALESCE(m.student_roll,'') roll FROM classroom_memberships m JOIN users u ON u.id=m.user_id WHERE m.classroom_id=$1::uuid AND m.member_role='student' AND m.status='active' AND u.status='active' AND u.deleted_at IS NULL AND ($2='' OR u.id=NULLIF($2,'')::uuid)
+ SELECT u.id,trim(u.first_name||' '||u.last_name) name,COALESCE(m.student_roll,'') roll FROM classroom_memberships m JOIN users u ON u.id=m.user_id WHERE m.classroom_id=$1::uuid AND m.member_role='student' AND m.status='active' AND u.status='active' AND u.deleted_at IS NULL AND ($2='' OR u.id=NULLIF($2,'')::uuid) AND ($6='' OR (u.first_name||' '||u.last_name||' '||COALESCE(m.student_roll,'')) ILIKE $7)
  ), latest AS (
  SELECT DISTINCT ON(s.assignment_id,s.student_id) s.student_id,s.assignment_id,s.awarded_points,s.submitted_at,a.title,a.max_points FROM classroom_assignment_submissions s JOIN classroom_assignments a ON a.id=s.assignment_id JOIN roster r ON r.id=s.student_id WHERE a.classroom_id=$1::uuid AND a.status='published' ORDER BY s.assignment_id,s.student_id,s.version DESC
  ), exam_scores AS (
@@ -49,7 +72,7 @@ func (h *Handler) buildProgress(ctx context.Context, class, student, role string
  (SELECT count(*)::int FROM classroom_exams e WHERE e.classroom_id=$1::uuid AND e.status='published' AND e.ends_at<now() AND NOT EXISTS(SELECT 1 FROM classroom_exam_attempts at WHERE at.exam_id=e.id AND at.student_id=r.id)),
  COALESCE(att.present,0),COALESCE(att.total,0),COALESCE(att.excused,0),
  CASE WHEN $2<>'' THEN COALESCE((SELECT jsonb_agg(jsonb_build_object('id',id,'kind',kind,'title',title,'at',at,'score',score,'maximum',maximum) ORDER BY at) FROM scores WHERE student_id=r.id),'[]'::jsonb) ELSE '[]'::jsonb END
- FROM roster r LEFT JOIN aggregate_scores s ON s.student_id=r.id LEFT JOIN attendance att ON att.student_id=r.id ORDER BY r.roll,r.name,r.id LIMIT 5001`, class, student, role)
+ FROM roster r LEFT JOIN aggregate_scores s ON s.student_id=r.id LEFT JOIN attendance att ON att.student_id=r.id WHERE (NOT $8 OR COALESCE(s.percent<50,false) OR (COALESCE(att.total,0)>0 AND att.present*100.0/NULLIF(att.total,0)<75) OR EXISTS(SELECT 1 FROM classroom_assignments a WHERE a.classroom_id=$1::uuid AND a.status='published' AND a.due_at<now() AND NOT EXISTS(SELECT 1 FROM latest l WHERE l.assignment_id=a.id AND l.student_id=r.id)) OR EXISTS(SELECT 1 FROM classroom_exams e WHERE e.classroom_id=$1::uuid AND e.status='published' AND e.ends_at<now() AND NOT EXISTS(SELECT 1 FROM classroom_exam_attempts at WHERE at.exam_id=e.id AND at.student_id=r.id))) ORDER BY r.roll,r.name,r.id LIMIT $4 OFFSET $5`, class, student, role, limit, offset, search, pattern, support)
 	if err != nil {
 		return nil, err
 	}

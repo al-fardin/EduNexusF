@@ -68,12 +68,12 @@ func (h *Handler) AssignmentDeadline(c *fiber.Ctx) error {
 	if err = activity.SetActor(c.UserContext(), tx, user, req.Reason); err != nil {
 		return err
 	}
-	tag, err := tx.Exec(c.UserContext(), `UPDATE classroom_assignments SET due_at=$3 WHERE id=$1::uuid AND classroom_id=$2::uuid AND due_at=$4`, c.Params("assignmentID"), c.Params("id"), req.DueAt, req.Expected)
+	tag, err := tx.Exec(c.UserContext(), `UPDATE classroom_assignments SET due_at=$3 WHERE id=$1::uuid AND classroom_id=$2::uuid AND due_at=$4 AND NOT EXISTS(SELECT 1 FROM classroom_content_schedules s WHERE s.resource_id=$1::uuid AND s.state='scheduled' AND s.publish_at>=$3)`, c.Params("assignmentID"), c.Params("id"), req.DueAt, req.Expected)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return fail(409, "deadline changed; refresh before updating")
+		return fail(409, "Deadline changed or precedes scheduled publication; refresh before updating")
 	}
 	if err = tx.Commit(c.UserContext()); err != nil {
 		return err

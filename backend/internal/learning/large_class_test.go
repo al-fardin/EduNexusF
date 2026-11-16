@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/edunexus/edunexus/internal/testsupport"
 	"github.com/google/uuid"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -41,6 +42,33 @@ func TestLargeClassProgressAndGradebook(t *testing.T) {
 	book := call(t, app, f.Teacher, "GET", "/classrooms/"+f.ClassID+"/gradebook", nil, 200)["data"].(map[string]any)
 	if len(book["students"].([]any)) != 501 || len(book["columns"].([]any)) != 100 {
 		t.Fatal("gradebook incomplete")
+	}
+	seen := map[string]bool{}
+	offset := 0
+	for {
+		page := call(t, app, f.Teacher, "GET", "/classrooms/"+f.ClassID+"/progress?offset="+strconv.Itoa(offset), nil, 200)["data"].(map[string]any)
+		students := page["students"].([]any)
+		if len(students) > 50 {
+			t.Fatal("page too large")
+		}
+		for _, raw := range students {
+			id := raw.(map[string]any)["id"].(string)
+			if seen[id] {
+				t.Fatal("duplicate roster row")
+			}
+			seen[id] = true
+		}
+		next := int(page["next_offset"].(float64))
+		if next < 0 {
+			break
+		}
+		if next <= offset {
+			t.Fatal("non-advancing page")
+		}
+		offset = next
+	}
+	if len(seen) != 501 {
+		t.Fatalf("paged roster lost students: %d", len(seen))
 	}
 	t.Logf("501 students × 100 assignments, progress and gradebook: %s", time.Since(started))
 }

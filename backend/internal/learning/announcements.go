@@ -3,6 +3,7 @@ package learning
 import (
 	"context"
 	"errors"
+	"github.com/edunexus/edunexus/internal/platform/contentrelease"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -145,7 +146,7 @@ func (h *Handler) publishScheduled(ctx context.Context) error {
 	}
 	var allowed bool
 	if actor != "" {
-		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM classroom_memberships m JOIN classrooms cl ON cl.id=m.classroom_id JOIN users u ON u.id=m.user_id WHERE m.classroom_id=$1::uuid AND m.user_id=$2::uuid AND m.member_role='teacher' AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL AND u.status='active' AND u.deleted_at IS NULL)`, class, actor).Scan(&allowed)
+		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM classroom_memberships m JOIN classrooms cl ON cl.id=m.classroom_id JOIN users u ON u.id=m.user_id LEFT JOIN classroom_staff_permissions sp ON sp.classroom_id=cl.id AND sp.user_id=m.user_id WHERE m.classroom_id=$1::uuid AND m.user_id=$2::uuid AND m.member_role='teacher' AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL AND u.status='active' AND u.deleted_at IS NULL AND (cl.owner_id=$2::uuid OR sp.user_id IS NULL OR COALESCE((sp.permissions->>'coursework')::boolean,false)))`, class, actor).Scan(&allowed)
 		if err != nil {
 			return err
 		}
@@ -176,6 +177,14 @@ func registerScheduledAnnouncements(app *fiber.App, h *Handler) {
 					if err := h.publishScheduled(work); err != nil {
 						if !errors.Is(err, pgx.ErrNoRows) {
 							log.Print("Scheduled announcement publishing deferred")
+						}
+						break
+					}
+				}
+				for i := 0; i < 20; i++ {
+					if err := contentrelease.PublishOne(work, h.db); err != nil {
+						if !errors.Is(err, pgx.ErrNoRows) {
+							log.Print("Scheduled coursework publishing deferred")
 						}
 						break
 					}

@@ -13,6 +13,10 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 	if validID(user) != nil {
 		return fail(401, "authentication required")
 	}
+	class := c.Query("class")
+	if class != "" && validID(class) != nil {
+		return fail(400, "Invalid class filter")
+	}
 	q := strings.TrimSpace(c.Query("q"))
 	kind := c.Query("kind", "all")
 	if len([]rune(q)) < 2 || len([]rune(q)) > 200 {
@@ -28,15 +32,15 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 	// Escape LIKE syntax so user input is a literal substring, including % and _.
 	pattern := "%" + strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(q) + "%"
 	rows, err := h.db.Query(c.UserContext(), `WITH access AS (
- SELECT cl.id,cl.name,m.member_role FROM classrooms cl JOIN classroom_memberships m ON m.classroom_id=cl.id
- WHERE m.user_id=$1::uuid AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL
+ SELECT cl.id,cl.name,m.member_role FROM classrooms cl JOIN classroom_memberships m ON m.classroom_id=cl.id LEFT JOIN classroom_staff_permissions sp ON sp.classroom_id=cl.id AND sp.user_id=m.user_id
+ WHERE m.user_id=$1::uuid AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL AND ($5='' OR cl.id=NULLIF($5,'')::uuid) AND (m.member_role<>'teacher' OR cl.owner_id=$1::uuid OR sp.user_id IS NULL OR COALESCE((sp.permissions->>'coursework')::boolean,false))
  ), found AS (
  SELECT a.id,'class'::text kind,a.name title,''::text excerpt,a.id classroom_id,a.name classroom_name,a.member_role,cl.created_at at FROM access a JOIN classrooms cl ON cl.id=a.id WHERE a.name ILIKE $2
  UNION ALL SELECT p.id,'post',COALESCE(NULLIF(p.title,''),'Class update'),left(p.content,220),a.id,a.name,a.member_role,p.created_at FROM classroom_stream_posts p JOIN access a ON a.id=p.classroom_id WHERE p.deleted_at IS NULL AND (p.title ILIKE $2 OR p.content ILIKE $2)
  UNION ALL SELECT f.id,'material',f.title,left(COALESCE(NULLIF(f.description,''),x.caption,x.plain_text,''),220),a.id,a.name,a.member_role,f.created_at FROM classroom_materials f JOIN access a ON a.id=f.classroom_id LEFT JOIN classroom_material_accessibility x ON x.material_id=f.id WHERE (f.title ILIKE $2 OR f.description ILIKE $2 OR f.original_filename ILIKE $2 OR x.plain_text ILIKE $2 OR x.transcript ILIKE $2 OR x.caption ILIKE $2 OR x.image_alt ILIKE $2) AND EXISTS(SELECT 1 FROM classroom_stream_posts p WHERE p.classroom_id=a.id AND p.reference_type='material' AND p.reference_id=f.id AND p.deleted_at IS NULL)
  UNION ALL SELECT f.id,'assignment',f.title,left(f.instructions,220),a.id,a.name,a.member_role,f.created_at FROM classroom_assignments f JOIN access a ON a.id=f.classroom_id WHERE (a.member_role='teacher' OR f.status='published') AND (f.title ILIKE $2 OR f.instructions ILIKE $2)
  UNION ALL SELECT f.id,'exam',f.title,''::text,a.id,a.name,a.member_role,f.created_at FROM classroom_exams f JOIN access a ON a.id=f.classroom_id WHERE (a.member_role='teacher' OR f.status='published') AND f.title ILIKE $2
- ) SELECT id::text,kind,title,excerpt,classroom_id::text,classroom_name,member_role,at FROM found WHERE ($3='all' OR kind=$3) ORDER BY at DESC,kind,id LIMIT 51 OFFSET $4`, user, pattern, kind, offset)
+ ) SELECT id::text,kind,title,excerpt,classroom_id::text,classroom_name,member_role,at FROM found WHERE ($3='all' OR kind=$3) ORDER BY at DESC,kind,id LIMIT 51 OFFSET $4`, user, pattern, kind, offset, class)
 	if err != nil {
 		return err
 	}

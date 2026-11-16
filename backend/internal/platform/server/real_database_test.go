@@ -67,14 +67,14 @@ func TestExistingDatabaseReadOnlyRoutes(t *testing.T) {
 		base := "/classrooms/" + m.class
 		paths = append(paths, "/workspace/terms", "/workspace/semester-classes", base+"/rechecks")
 		paths = append(paths, "/workspace/tasks", "/workspace/storage", "/workspace/enrollment", "/auth/security", "/auth/security/sessions", base+"/reports")
-		for _, suffix := range []string{"/details", "/message-recipients", "/messaging-settings", "/conversations", "/exams", "/assignments", "/analytics", "/tutor", "/tutor/sources", "/stream", "/materials", "/topics"} {
+		for _, suffix := range []string{"/details", "/message-recipients", "/messaging-settings", "/conversations", "/exams", "/assignments", "/analytics", "/tutor", "/tutor/sources", "/stream", "/materials", "/topics", "/progress?offset=0"} {
 			paths = append(paths, base+suffix)
 		}
 		if m.membership == "student" {
 			paths = append(paths, base+"/exams/active")
 		}
 		if m.membership == "teacher" {
-			paths = append(paths, base+"/question-bank")
+			paths = append(paths, base+"/question-bank", base+"/content-schedules")
 		}
 		for _, path := range paths {
 			req := httptest.NewRequest("GET", path, nil)

@@ -10,9 +10,10 @@ import (
 )
 
 type RubricCriterion struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Maximum int    `json:"maximum"`
+	Description string `json:"description,omitempty"`
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Maximum     int    `json:"maximum"`
 }
 
 func validRubric(criteria []RubricCriterion, maximum int) error {
@@ -25,7 +26,7 @@ func validRubric(criteria []RubricCriterion, maximum int) error {
 	sum := 0
 	seen := map[string]bool{}
 	for _, q := range criteria {
-		if _, err := uuid.Parse(q.ID); err != nil || seen[q.ID] || len(strings.TrimSpace(q.Title)) < 1 || len(q.Title) > 200 || q.Maximum < 1 || q.Maximum > 1000 {
+		if _, err := uuid.Parse(q.ID); err != nil || seen[q.ID] || len(strings.TrimSpace(q.Title)) < 1 || len(q.Title) > 200 || len(q.Description) > 1000 || q.Maximum < 1 || q.Maximum > 1000 {
 			return fail(400, "Provide unique rubric criteria with titles and 1–1000 points")
 		}
 		seen[q.ID] = true

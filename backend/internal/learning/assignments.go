@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/edunexus/edunexus/internal/activity"
+	"github.com/edunexus/edunexus/internal/platform/contentrelease"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
 	"io"
@@ -15,6 +16,7 @@ import (
 )
 
 type Assignment struct {
+	PublishAt     *time.Time        `json:"publish_at"`
 	Rubric        []RubricCriterion `json:"rubric"`
 	ID            string            `json:"id"`
 	Title         string            `json:"title"`
@@ -31,6 +33,9 @@ func validAssignment(a Assignment) error {
 	if len(strings.TrimSpace(a.Title)) < 3 || len(a.Title) > 200 || len(a.Instructions) > 20000 || a.DueAt.IsZero() || a.MaxPoints < 1 || a.MaxPoints > 1000 {
 		return fail(400, "provide a title, due date and 1-1000 points")
 	}
+	if a.PublishAt != nil && (!a.PublishAt.After(time.Now()) || a.PublishAt.After(time.Now().AddDate(1, 0, 0)) || !a.PublishAt.Before(a.DueAt)) {
+		return fail(400, "Publish time must be in the next year and before the deadline")
+	}
 	return validRubric(a.Rubric, a.MaxPoints)
 }
 func (h *Handler) ListAssignments(c *fiber.Ctx) error {
@@ -38,7 +43,7 @@ func (h *Handler) ListAssignments(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT id::text,title,instructions,due_at,max_points,allow_late,allow_resubmit,status,rubric FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') ORDER BY due_at DESC LIMIT 200`, c.Params("id"), role)
+	rows, err := h.db.Query(c.UserContext(), `SELECT a.id::text,a.title,a.instructions,a.due_at,a.max_points,a.allow_late,a.allow_resubmit,a.status,a.rubric,CASE WHEN s.state='scheduled' THEN s.publish_at END FROM classroom_assignments a LEFT JOIN classroom_content_schedules s ON s.resource_id=a.id WHERE a.classroom_id=$1::uuid AND ($2='teacher' OR a.status='published') ORDER BY a.due_at DESC LIMIT 200`, c.Params("id"), role)
 	if err != nil {
 		return err
 	}
@@ -46,7 +51,7 @@ func (h *Handler) ListAssignments(c *fiber.Ctx) error {
 	out := make([]Assignment, 0)
 	for rows.Next() {
 		var a Assignment
-		if err = rows.Scan(&a.ID, &a.Title, &a.Instructions, &a.DueAt, &a.MaxPoints, &a.AllowLate, &a.AllowResubmit, &a.Status, &a.Rubric); err != nil {
+		if err = rows.Scan(&a.ID, &a.Title, &a.Instructions, &a.DueAt, &a.MaxPoints, &a.AllowLate, &a.AllowResubmit, &a.Status, &a.Rubric, &a.PublishAt); err != nil {
 			return err
 		}
 		out = append(out, a)
@@ -87,8 +92,15 @@ func (h *Handler) SaveAssignment(c *fiber.Ctx) error {
 			return err
 		}
 		a.ID = c.Params("assignmentID")
-		if _, err = tx.Exec(c.UserContext(), `SELECT id FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid FOR UPDATE`, a.ID, c.Params("id")); err != nil {
+		var status string
+		if err = tx.QueryRow(c.UserContext(), `SELECT status FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid FOR UPDATE`, a.ID, c.Params("id")).Scan(&status); errors.Is(err, pgx.ErrNoRows) {
+			return fail(404, "Assignment not found")
+		}
+		if err != nil {
 			return err
+		}
+		if a.PublishAt != nil && status != "draft" {
+			return fail(409, "Published work cannot be scheduled")
 		}
 		tag, e := tx.Exec(c.UserContext(), `UPDATE classroom_assignments SET title=$3,instructions=$4,due_at=$5,max_points=$6,allow_late=$7,allow_resubmit=$8,rubric=$9::jsonb WHERE id=$1::uuid AND classroom_id=$2::uuid AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions WHERE assignment_id=$1::uuid)`, a.ID, c.Params("id"), strings.TrimSpace(a.Title), a.Instructions, a.DueAt, a.MaxPoints, a.AllowLate, a.AllowResubmit, rubricJSON)
 		err = e
@@ -99,24 +111,40 @@ func (h *Handler) SaveAssignment(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	if err = contentrelease.Save(c.UserContext(), tx, c.Params("id"), user, "assignment", a.ID, a.PublishAt); err != nil {
+		return err
+	}
 	if err = tx.Commit(c.UserContext()); err != nil {
 		return err
 	}
 	return respond(c, 200, fiber.Map{"id": a.ID})
 }
 func (h *Handler) PublishAssignment(c *fiber.Ctx) error {
-	if _, _, err := h.member(c, true); err != nil {
-		return err
-	}
-	if err := validID(c.Params("assignmentID")); err != nil {
-		return err
-	}
-	tag, err := h.db.Exec(c.UserContext(), `UPDATE classroom_assignments SET status='published' WHERE id=$1::uuid AND classroom_id=$2::uuid AND status='draft'`, c.Params("assignmentID"), c.Params("id"))
+	actor, _, err := h.member(c, true)
 	if err != nil {
 		return err
 	}
-	if tag.RowsAffected() == 0 {
-		return fail(409, "assignment is unavailable or already published")
+	if err = validID(c.Params("assignmentID")); err != nil {
+		return err
+	}
+	tx, err := h.db.Begin(c.UserContext())
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(c.UserContext())
+	var status string
+	err = tx.QueryRow(c.UserContext(), `SELECT status FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid FOR UPDATE`, c.Params("assignmentID"), c.Params("id")).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) || err == nil && status != "draft" {
+		return fail(409, "Assignment is unavailable or already published")
+	}
+	if err != nil {
+		return err
+	}
+	if err = contentrelease.Publish(c.UserContext(), tx, "assignment", c.Params("assignmentID"), c.Params("id"), actor); err != nil {
+		return err
+	}
+	if err = tx.Commit(c.UserContext()); err != nil {
+		return err
 	}
 	return respond(c, 200, fiber.Map{"published": true})
 }
