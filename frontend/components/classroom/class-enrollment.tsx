@@ -1,4 +1,5 @@
 "use client";
+import { ClassJoinShare, BulkInvitations } from "./enrollment-sharing";
 import { useState } from "react";
 import {
   useInfiniteQuery,
@@ -144,6 +145,11 @@ function JoinSettingsForm({
           {initial.class_code}
         </code>
       </p>
+      <ClassJoinShare
+        code={initial.class_code}
+        enabled={initial.code_join_enabled}
+        expires={initial.class_code_expires_at}
+      />
       <JoinPolicyFields value={value} onChange={setValue} disabled={busy} />
       {error && <ErrorState message={error} />}
       <Button type="submit" disabled={busy}>
@@ -315,6 +321,7 @@ function TeacherInvitations({ classId }: { classId: string }) {
   }
   return (
     <section className="space-y-4">
+      <BulkInvitations classId={classId} onCreated={changed} />
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {

@@ -15,23 +15,28 @@ export function WorkspaceSearch() {
     params = useSearchParams(),
     router = useRouter(),
     user = useAuthStore((s) => s.user?.id);
+  const classId = params.get("class") ?? "";
   const q = params.get("q") ?? "",
     kind = params.get("kind") ?? "all",
     offset = Math.max(0, Number(params.get("offset")) || 0);
   const query = useQuery({
-    queryKey: ["global-search", user, q, kind, offset],
-    queryFn: () => academic.search(q, kind, offset),
+    queryKey: ["global-search", user, q, kind, offset, classId],
+    queryFn: () => academic.search(q, kind, offset, classId),
     enabled: !!user && q.trim().length >= 2,
   });
   const href = (page: number) =>
-    `/search?${new URLSearchParams({ q, kind, offset: String(page) })}`;
+    `/search?${new URLSearchParams({ q, kind, offset: String(page), ...(classId ? { class: classId } : {}) })}`;
   return (
     <main className="en-workspace-page">
       <div className="en-workspace-container space-y-5">
         <header>
           <h1 className="text-2xl font-semibold">{t("Search")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {t("Search your classes and coursework")}
+            {t(
+              classId
+                ? "Search within this class"
+                : "Search your classes and coursework",
+            )}
           </p>
         </header>
         <form
@@ -41,7 +46,7 @@ export function WorkspaceSearch() {
             e.preventDefault();
             const form = new FormData(e.currentTarget);
             router.push(
-              `/search?${new URLSearchParams({ q: String(form.get("q")).trim(), kind: String(form.get("kind")) })}`,
+              `/search?${new URLSearchParams({ q: String(form.get("q")).trim(), kind: String(form.get("kind")), ...(classId ? { class: classId } : {}) })}`,
             );
           }}
         >

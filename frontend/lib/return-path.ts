@@ -15,6 +15,7 @@ const roots = new Set([
   "/classrooms",
   "/instructor/classrooms",
   "/student/classrooms",
+  "/student/classrooms/join",
 ]);
 export function safeReturnPath(value: string | null | undefined): string {
   if (

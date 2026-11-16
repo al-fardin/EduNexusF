@@ -72,9 +72,13 @@ export const academic = {
     q: string,
     kind: string,
     offset: number,
+    classId = "",
   ): Promise<{ items: SearchItem[]; next_offset: number }> =>
-    (await api.get("/workspace/search", { params: { q, kind, offset } })).data
-      .data,
+    (
+      await api.get("/workspace/search", {
+        params: { q, kind, offset, class: classId },
+      })
+    ).data.data,
   createEvent: async (
     classId: string,
     data: {
@@ -99,9 +103,29 @@ export const academic = {
   progress: async (
     classId: string,
     student?: string,
-  ): Promise<{ scope: string; students: StudentProgress[] }> =>
-    (await api.get(`/classrooms/${classId}/progress`, { params: { student } }))
-      .data.data,
+    offset?: number,
+    q = "",
+    needs_support = false,
+  ): Promise<{
+    scope: string;
+    students: StudentProgress[];
+    next_offset: number;
+  }> =>
+    (
+      await api.get(`/classrooms/${classId}/progress`, {
+        params: { student, offset, q, needs_support },
+      })
+    ).data.data,
+  coursework: async (
+    classId: string,
+    student: string,
+    offset = 0,
+  ): Promise<{ items: ProgressWork[]; next_offset: number }> =>
+    (
+      await api.get(`/classrooms/${classId}/progress/${student}/coursework`, {
+        params: { offset },
+      })
+    ).data.data,
   attendance: async (classId: string, day: string): Promise<AttendanceRow[]> =>
     (await api.get(`/classrooms/${classId}/attendance`, { params: { day } }))
       .data.data,
@@ -139,4 +163,22 @@ export const academic = {
     api.post(`/classrooms/${classId}/assignments/${assignment}/remind`, {
       students,
     }),
+};
+
+export type ProgressWork = {
+  id: string;
+  title: string;
+  due_at: string;
+  maximum: number;
+  score: number | null;
+  state: string;
+  feedback: string;
+  rubric: Array<{
+    id: string;
+    title: string;
+    maximum: number;
+    description?: string;
+  }>;
+  rubric_scores: Record<string, number>;
+  submitted_at: string | null;
 };

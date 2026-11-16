@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { StudentCoursework } from "./student-coursework";
+import { useState, useDeferredValue } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { workspace } from "@/services/workspace";
 import { academic, type StudentProgress } from "@/services/academic-tools";
-import { needsSupport } from "@/lib/academic-tools";
+
 import { useAuthStore } from "@/store/auth-store";
 import { usePreferences } from "@/providers/preferences-provider";
 import { ContentSkeleton } from "@/components/ui/content-skeleton";
@@ -76,15 +77,22 @@ function ClassProgress({
     user = useAuthStore((s) => s.user?.id);
   const [filter, setFilter] = useState(false),
     [search, setSearch] = useState("");
+  const [offset, setOffset] = useState(0);
+  const deferred = useDeferredValue(search);
   const query = useQuery({
-    queryKey: ["class-progress", user, classId, student],
-    queryFn: () => academic.progress(classId, student),
+    queryKey: [
+      "class-progress",
+      user,
+      classId,
+      student,
+      offset,
+      deferred,
+      filter,
+    ],
+    queryFn: () =>
+      academic.progress(classId, student, offset, deferred, filter),
   });
-  const rows = (query.data?.students ?? []).filter(
-    (s) =>
-      (!filter || needsSupport(s)) &&
-      (s.name + " " + s.roll).toLowerCase().includes(search.toLowerCase()),
-  );
+  const rows = query.data?.students ?? [];
   return (
     <section className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -104,14 +112,21 @@ function ClassProgress({
             aria-label={t("Search students")}
             placeholder={t("Search students")}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            maxLength={100}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setOffset(0);
+            }}
             className="w-full rounded-xl border border-border bg-card p-3"
           />
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={filter}
-              onChange={(e) => setFilter(e.target.checked)}
+              onChange={(e) => {
+                setFilter(e.target.checked);
+                setOffset(0);
+              }}
             />
             {t("Needs support")}
           </label>
@@ -153,6 +168,9 @@ function ClassProgress({
               </div>
               <StudentStats student={s} />
               {(!teacher || student) && (
+                <StudentCoursework classId={classId} student={s.id} />
+              )}
+              {(!teacher || student) && (
                 <section className="space-y-3">
                   <h4 className="font-semibold">{t("Score history")}</h4>
                   {!s.trend.length ? (
@@ -183,6 +201,29 @@ function ClassProgress({
           ))}
         </div>
       )}
+      <nav
+        aria-label={t("Progress pages")}
+        className="flex justify-between gap-3"
+      >
+        {offset > 0 ? (
+          <button
+            className="en-outline-button"
+            onClick={() => setOffset(Math.max(0, offset - 50))}
+          >
+            {t("Previous")}
+          </button>
+        ) : (
+          <span />
+        )}
+        {query.data && query.data.next_offset >= 0 && (
+          <button
+            className="en-outline-button"
+            onClick={() => setOffset(query.data.next_offset)}
+          >
+            {t("More students")}
+          </button>
+        )}
+      </nav>
     </section>
   );
 }

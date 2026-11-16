@@ -12,7 +12,7 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import {
   enrollmentPhase5,
@@ -22,7 +22,13 @@ import { getClassroomErrorMessage } from "@/services/classroom";
 
 export default function JoinClassroomPage() {
   const router = useRouter();
-  const [code, setCode] = useState("");
+  const params = useSearchParams();
+  const [code, setCode] = useState(() =>
+    (params.get("code") ?? "")
+      .replace(/[^A-Za-z0-9]/g, "")
+      .slice(0, 32)
+      .toUpperCase(),
+  );
   const [roll, setRoll] = useState("");
   const [matched, setMatched] = useState<CourseLookup | null>(null);
   const lookup = useMutation({

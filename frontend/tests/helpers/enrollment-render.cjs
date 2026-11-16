@@ -38,7 +38,7 @@ function studentMarkup(locale="en") {
 }
 function teacherMarkup(owner=true) {
   const items=[{id:"request",user_id:"student",name:"Rafi Ahmed",email:"student@example.invalid",student_roll:"001",status:"pending",reason:"",version:1,updated_at:"2026-11-12T06:00:00Z"}];
-  const mocks={...commonMocks("en",items),"./join-policy-fields":{JoinPolicyFields:policyComponent()},"@/components/ui/reason-dialog":{ReasonDialog:()=>null}};
+  const mocks={"./enrollment-sharing":{ClassJoinShare:()=>null,BulkInvitations:()=>null},...commonMocks("en",items),"./join-policy-fields":{JoinPolicyFields:policyComponent()},"@/components/ui/reason-dialog":{ReasonDialog:()=>null}};
   const {ClassEnrollment}=loadComponent("components/classroom/class-enrollment.tsx",mocks);
   return renderToStaticMarkup(React.createElement(ClassEnrollment,{classId:classroomId,owner,open:true,onOpenChange(){}}));
 }

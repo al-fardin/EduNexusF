@@ -463,6 +463,66 @@ Object.assign(bengali, {
   failed: "ব্যর্থ",
   skipped: "পাঠানো হয়নি",
 });
+Object.assign(bengali, {
+  "Class join link & QR": "ক্লাসে যোগদানের লিংক ও QR",
+  "The same approval and code expiry rules apply to shared links.":
+    "শেয়ার করা লিংকেও একই অনুমোদন ও কোডের মেয়াদের নিয়ম প্রযোজ্য।",
+  "Code joining is disabled": "কোড দিয়ে যোগদান বন্ধ আছে",
+  "Scan to join this class": "এই ক্লাসে যোগ দিতে স্ক্যান করুন",
+  "Join link": "যোগদানের লিংক",
+  "Copy link": "লিংক কপি করুন",
+  "Download QR": "QR ডাউনলোড করুন",
+  "Unable to create QR code": "QR তৈরি করা যায়নি",
+  "Unable to copy link": "লিংক কপি করা যায়নি",
+  "Import student emails (CSV)": "শিক্ষার্থীদের ইমেইল আমদানি (CSV)",
+  "One email column, up to 100 rows. Preview before sending invitations.":
+    "একটি email কলামে সর্বোচ্চ ১০০টি ইমেইল দিন। আমন্ত্রণ পাঠানোর আগে প্রিভিউ দেখুন।",
+  "Download CSV template": "CSV টেমপ্লেট ডাউনলোড করুন",
+  "CSV file": "CSV ফাইল",
+  "CSV contents": "CSV-এর তথ্য",
+  "CSV must be at most 32 KB": "CSV সর্বোচ্চ ৩২ KB হতে পারবে",
+  "Unable to read file": "ফাইল পড়া যায়নি",
+  "Preview invitations": "আমন্ত্রণের প্রিভিউ দেখুন",
+  Ready: "প্রস্তুত",
+  "Daily invitations remaining": "আজকের অবশিষ্ট আমন্ত্রণ",
+  "Invitation preview": "আমন্ত্রণের প্রিভিউ",
+  "Invalid email": "ভুল ইমেইল",
+  "Duplicate email": "একই ইমেইল একাধিকবার",
+  "Recently invited": "সম্প্রতি আমন্ত্রণ পাঠানো হয়েছে",
+  "Send ready invitations": "প্রস্তুত আমন্ত্রণগুলো পাঠান",
+  "Invitations created": "আমন্ত্রণ তৈরি হয়েছে",
+  "Coursework & feedback": "ক্লাসের কাজ ও ফিডব্যাক",
+  "No published assignments": "কোনো প্রকাশিত অ্যাসাইনমেন্ট নেই",
+  "Teacher feedback": "শিক্ষকের ফিডব্যাক",
+  "Grading criteria": "নম্বর দেওয়ার মানদণ্ড",
+  "Coursework pages": "কাজের পৃষ্ঠা",
+  "More coursework": "আরও কাজ",
+  "Progress pages": "অগ্রগতির পৃষ্ঠা",
+  "More students": "আরও শিক্ষার্থী",
+  "Search within this class": "এই ক্লাসের মধ্যে খুঁজুন",
+  "Scheduled content": "নির্ধারিত প্রকাশনা",
+  "Manage scheduled assignments and materials. Posts are in announcement drafts.":
+    "অ্যাসাইনমেন্ট ও ম্যাটেরিয়ালের প্রকাশনা পরিচালনা করুন। পোস্টগুলো announcement drafts-এ আছে।",
+  "No scheduled coursework": "কোনো নির্ধারিত প্রকাশনা নেই",
+  "Publish time": "প্রকাশের সময়",
+  Reschedule: "সময় পরিবর্তন করুন",
+  "Publish now": "এখনই প্রকাশ করুন",
+  "Cancel schedule": "নির্ধারিত প্রকাশনা বাতিল করুন",
+  "More schedules": "আরও প্রকাশনা",
+  "Publish content now?": "এখনই প্রকাশ করবেন?",
+  "Teacher permissions or classroom access changed":
+    "শিক্ষকের অনুমতি বা ক্লাসে প্রবেশাধিকার বদলেছে",
+  scheduled: "নির্ধারিত",
+  published: "প্রকাশিত",
+  blocked: "আটকে আছে",
+  cancelled: "বাতিল",
+});
+Object.assign(bengali, {
+  Graded: "মূল্যায়িত",
+  Submitted: "জমা দেওয়া হয়েছে",
+  Missing: "জমা দেওয়া হয়নি",
+  Due: "জমার সময়",
+});
 export function translate(language: Language, text: string) {
   return language === "bn" ? (bengali[text] ?? text) : text;
 }

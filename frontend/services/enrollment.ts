@@ -44,7 +44,28 @@ export type EnrollmentItem = {
   expires_at: string | null;
 };
 type Page<T> = { items: T[]; next_offset: number };
+export type InvitationImport = {
+  rows: Array<{ line: number; email: string; state: string }>;
+  ready: number;
+  remaining: number;
+  revision: string;
+  created: number;
+};
 export const enrollment = {
+  async importInvitations(
+    id: string,
+    csv: string,
+    action: "preview" | "commit",
+    revision = "",
+  ): Promise<InvitationImport> {
+    return (
+      await api.post(`/classrooms/${id}/enrollment/invitations/import`, {
+        csv,
+        action,
+        revision,
+      })
+    ).data.data;
+  },
   async settings(id: string): Promise<JoinSettings> {
     return (await api.get(`/classrooms/${id}/join-settings`)).data.data;
   },

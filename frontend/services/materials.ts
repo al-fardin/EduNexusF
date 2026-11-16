@@ -1,9 +1,11 @@
-import type {AxiosProgressEvent} from "axios";
+import type { AxiosProgressEvent } from "axios";
 import { api } from "@/lib/api";
-import {cachedResource,materialBlob} from "@/lib/offline-resources";
+import { cachedResource, materialBlob } from "@/lib/offline-resources";
 
 export type ClassroomMaterial = {
-  image_alt?:string;
+  image_alt?: string;
+  publish_at?: string | null;
+  schedule_state?: string;
   id: string;
   classroom_id: string;
   title: string;
@@ -18,31 +20,52 @@ type Envelope<T> = { success: boolean; data: T; message?: string };
 
 export const materialService = {
   async list(classroomId: string): Promise<ClassroomMaterial[]> {
-    return cachedResource(classroomId,"materials",async()=>{
-    const response = await api.get<Envelope<ClassroomMaterial[]>>(
-      `/classrooms/${classroomId}/materials`
-    );
-    return response.data.data;});
+    return cachedResource(classroomId, "materials", async () => {
+      const response = await api.get<Envelope<ClassroomMaterial[]>>(
+        `/classrooms/${classroomId}/materials`,
+      );
+      return response.data.data;
+    });
   },
 
-  async upload(classroomId: string, data: { title: string; description: string; file: File },options?:{signal?:AbortSignal;onUploadProgress?:(e:AxiosProgressEvent)=>void}): Promise<ClassroomMaterial> {
+  async upload(
+    classroomId: string,
+    data: {
+      title: string;
+      description: string;
+      file: File;
+      publish_at?: string | null;
+    },
+    options?: {
+      signal?: AbortSignal;
+      onUploadProgress?: (e: AxiosProgressEvent) => void;
+    },
+  ): Promise<ClassroomMaterial> {
     const form = new FormData();
     form.append("title", data.title);
     form.append("description", data.description);
     form.append("file", data.file);
+    if (data.publish_at) form.append("publish_at", data.publish_at);
     const response = await api.post<Envelope<ClassroomMaterial>>(
-      `/classrooms/${classroomId}/materials`, form,
-      { headers: { "Content-Type": undefined },...options }
+      `/classrooms/${classroomId}/materials`,
+      form,
+      { headers: { "Content-Type": undefined }, ...options },
     );
     return response.data.data;
   },
 
-  async remove(classroomId: string, materialId: string, reason="") {
-    await api.delete(`/classrooms/${classroomId}/materials/${materialId}`,{data:{reason}});
+  async remove(classroomId: string, materialId: string, reason = "") {
+    await api.delete(`/classrooms/${classroomId}/materials/${materialId}`, {
+      data: { reason },
+    });
   },
 
   async download(classroomId: string, materialId: string, filename: string) {
-    const blob=await materialBlob(`/classrooms/${classroomId}/materials/${materialId}/download`,undefined,filename);
+    const blob = await materialBlob(
+      `/classrooms/${classroomId}/materials/${materialId}/download`,
+      undefined,
+      filename,
+    );
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
