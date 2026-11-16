@@ -523,6 +523,40 @@ Object.assign(bengali, {
   Missing: "জমা দেওয়া হয়নি",
   Due: "জমার সময়",
 });
+Object.assign(bengali, {
+  "Advanced settings": "অ্যাডভান্সড সেটিংস",
+  Audience: "যাদের জন্য",
+  Everyone: "সবাই",
+  "Odd rolls": "বিজোড় রোল",
+  "Even rolls": "জোড় রোল",
+  "Roll ranges": "রোলের সীমা",
+  "Custom rolls": "নির্দিষ্ট রোল",
+  "Mixed audience": "একাধিক শর্ত",
+  Exclusions: "বাদ দেওয়া রোল",
+  "Optional. Everyone receives this unless you choose an audience.":
+    "এটি ঐচ্ছিক। আলাদা করে বেছে না নিলে সবাই পাবে।",
+  "Who can access this?": "কারা দেখতে ও অংশ নিতে পারবে?",
+  "Numeric rules use the final number in a roll: CSE-021 means 21. Rolls without a final number require a custom list.":
+    "রোলের শেষ সংখ্যাটি গণনা হবে: CSE-021 মানে ২১। শেষে সংখ্যা না থাকলে নির্দিষ্ট রোলের তালিকা ব্যবহার করুন।",
+  "Parity within ranges": "সীমার মধ্যে জোড়/বিজোড়",
+  "Any roll number": "সব রোল নম্বর",
+  "Inclusive roll ranges": "শুরু ও শেষ রোলসহ সীমা",
+  "From roll": "শুরু রোল",
+  "To roll": "শেষ রোল",
+  "Remove range": "সীমা সরান",
+  "Add range": "আরেকটি সীমা",
+  "Additional custom rolls": "অতিরিক্ত নির্দিষ্ট রোল",
+  "Enter full roll values separated by commas or new lines. Leading zeroes matter for custom rolls.":
+    "কমা বা নতুন লাইনে পুরো রোল লিখুন। নির্দিষ্ট রোলের ক্ষেত্রে শুরুর শূন্যও মিলতে হবে।",
+  "Numeric rules match parity AND any range. Additional custom rolls are included too. Exclusions always win.":
+    "সংখ্যাভিত্তিক রোলকে জোড়/বিজোড় ও যেকোনো একটি সীমা—দুটিই মিলতে হবে। অতিরিক্ত নির্দিষ্ট রোলও যুক্ত হবে। বাদ দেওয়ার তালিকা সবার আগে প্রযোজ্য।",
+  "Exclude rolls (optional)": "বাদ দেওয়া রোল (ঐচ্ছিক)",
+  "Audience preview": "নির্বাচনের প্রিভিউ",
+  "Selected students": "নির্বাচিত শিক্ষার্থী",
+  "No current students match. Check the rolls, or save this for matching students who join later.":
+    "বর্তমানে কোনো শিক্ষার্থী মিলছে না। রোল যাচাই করুন, অথবা পরে যোগ দেওয়া শিক্ষার্থীদের জন্য সংরক্ষণ করুন।",
+  "Not assigned": "এই কাজ দেওয়া হয়নি",
+});
 export function translate(language: Language, text: string) {
   return language === "bn" ? (bengali[text] ?? text) : text;
 }

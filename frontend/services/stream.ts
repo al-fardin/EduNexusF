@@ -1,3 +1,4 @@
+import type { AudienceRule } from "./audience";
 import axios from "axios";
 
 import { api } from "@/lib/api";
@@ -19,6 +20,7 @@ export type StreamAuthor = {
 };
 
 export type StreamPost = {
+  audience?: AudienceRule;
   id: string;
   classroom_id: string;
   author_id?: string;
@@ -34,6 +36,7 @@ export type StreamPost = {
 };
 
 export type AnnouncementInput = {
+  audience?: AudienceRule;
   title: string;
   content: string;
 };
@@ -54,29 +57,28 @@ export const streamService = {
   async list(
     classroomId: string,
     page = 1,
-    limit = 10
+    limit = 10,
   ): Promise<StreamListData> {
-    const response = await api.get<
-      ApiResponse<StreamListData>
-    >(`/classrooms/${classroomId}/stream`, {
-      params: {
-        page,
-        limit,
+    const response = await api.get<ApiResponse<StreamListData>>(
+      `/classrooms/${classroomId}/stream`,
+      {
+        params: {
+          page,
+          limit,
+        },
       },
-    });
+    );
 
     return response.data.data;
   },
 
   async createAnnouncement(
     classroomId: string,
-    input: AnnouncementInput
+    input: AnnouncementInput,
   ): Promise<StreamPost> {
-    const response = await api.post<
-      ApiResponse<StreamPost>
-    >(
+    const response = await api.post<ApiResponse<StreamPost>>(
       `/classrooms/${classroomId}/stream/announcements`,
-      input
+      input,
     );
 
     return response.data.data;
@@ -85,65 +87,45 @@ export const streamService = {
   async updateAnnouncement(
     classroomId: string,
     postId: string,
-    input: AnnouncementInput
+    input: AnnouncementInput,
   ): Promise<StreamPost> {
-    const response = await api.put<
-      ApiResponse<StreamPost>
-    >(
+    const response = await api.put<ApiResponse<StreamPost>>(
       `/classrooms/${classroomId}/stream/announcements/${postId}`,
-      input
+      input,
     );
 
     return response.data.data;
   },
 
-  async pin(
-    classroomId: string,
-    postId: string
-  ): Promise<StreamPost> {
-    const response = await api.patch<
-      ApiResponse<StreamPost>
-    >(
-      `/classrooms/${classroomId}/stream/posts/${postId}/pin`
+  async pin(classroomId: string, postId: string): Promise<StreamPost> {
+    const response = await api.patch<ApiResponse<StreamPost>>(
+      `/classrooms/${classroomId}/stream/posts/${postId}/pin`,
     );
 
     return response.data.data;
   },
 
-  async unpin(
-    classroomId: string,
-    postId: string
-  ): Promise<StreamPost> {
-    const response = await api.patch<
-      ApiResponse<StreamPost>
-    >(
-      `/classrooms/${classroomId}/stream/posts/${postId}/unpin`
+  async unpin(classroomId: string, postId: string): Promise<StreamPost> {
+    const response = await api.patch<ApiResponse<StreamPost>>(
+      `/classrooms/${classroomId}/stream/posts/${postId}/unpin`,
     );
 
     return response.data.data;
   },
 
-  async remove(
-    classroomId: string,
-    postId: string
-  ): Promise<void> {
-    await api.delete(
-      `/classrooms/${classroomId}/stream/posts/${postId}`
-    );
+  async remove(classroomId: string, postId: string): Promise<void> {
+    await api.delete(`/classrooms/${classroomId}/stream/posts/${postId}`);
   },
 };
 
-export function getStreamErrorMessage(
-  error: unknown
-): string {
+export function getStreamErrorMessage(error: unknown): string {
   if (
     axios.isAxiosError<{
       message?: string;
     }>(error)
   ) {
     return (
-      error.response?.data?.message ??
-      "Unable to complete the stream request."
+      error.response?.data?.message ?? "Unable to complete the stream request."
     );
   }
 

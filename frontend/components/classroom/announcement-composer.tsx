@@ -1,18 +1,9 @@
 "use client";
+import { AudienceFields } from "./audience-fields";
 
-import {
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import {
-  LoaderCircle,
-  Megaphone,
-  Send,
-} from "lucide-react";
-import {
-  type FormEvent,
-  useState,
-} from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { LoaderCircle, Megaphone, Send } from "lucide-react";
+import { type FormEvent, useState } from "react";
 
 import {
   type AnnouncementInput,
@@ -36,19 +27,11 @@ export function AnnouncementComposer({
 }: AnnouncementComposerProps) {
   const queryClient = useQueryClient();
 
-  const [form, setForm] =
-    useState<AnnouncementInput>(
-      initialForm
-    );
+  const [form, setForm] = useState<AnnouncementInput>(initialForm);
 
   const createMutation = useMutation({
-    mutationFn: (
-      input: AnnouncementInput
-    ) =>
-      streamService.createAnnouncement(
-        classroomId,
-        input
-      ),
+    mutationFn: (input: AnnouncementInput) =>
+      streamService.createAnnouncement(classroomId, input),
 
     onSuccess: async () => {
       setForm({
@@ -59,41 +42,30 @@ export function AnnouncementComposer({
       onCreated?.();
 
       await queryClient.invalidateQueries({
-        queryKey: [
-          "classrooms",
-          "stream",
-          classroomId,
-        ],
+        queryKey: ["classrooms", "stream", classroomId],
       });
     },
   });
 
-  function updateField(
-    field: keyof AnnouncementInput,
-    value: string
-  ) {
+  function updateField(field: "title" | "content", value: string) {
     setForm((current) => ({
       ...current,
       [field]: value,
     }));
   }
 
-  function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const title = form.title.trim();
     const content = form.content.trim();
 
-    if (
-      !content ||
-      createMutation.isPending
-    ) {
+    if (!content || createMutation.isPending) {
       return;
     }
 
     createMutation.mutate({
+      audience: form.audience,
       title,
       content,
     });
@@ -112,16 +84,12 @@ export function AnnouncementComposer({
           </h2>
 
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Share class notices, reminders
-            and important updates.
+            Share class notices, reminders and important updates.
           </p>
         </div>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mt-5 space-y-4"
-      >
+      <form onSubmit={handleSubmit} className="mt-5 space-y-4">
         <div>
           <label
             htmlFor="announcement-title"
@@ -138,15 +106,8 @@ export function AnnouncementComposer({
             type="text"
             maxLength={200}
             value={form.title}
-            disabled={
-              createMutation.isPending
-            }
-            onChange={(event) =>
-              updateField(
-                "title",
-                event.target.value
-              )
-            }
+            disabled={createMutation.isPending}
+            onChange={(event) => updateField("title", event.target.value)}
             placeholder="Example: Tomorrow's class update"
             className="min-h-11 w-full rounded-xl border border-border bg-card px-3 py-2 text-base outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-secondary sm:text-sm"
           />
@@ -165,46 +126,39 @@ export function AnnouncementComposer({
             required
             rows={5}
             value={form.content}
-            disabled={
-              createMutation.isPending
-            }
-            onChange={(event) =>
-              updateField(
-                "content",
-                event.target.value
-              )
-            }
+            disabled={createMutation.isPending}
+            onChange={(event) => updateField("content", event.target.value)}
             placeholder="Write the announcement details..."
             className="min-h-32 w-full resize-y rounded-xl border border-border bg-card px-3 py-3 text-base leading-6 outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-secondary sm:text-sm"
           />
         </div>
 
+        <AudienceFields
+          classId={classroomId}
+          value={form.audience}
+          onChange={(audience) =>
+            setForm((current) => ({ ...current, audience }))
+          }
+          disabled={createMutation.isPending}
+        />
         {createMutation.isError && (
           <div
             role="alert"
             className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           >
-            {getStreamErrorMessage(
-              createMutation.error
-            )}
+            {getStreamErrorMessage(createMutation.error)}
           </div>
         )}
 
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={
-              !form.content.trim() ||
-              createMutation.isPending
-            }
+            disabled={!form.content.trim() || createMutation.isPending}
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {createMutation.isPending ? (
               <>
-                <LoaderCircle
-                  size={18}
-                  className="animate-spin"
-                />
+                <LoaderCircle size={18} className="animate-spin" />
                 Posting...
               </>
             ) : (

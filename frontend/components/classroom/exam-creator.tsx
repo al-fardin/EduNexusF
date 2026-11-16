@@ -1,4 +1,6 @@
 "use client";
+import { AudienceFields } from "./audience-fields";
+import { type AudienceRule, EVERYONE } from "@/services/audience";
 import { ExamDraftPreview } from "./exam-preview";
 
 import { MobileExamOption } from "@/components/classroom/mobile-exam-option";
@@ -36,6 +38,7 @@ export function ExamCreator({
   classroomId: string;
   onClose: () => void;
 }) {
+  const [audience, setAudience] = useState<AudienceRule>(EVERYONE);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [starts, setStarts] = useState(() =>
@@ -59,6 +62,7 @@ export function ExamCreator({
   }
   function create() {
     const payload: NewExam = {
+      audience,
       allow_mobile_mcq: allowPhone && questions.every((q) => q.kind === "mcq"),
       title: title.trim(),
       description: description.trim(),
@@ -375,6 +379,12 @@ export function ExamCreator({
           {examError(mutation.error)}
         </p>
       )}
+      <AudienceFields
+        classId={classroomId}
+        value={audience}
+        onChange={setAudience}
+        disabled={mutation.isPending}
+      />
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           type="button"

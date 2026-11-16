@@ -1,4 +1,6 @@
 "use client";
+import { AudienceFields, AudienceBadge } from "./audience-fields";
+import { type AudienceRule, EVERYONE } from "@/services/audience";
 
 import { AccessibleMaterial } from "./accessible-material";
 import { MaterialDeleteDialog } from "./material-usage";
@@ -43,6 +45,7 @@ export function MaterialUploadForm({
   onUploaded?: () => void;
 }) {
   const queryClient = useQueryClient();
+  const [audience, setAudience] = useState<AudienceRule>(EVERYONE);
   const [schedule, setSchedule] = useState("");
   const [title, setTitle] = useState("");
   const [progress, setProgress] = useState(0);
@@ -57,6 +60,7 @@ export function MaterialUploadForm({
       description: string;
       file: File;
       publish_at?: string | null;
+      audience?: AudienceRule;
     }) => {
       uploadAbort.current = new AbortController();
       setProgress(0);
@@ -83,6 +87,7 @@ export function MaterialUploadForm({
     onSuccess: async () => {
       setTitle("");
       setSchedule("");
+      setAudience(EVERYONE);
       setDescription("");
       setFile(null);
       setInputKey((n) => n + 1);
@@ -120,6 +125,7 @@ export function MaterialUploadForm({
       title: title.trim(),
       description: description.trim(),
       file,
+      audience,
       publish_at: schedule ? new Date(schedule).toISOString() : null,
     });
   }
@@ -189,6 +195,12 @@ export function MaterialUploadForm({
             Leave empty to publish now. Times use your device timezone.
           </span>
         </label>
+        <AudienceFields
+          classId={classroomId}
+          value={audience}
+          onChange={setAudience}
+          disabled={mutation.isPending}
+        />
         {(validationError || mutation.isError) && (
           <p
             role="alert"
@@ -429,12 +441,13 @@ export function MaterialLibrary({
                       <h3 className="font-semibold text-foreground">
                         {item.title}
                       </h3>
+                      {canManage && <AudienceBadge value={item.audience} />}
                       {item.schedule_state &&
                         item.schedule_state !== "published" && (
                           <p className="mt-2 text-xs text-primary">
                             {item.schedule_state}
                             {item.publish_at
-                              ? ` � ${new Date(item.publish_at).toLocaleString()}`
+                              ? ` · ${new Date(item.publish_at).toLocaleString()}`
                               : ""}
                           </p>
                         )}

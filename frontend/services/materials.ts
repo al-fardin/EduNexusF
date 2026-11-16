@@ -1,8 +1,10 @@
+import type { AudienceRule } from "./audience";
 import type { AxiosProgressEvent } from "axios";
 import { api } from "@/lib/api";
 import { cachedResource, materialBlob } from "@/lib/offline-resources";
 
 export type ClassroomMaterial = {
+  audience?: AudienceRule;
   image_alt?: string;
   publish_at?: string | null;
   schedule_state?: string;
@@ -35,6 +37,7 @@ export const materialService = {
       description: string;
       file: File;
       publish_at?: string | null;
+      audience?: AudienceRule;
     },
     options?: {
       signal?: AbortSignal;
@@ -44,6 +47,7 @@ export const materialService = {
     const form = new FormData();
     form.append("title", data.title);
     form.append("description", data.description);
+    if (data.audience) form.append("audience", JSON.stringify(data.audience));
     form.append("file", data.file);
     if (data.publish_at) form.append("publish_at", data.publish_at);
     const response = await api.post<Envelope<ClassroomMaterial>>(

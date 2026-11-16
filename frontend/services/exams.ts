@@ -1,3 +1,4 @@
+import type { AudienceRule } from "./audience";
 import { api } from "@/lib/api";
 
 import type { TesterAttachment } from "@/services/question-testers";
@@ -5,7 +6,7 @@ import type { TesterAttachment } from "@/services/question-testers";
 type Envelope<T> = { success: boolean; data: T; message?: string };
 export type QuestionKind = "mcq" | "theory" | "coding";
 export type ExamQuestion = {
- explanation?:string;
+  explanation?: string;
   topic?: string;
   tester?: TesterAttachment;
   id: string;
@@ -18,6 +19,7 @@ export type ExamQuestion = {
   language?: string;
 };
 export type ExamInfo = {
+  audience?: AudienceRule;
   allow_mobile_mcq?: boolean;
   id: string;
   classroom_id: string;
@@ -59,7 +61,8 @@ export type ExamSubmission = {
   answers: Record<string, string>;
 };
 export type NewExam = {
-  reason?:string;
+  audience?: AudienceRule;
+  reason?: string;
   allow_mobile_mcq?: boolean;
   title: string;
   description: string;
@@ -70,50 +73,124 @@ export type NewExam = {
 };
 const prefix = (classroomId: string) => `/classrooms/${classroomId}/exams`;
 export const examService = {
-  async access(classroomId:string,id:string):Promise<{allow_mobile_mcq:boolean;mcq_only:boolean;has_coding:boolean}>{return (await api.get(`${prefix(classroomId)}/${id}/access`)).data.data;},
-  async active(classroomId: string): Promise<Array<{exam_id:string;title:string;expires_at:string;last_saved_at:string|null}>> {
-    return (await api.get<Envelope<Array<{exam_id:string;title:string;expires_at:string;last_saved_at:string|null}>>>(`${prefix(classroomId)}/active`)).data.data;
+  async access(
+    classroomId: string,
+    id: string,
+  ): Promise<{
+    allow_mobile_mcq: boolean;
+    mcq_only: boolean;
+    has_coding: boolean;
+  }> {
+    return (await api.get(`${prefix(classroomId)}/${id}/access`)).data.data;
+  },
+  async active(
+    classroomId: string,
+  ): Promise<
+    Array<{
+      exam_id: string;
+      title: string;
+      expires_at: string;
+      last_saved_at: string | null;
+    }>
+  > {
+    return (
+      await api.get<
+        Envelope<
+          Array<{
+            exam_id: string;
+            title: string;
+            expires_at: string;
+            last_saved_at: string | null;
+          }>
+        >
+      >(`${prefix(classroomId)}/active`)
+    ).data.data;
   },
   async list(classroomId: string): Promise<ExamInfo[]> {
     const r = await api.get<Envelope<ExamInfo[]>>(prefix(classroomId));
     return r.data.data;
   },
-  async create(classroomId: string, payload: NewExam): Promise<{ id: string; status: string }> {
-    const r = await api.post<Envelope<{ id: string; status: string }>>(prefix(classroomId), payload);
+  async create(
+    classroomId: string,
+    payload: NewExam,
+  ): Promise<{ id: string; status: string }> {
+    const r = await api.post<Envelope<{ id: string; status: string }>>(
+      prefix(classroomId),
+      payload,
+    );
     return r.data.data;
   },
   async publish(classroomId: string, id: string) {
     await api.post(`${prefix(classroomId)}/${id}/publish`);
   },
-  async teacherExam(classroomId: string, id: string): Promise<{ exam: ExamInfo; questions: ExamQuestion[] }> {
-    const r = await api.get<Envelope<{ exam: ExamInfo; questions: ExamQuestion[] }>>(`${prefix(classroomId)}/${id}`);
+  async teacherExam(
+    classroomId: string,
+    id: string,
+  ): Promise<{ exam: ExamInfo; questions: ExamQuestion[] }> {
+    const r = await api.get<
+      Envelope<{ exam: ExamInfo; questions: ExamQuestion[] }>
+    >(`${prefix(classroomId)}/${id}`);
     return r.data.data;
   },
-  async submissions(classroomId: string, id: string): Promise<ExamSubmission[]> {
-    const r = await api.get<Envelope<ExamSubmission[]>>(`${prefix(classroomId)}/${id}/submissions`);
+  async submissions(
+    classroomId: string,
+    id: string,
+  ): Promise<ExamSubmission[]> {
+    const r = await api.get<Envelope<ExamSubmission[]>>(
+      `${prefix(classroomId)}/${id}/submissions`,
+    );
     return r.data.data;
   },
-  async start(classroomId: string, id: string,entry_mode:"desktop"|"mobile"="desktop",mobile_rules_accepted=false): Promise<LiveExam> {
-    const r = await api.post<Envelope<LiveExam>>(`${prefix(classroomId)}/${id}/start`,{entry_mode,mobile_rules_accepted});
+  async start(
+    classroomId: string,
+    id: string,
+    entry_mode: "desktop" | "mobile" = "desktop",
+    mobile_rules_accepted = false,
+  ): Promise<LiveExam> {
+    const r = await api.post<Envelope<LiveExam>>(
+      `${prefix(classroomId)}/${id}/start`,
+      { entry_mode, mobile_rules_accepted },
+    );
     return r.data.data;
   },
   async attempt(classroomId: string, id: string): Promise<LiveExam> {
-    const r = await api.get<Envelope<LiveExam>>(`${prefix(classroomId)}/${id}/attempt`);
+    const r = await api.get<Envelope<LiveExam>>(
+      `${prefix(classroomId)}/${id}/attempt`,
+    );
     return r.data.data;
   },
-  async save(classroomId: string, id: string, answers: Record<string,string>, expectedRevision?: number): Promise<ExamAttempt> {
-    const r = await api.put<Envelope<ExamAttempt>>(`${prefix(classroomId)}/${id}/attempt`, {answers, expected_revision: expectedRevision});
+  async save(
+    classroomId: string,
+    id: string,
+    answers: Record<string, string>,
+    expectedRevision?: number,
+  ): Promise<ExamAttempt> {
+    const r = await api.put<Envelope<ExamAttempt>>(
+      `${prefix(classroomId)}/${id}/attempt`,
+      { answers, expected_revision: expectedRevision },
+    );
     return r.data.data;
   },
-  async submit(classroomId: string, id: string, answers: Record<string,string>, expectedRevision?: number): Promise<ExamAttempt> {
-    const r = await api.post<Envelope<ExamAttempt>>(`${prefix(classroomId)}/${id}/submit`, {answers, expected_revision: expectedRevision});
+  async submit(
+    classroomId: string,
+    id: string,
+    answers: Record<string, string>,
+    expectedRevision?: number,
+  ): Promise<ExamAttempt> {
+    const r = await api.post<Envelope<ExamAttempt>>(
+      `${prefix(classroomId)}/${id}/submit`,
+      { answers, expected_revision: expectedRevision },
+    );
     return r.data.data;
   },
 };
 export function examError(error: unknown) {
   if (typeof error === "object" && error && "response" in error) {
-    const response = (error as { response?: { data?: { message?: string } } }).response;
+    const response = (error as { response?: { data?: { message?: string } } })
+      .response;
     if (response?.data?.message) return response.data.message;
   }
-  return error instanceof Error ? error.message : "Exam request failed. Please retry.";
+  return error instanceof Error
+    ? error.message
+    : "Exam request failed. Please retry.";
 }

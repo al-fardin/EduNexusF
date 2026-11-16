@@ -1,4 +1,5 @@
 "use client";
+import { AudienceFields, AudienceBadge } from "./audience-fields";
 import { AssignmentRubricEditor } from "./grading-tools";
 import {
   useTopics,
@@ -119,6 +120,7 @@ export function AssignmentBoard({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="font-semibold">{a.title}</h3>
+                {canManage && <AudienceBadge value={a.audience} />}
                 {canManage && (
                   <ResourceTopicPicker
                     classId={classroomId}
@@ -290,6 +292,12 @@ function AssignmentEditor({
           </span>
         </label>
       )}
+      <AudienceFields
+        classId={classroomId}
+        value={a.audience}
+        onChange={(audience) => setA({ ...a, audience })}
+        disabled={busy}
+      />
       <AssignmentRubricEditor
         classId={classroomId}
         value={a.rubric ?? []}

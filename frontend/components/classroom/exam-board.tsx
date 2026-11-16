@@ -1,4 +1,5 @@
 "use client";
+import { AudienceBadge } from "./audience-fields";
 import { SavedExamPreview, AnswerReviewSettings } from "./exam-preview";
 import { ExamEntryGate } from "@/components/classroom/exam-entry-gate";
 import { TeacherSubmissionExplorer } from "@/components/classroom/teacher-submission-explorer";
@@ -320,6 +321,7 @@ function ExamCard({
         </span>
       </div>
       <h3 className="text-lg font-bold">{exam.title}</h3>
+      {canManage && <AudienceBadge value={exam.audience} />}
       <p className="mt-2 text-sm text-muted-foreground">
         {exam.description || "Classroom assessment"}
       </p>

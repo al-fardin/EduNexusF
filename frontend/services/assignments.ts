@@ -1,8 +1,10 @@
+import type { AudienceRule } from "./audience";
 import type { RubricCriterion } from "./grading-tools";
 import type { AxiosProgressEvent } from "axios";
 import { api } from "@/lib/api";
 import { cachedResource } from "@/lib/offline-resources";
 export type Assignment = {
+  audience?: AudienceRule;
   publish_at?: string | null;
   rubric?: RubricCriterion[];
   reason?: string;
