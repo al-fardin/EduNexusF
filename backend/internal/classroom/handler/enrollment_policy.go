@@ -29,6 +29,7 @@ func (h *EnrollmentPhase5) RegisterEnrollment(app *fiber.App) {
 	g.Post("/enrollment/requests/:requestID/respond", h.ReviewJoinRequest)
 	g.Get("/enrollment/invitations", h.Invitations)
 	g.Post("/enrollment/invitations", rate(), h.InviteStudent)
+	g.Post("/enrollment/invitations/import", rate(), h.ImportInvitations)
 	g.Post("/enrollment/invitations/:invitationID/revoke", h.RevokeInvitation)
 	w := app.Group("/workspace/enrollment", auth.JWTProtected())
 	w.Get("/", h.EnrollmentInbox)

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/mail"
 	"strconv"
@@ -55,45 +56,52 @@ func (h *EnrollmentPhase5) InviteStudent(c *fiber.Ctx) error {
 	if e = lockEnrollmentTeacher(c.UserContext(), tx, c.Params("id"), user, false); e != nil {
 		return e
 	}
-	if _, e = tx.Exec(c.UserContext(), `SELECT id FROM users WHERE id=$1::uuid FOR UPDATE`, user); e != nil {
-		return e
-	}
-	var member bool
-	e = tx.QueryRow(c.UserContext(), `SELECT EXISTS(SELECT 1 FROM users u JOIN classroom_memberships m ON m.user_id=u.id WHERE lower(u.email)=$2 AND m.classroom_id=$1::uuid AND (m.status='active' OR m.member_role='teacher'))`, c.Params("id"), email).Scan(&member)
+	id, e := inviteEnrollment(c.UserContext(), tx, c.Params("id"), user, email)
 	if e != nil {
-		return e
-	}
-	if member {
-		return fiber.NewError(409, "This email already belongs to a class member")
-	}
-	var count int
-	e = tx.QueryRow(c.UserContext(), `SELECT count(*) FROM classroom_invitation_events WHERE actor_id=$1::uuid AND status='pending' AND created_at>now()-interval '1 day'`, user).Scan(&count)
-	if e != nil {
-		return e
-	}
-	if count >= 100 {
-		return fiber.NewError(429, "Daily invitation limit reached")
-	}
-	var id string
-	var at time.Time
-	e = tx.QueryRow(c.UserContext(), `SELECT id::text,updated_at FROM classroom_student_invitations WHERE classroom_id=$1::uuid AND email=$2 FOR UPDATE`, c.Params("id"), email).Scan(&id, &at)
-	if e != nil && !errors.Is(e, pgx.ErrNoRows) {
-		return e
-	}
-	if e == nil && time.Since(at) < 10*time.Minute {
-		return fiber.NewError(429, "Wait ten minutes before sending another invitation to this email")
-	}
-	e = tx.QueryRow(c.UserContext(), `INSERT INTO classroom_student_invitations(classroom_id,email,invited_by) VALUES($1::uuid,$2,$3::uuid) ON CONFLICT(classroom_id,email) DO UPDATE SET status='pending',invited_by=$3::uuid,expires_at=now()+interval '7 days',updated_at=now(),version=classroom_student_invitations.version+1,email_status='pending',email_attempts=0,email_next_at=now(),email_lease=NULL,email_sent_at=NULL RETURNING id::text`, c.Params("id"), email, user).Scan(&id)
-	if e != nil {
-		return e
-	}
-	if _, e = tx.Exec(c.UserContext(), `INSERT INTO classroom_invitation_events(invitation_id,actor_id,status) VALUES($1::uuid,$2::uuid,'pending')`, id, user); e != nil {
 		return e
 	}
 	if e = tx.Commit(c.UserContext()); e != nil {
 		return e
 	}
 	return enrollmentResult(c, 201, fiber.Map{"id": id, "email_configured": h.emailConfigured, "status": "pending"})
+}
+func inviteEnrollment(ctx context.Context, tx pgx.Tx, class, user, email string) (string, error) {
+	if _, e := tx.Exec(ctx, `SELECT id FROM users WHERE id=$1::uuid FOR UPDATE`, user); e != nil {
+		return "", e
+	}
+	var member bool
+	e := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users u JOIN classroom_memberships m ON m.user_id=u.id WHERE lower(u.email)=$2 AND m.classroom_id=$1::uuid AND (m.status='active' OR m.member_role='teacher'))`, class, email).Scan(&member)
+	if e != nil {
+		return "", e
+	}
+	if member {
+		return "", fiber.NewError(409, "This email already belongs to a class member")
+	}
+	var count int
+	e = tx.QueryRow(ctx, `SELECT count(*) FROM classroom_invitation_events WHERE actor_id=$1::uuid AND status='pending' AND created_at>now()-interval '1 day'`, user).Scan(&count)
+	if e != nil {
+		return "", e
+	}
+	if count >= 100 {
+		return "", fiber.NewError(429, "Daily invitation limit reached")
+	}
+	var id string
+	var at time.Time
+	e = tx.QueryRow(ctx, `SELECT id::text,updated_at FROM classroom_student_invitations WHERE classroom_id=$1::uuid AND email=$2 FOR UPDATE`, class, email).Scan(&id, &at)
+	if e != nil && !errors.Is(e, pgx.ErrNoRows) {
+		return "", e
+	}
+	if e == nil && time.Since(at) < 10*time.Minute {
+		return "", fiber.NewError(429, "Wait ten minutes before sending another invitation to this email")
+	}
+	e = tx.QueryRow(ctx, `INSERT INTO classroom_student_invitations(classroom_id,email,invited_by) VALUES($1::uuid,$2,$3::uuid) ON CONFLICT(classroom_id,email) DO UPDATE SET status='pending',invited_by=$3::uuid,expires_at=now()+interval '7 days',updated_at=now(),version=classroom_student_invitations.version+1,email_status='pending',email_attempts=0,email_next_at=now(),email_lease=NULL,email_sent_at=NULL RETURNING id::text`, class, email, user).Scan(&id)
+	if e != nil {
+		return "", e
+	}
+	if _, e = tx.Exec(ctx, `INSERT INTO classroom_invitation_events(invitation_id,actor_id,status) VALUES($1::uuid,$2::uuid,'pending')`, id, user); e != nil {
+		return "", e
+	}
+	return id, nil
 }
 func (h *EnrollmentPhase5) Invitations(c *fiber.Ctx) error {
 	if _, e := h.teacher(c, false); e != nil {
