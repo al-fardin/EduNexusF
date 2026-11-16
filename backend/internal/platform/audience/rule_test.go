@@ -58,3 +58,26 @@ func TestAudienceValidationAndCanonicalRolls(t *testing.T) {
 		t.Fatal(normalized, err)
 	}
 }
+
+func TestSectionIntersectionAgreesWithDatabase(t *testing.T) {
+	f := testsupport.Database(t)
+	a := "11111111-1111-4111-8111-111111111111"
+	b := "22222222-2222-4222-8222-222222222222"
+	for _, rule := range []Rule{{Mode: "all"}, {Mode: "sections", Sections: []string{a}}, {Mode: "odd", Sections: []string{a}}, {Mode: "ranges", Sections: []string{a, b}, Ranges: []Range{{1, 50}}}} {
+		raw, err := Encode(&rule)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, section := range []string{"", a, b} {
+			for _, roll := range []string{"", "001", "002", "CSE-051"} {
+				var got bool
+				if err = f.DB.QueryRow(t.Context(), `SELECT edunexus_audience_matches($1::jsonb,$2,NULLIF($3,'')::uuid)`, raw, roll, section).Scan(&got); err != nil {
+					t.Fatal(err)
+				}
+				if got != CompileMember(&rule)(roll, section) {
+					t.Fatalf("section predicate mismatch: %s %s %s", raw, roll, section)
+				}
+			}
+		}
+	}
+}

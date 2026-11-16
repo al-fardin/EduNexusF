@@ -4,6 +4,7 @@ package audience
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"math/big"
 	"regexp"
 	"strings"
@@ -14,11 +15,12 @@ type Range struct {
 	To   int64 `json:"to"`
 }
 type Rule struct {
-	Mode    string   `json:"mode"`
-	Parity  string   `json:"parity,omitempty"`
-	Ranges  []Range  `json:"ranges,omitempty"`
-	Rolls   []string `json:"rolls,omitempty"`
-	Exclude []string `json:"exclude_rolls,omitempty"`
+	Sections []string `json:"section_ids,omitempty"`
+	Mode     string   `json:"mode"`
+	Parity   string   `json:"parity,omitempty"`
+	Ranges   []Range  `json:"ranges,omitempty"`
+	Rolls    []string `json:"rolls,omitempty"`
+	Exclude  []string `json:"exclude_rolls,omitempty"`
 }
 
 var rollPattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9_/-]{0,31}$`)
@@ -28,7 +30,7 @@ var suffixPattern = regexp.MustCompile(`[0-9]+$`)
 func Matches(rule *Rule, roll string) bool { return Compile(rule)(roll) }
 
 // Compile validates once and builds sets for large gradebooks.
-func Compile(rule *Rule) func(string) bool {
+func compileRoll(rule *Rule) func(string) bool {
 	r, err := Normalize(rule)
 	if err != nil {
 		return func(string) bool { return false }
@@ -45,7 +47,7 @@ func Compile(rule *Rule) func(string) bool {
 		if excluded[value] {
 			return false
 		}
-		if r.Mode == "all" {
+		if r.Mode == "all" || r.Mode == "sections" {
 			return true
 		}
 		if value == "" {
@@ -93,9 +95,29 @@ func Normalize(rule *Rule) (Rule, error) {
 		r.Mode = "all"
 	}
 	switch r.Mode {
-	case "all", "odd", "even", "ranges", "custom", "mixed":
+	case "all", "odd", "even", "ranges", "custom", "mixed", "sections":
 	default:
 		return r, fmt.Errorf("Choose everyone, odd, even, ranges, custom or mixed audience")
+	}
+	if len(r.Sections) > 50 {
+		return r, fmt.Errorf("Choose at most 50 sections")
+	}
+	seenSections := map[string]bool{}
+	sections := []string{}
+	for _, id := range r.Sections {
+		parsed, e := uuid.Parse(id)
+		if e != nil {
+			return r, fmt.Errorf("Invalid section")
+		}
+		v := parsed.String()
+		if !seenSections[v] {
+			seenSections[v] = true
+			sections = append(sections, v)
+		}
+	}
+	r.Sections = sections
+	if r.Mode == "sections" && len(r.Sections) == 0 {
+		return r, fmt.Errorf("Choose a section")
 	}
 	if len(r.Ranges) > 20 || len(r.Rolls) > 1000 || len(r.Exclude) > 1000 {
 		return r, fmt.Errorf("Use at most 20 ranges and 1000 custom/excluded rolls")
@@ -154,4 +176,21 @@ func Encode(rule *Rule) ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(r)
+}
+
+func Compile(rule *Rule) func(string) bool {
+	match := CompileMember(rule)
+	return func(roll string) bool { return match(roll, "") }
+}
+func CompileMember(rule *Rule) func(string, string) bool {
+	r, e := Normalize(rule)
+	if e != nil {
+		return func(string, string) bool { return false }
+	}
+	match := compileRoll(&r)
+	sections := map[string]bool{}
+	for _, id := range r.Sections {
+		sections[id] = true
+	}
+	return func(roll, section string) bool { return (len(sections) == 0 || sections[section]) && match(roll) }
 }

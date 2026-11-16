@@ -459,15 +459,17 @@ type ClassroomMaterialAccessibility struct {
 }
 
 type ClassroomMembership struct {
-	ID          pgtype.UUID        `json:"id"`
-	ClassroomID pgtype.UUID        `json:"classroom_id"`
-	UserID      pgtype.UUID        `json:"user_id"`
-	MemberRole  string             `json:"member_role"`
-	Status      string             `json:"status"`
-	JoinedAt    pgtype.Timestamptz `json:"joined_at"`
-	RemovedAt   pgtype.Timestamptz `json:"removed_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	StudentRoll pgtype.Text        `json:"student_roll"`
+	ID            pgtype.UUID        `json:"id"`
+	ClassroomID   pgtype.UUID        `json:"classroom_id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	MemberRole    string             `json:"member_role"`
+	Status        string             `json:"status"`
+	JoinedAt      pgtype.Timestamptz `json:"joined_at"`
+	RemovedAt     pgtype.Timestamptz `json:"removed_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	StudentRoll   pgtype.Text        `json:"student_roll"`
+	SectionID     pgtype.UUID        `json:"section_id"`
+	RosterVersion int32              `json:"roster_version"`
 }
 
 type ClassroomMessage struct {
@@ -603,6 +605,25 @@ type ClassroomRollover struct {
 	RequestID         pgtype.UUID `json:"request_id"`
 	NewClassroomID    pgtype.UUID `json:"new_classroom_id"`
 	PayloadHash       string      `json:"payload_hash"`
+}
+
+type ClassroomRosterEvent struct {
+	ID          int64              `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	ActorID     pgtype.UUID        `json:"actor_id"`
+	BeforeValue []byte             `json:"before_value"`
+	AfterValue  []byte             `json:"after_value"`
+	Reason      string             `json:"reason"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type ClassroomSection struct {
+	ID          pgtype.UUID        `json:"id"`
+	ClassroomID pgtype.UUID        `json:"classroom_id"`
+	Name        string             `json:"name"`
+	Version     int32              `json:"version"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type ClassroomSharedMessageTheme struct {

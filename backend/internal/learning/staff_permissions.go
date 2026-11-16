@@ -52,6 +52,18 @@ func StaffPolicy(pool *pgxpool.Pool) func(context.Context, string, string, strin
 func staffScope(parts []string, method string) string {
 	route := strings.Join(parts, "/")
 	first := parts[0]
+	if first == "roster" {
+		return "people"
+	}
+	if first == "sections" {
+		if method == "GET" {
+			return ""
+		}
+		return "people"
+	}
+	if first == "student-view" {
+		return "coursework"
+	}
 	if first == "join-settings" {
 		return "owner"
 	}

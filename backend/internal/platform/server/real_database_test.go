@@ -74,7 +74,7 @@ func TestExistingDatabaseReadOnlyRoutes(t *testing.T) {
 			paths = append(paths, base+"/exams/active")
 		}
 		if m.membership == "teacher" {
-			paths = append(paths, base+"/question-bank", base+"/content-schedules")
+			paths = append(paths, base+"/question-bank", base+"/content-schedules", base+"/sections", base+"/roster")
 		}
 		for _, path := range paths {
 			req := httptest.NewRequest("GET", path, nil)

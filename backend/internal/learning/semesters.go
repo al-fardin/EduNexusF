@@ -244,6 +244,9 @@ func (h *Handler) RolloverClass(c *fiber.Ctx) error {
 	if _, err = tx.Exec(c.UserContext(), `INSERT INTO classrooms(id,owner_id,name,subject,section,room,description,class_code,term_id,syllabus,join_mode,code_join_enabled,class_code_expires_at) SELECT $3::uuid,$2::uuid,$4,subject,section,room,description,upper(substr(replace($3::text,'-',''),1,8)),$5::uuid,syllabus,join_mode,code_join_enabled,class_code_expires_at FROM classrooms WHERE id=$1::uuid`, c.Params("id"), user, id, strings.TrimSpace(req.Name), req.Term); err != nil {
 		return err
 	}
+	if _, err = tx.Exec(c.UserContext(), `INSERT INTO classroom_sections(classroom_id,name) SELECT $2::uuid,name FROM classroom_sections WHERE classroom_id=$1::uuid`, c.Params("id"), id); err != nil {
+		return err
+	}
 	if _, err = tx.Exec(c.UserContext(), `INSERT INTO classroom_memberships(classroom_id,user_id,member_role,status) VALUES($1::uuid,$2::uuid,'teacher','active') ON CONFLICT DO NOTHING`, id, user); err != nil {
 		return err
 	}
@@ -341,6 +344,11 @@ func (h *Handler) RolloverClass(c *fiber.Ctx) error {
 	}
 	for _, link := range links {
 		if _, err = tx.Exec(c.UserContext(), `INSERT INTO classroom_topic_resources(classroom_id,topic_id,resource_kind,resource_id) VALUES($1::uuid,$2::uuid,$3,$4::uuid)`, id, link[0], link[1], link[2]); err != nil {
+			return err
+		}
+	}
+	for _, table := range []string{"classroom_exams", "classroom_assignments", "classroom_materials", "classroom_stream_posts"} {
+		if _, err = tx.Exec(c.UserContext(), `UPDATE `+table+` t SET audience=jsonb_set(t.audience,'{section_ids}',(SELECT jsonb_agg(COALESCE(dest.id::text,v.value)) FROM jsonb_array_elements_text(t.audience->'section_ids') v(value) LEFT JOIN classroom_sections old ON old.id::text=v.value LEFT JOIN classroom_sections dest ON dest.classroom_id=t.classroom_id AND lower(dest.name)=lower(old.name))) WHERE t.classroom_id=$1::uuid AND jsonb_array_length(COALESCE(t.audience->'section_ids','[]'::jsonb))>0`, id); err != nil {
 			return err
 		}
 	}

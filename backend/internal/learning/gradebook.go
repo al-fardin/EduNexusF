@@ -22,6 +22,8 @@ type gradeCell struct {
 	Late      bool   `json:"late"`
 }
 type gradeStudent struct {
+	SectionName  string               `json:"section_name"`
+	Section      string               `json:"section_id"`
 	ID           string               `json:"id"`
 	Name         string               `json:"name"`
 	Roll         string               `json:"roll"`
@@ -34,13 +36,17 @@ func (h *Handler) Gradebook(c *fiber.Ctx) error {
 	if _, _, err := h.member(c, true); err != nil {
 		return err
 	}
+	filter, e := selectionFilter(c)
+	if e != nil {
+		return e
+	}
 	ctx := c.UserContext()
 	class := c.Params("id")
 	columns := make([]gradeColumn, 0)
 	rows, err := h.db.Query(ctx, `SELECT id::text,kind,title,maximum,due_at,audience FROM (
  SELECT id,'assignment' kind,title,max_points maximum,due_at,audience FROM classroom_assignments WHERE classroom_id=$1::uuid AND status='published'
  UNION ALL SELECT id,'exam',title,(SELECT COALESCE(sum((q->>'points')::int),0)::int FROM jsonb_array_elements(questions) q),ends_at,audience FROM classroom_exams WHERE classroom_id=$1::uuid AND status='published'
- ) work ORDER BY due_at,id LIMIT 201`, class)
+  ) work WHERE $2::jsonb='{"mode":"all"}'::jsonb OR EXISTS(SELECT 1 FROM classroom_memberships m WHERE m.classroom_id=$1::uuid AND m.member_role='student' AND m.status='active' AND edunexus_audience_matches($2::jsonb,m.student_roll,m.section_id) AND edunexus_resource_visible($1::uuid,work.kind,work.id,m.user_id)) ORDER BY due_at,id LIMIT 201`, class, filter)
 	if err != nil {
 		return err
 	}
@@ -62,13 +68,13 @@ func (h *Handler) Gradebook(c *fiber.Ctx) error {
 	}
 	students := make([]gradeStudent, 0)
 	positions := map[string]int{}
-	rows, err = h.db.Query(ctx, `SELECT u.id::text,trim(u.first_name||' '||u.last_name),COALESCE(m.student_roll,'') FROM classroom_memberships m JOIN users u ON u.id=m.user_id WHERE m.classroom_id=$1::uuid AND m.member_role='student' AND m.status='active' AND u.status='active' AND u.deleted_at IS NULL ORDER BY m.student_roll NULLS LAST,u.first_name,u.last_name,u.id LIMIT 5001`, class)
+	rows, err = h.db.Query(ctx, `SELECT u.id::text,trim(u.first_name||' '||u.last_name),COALESCE(m.student_roll,''),COALESCE(m.section_id::text,''),COALESCE(sec.name,'') FROM classroom_memberships m JOIN users u ON u.id=m.user_id LEFT JOIN classroom_sections sec ON sec.id=m.section_id WHERE m.classroom_id=$1::uuid AND m.member_role='student' AND m.status='active' AND u.status='active' AND u.deleted_at IS NULL AND edunexus_audience_matches($2::jsonb,m.student_roll,m.section_id) ORDER BY m.student_roll NULLS LAST,u.first_name,u.last_name,u.id LIMIT 5001`, class, filter)
 	if err != nil {
 		return err
 	}
 	for rows.Next() {
 		var s gradeStudent
-		if err = rows.Scan(&s.ID, &s.Name, &s.Roll); err != nil {
+		if err = rows.Scan(&s.ID, &s.Name, &s.Roll, &s.Section, &s.SectionName); err != nil {
 			rows.Close()
 			return err
 		}
@@ -145,15 +151,15 @@ func (h *Handler) Gradebook(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	predicates := map[string]func(string) bool{}
+	predicates := map[string]func(string, string) bool{}
 	for _, col := range columns {
-		predicates[col.Kind+":"+col.ID] = audience.Compile(col.Audience)
+		predicates[col.Kind+":"+col.ID] = audience.CompileMember(col.Audience)
 	}
 	now := time.Now()
 	for i := range students {
 		for _, col := range columns {
 			key := col.Kind + ":" + col.ID
-			if !predicates[key](students[i].Roll) {
+			if _, exists := students[i].Cells[key]; !exists && !predicates[key](students[i].Roll, students[i].Section) {
 				students[i].Cells[key] = gradeCell{Status: "not_assigned"}
 				continue
 			}
