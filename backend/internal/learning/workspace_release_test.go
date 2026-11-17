@@ -148,6 +148,14 @@ func TestCoTeacherCapabilitiesCannotAlterOwnerOrPromoteStudent(t *testing.T) {
 			t.Fatal("co-teacher could change owner-only class settings")
 		}
 	}
+	if policy(t.Context(), f.Outsider, base+"/accommodations", "PUT") != nil {
+		t.Fatal("grading timing permission rejected")
+	}
+	for _, path := range []string{base + "/roster/bulk-section", base + "/trash", base + "/content-schedules"} {
+		if policy(t.Context(), f.Outsider, path, "POST") == nil {
+			t.Fatal("co-teacher scope bypass", path)
+		}
+	}
 	if policy(t.Context(), f.Outsider, base+"/materials", "POST") == nil {
 		t.Fatal("coursework permission bypassed")
 	}

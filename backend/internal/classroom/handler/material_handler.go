@@ -347,7 +347,7 @@ func acceptableMaterialContent(ext, mime string) bool {
 	}
 }
 
-// Remove hides the material from the stream and destroys its stored file. Only a teacher
+// Remove retains the file in class trash for a 30-day restore window. Only a teacher
 // in this classroom may remove it.
 func (h *MaterialHandler) Remove(c *fiber.Ctx) error {
 	if err := h.authorize(c, true); err != nil {
@@ -380,7 +380,7 @@ func (h *MaterialHandler) Remove(c *fiber.Ctx) error {
 		return err
 	}
 	var storageKey string
-	err = tx.QueryRow(c.UserContext(), `SELECT storage_key FROM classroom_materials WHERE id=$1 AND classroom_id=$2 FOR UPDATE`, materialID.String(), classID.String()).Scan(&storageKey)
+	err = tx.QueryRow(c.UserContext(), `SELECT storage_key FROM classroom_materials WHERE id=$1 AND classroom_id=$2 AND NOT EXISTS(SELECT 1 FROM classroom_material_trash WHERE material_id=$1) FOR UPDATE`, materialID.String(), classID.String()).Scan(&storageKey)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return errorResponse(c, fiber.StatusNotFound, "material not found")
 	}
@@ -390,19 +390,20 @@ func (h *MaterialHandler) Remove(c *fiber.Ctx) error {
 	if _, err := uuid.Parse(storageKey); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "invalid file key")
 	}
-	_, err = tx.Exec(c.UserContext(), `UPDATE classroom_stream_posts SET deleted_at=now() WHERE classroom_id=$1 AND reference_type='material' AND reference_id=$2 AND deleted_at IS NULL`, classID.String(), materialID.String())
+	_, err = tx.Exec(c.UserContext(), `WITH hidden AS(UPDATE classroom_stream_posts SET deleted_at=now(),updated_at=now() WHERE classroom_id=$1::uuid AND reference_type='material' AND reference_id=$2::uuid AND deleted_at IS NULL RETURNING id) INSERT INTO classroom_material_trash(material_id,post_ids) SELECT $2::uuid,COALESCE(array_agg(id),'{}'::uuid[]) FROM hidden`, classID.String(), materialID.String())
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(c.UserContext(), `DELETE FROM classroom_materials WHERE id=$1 AND classroom_id=$2`, materialID.String(), classID.String())
+	_, err = tx.Exec(c.UserContext(), `UPDATE classroom_content_schedules SET state='cancelled',version=version+1,updated_at=now() WHERE resource_id=$1::uuid AND state IN ('scheduled','blocked')`, materialID.String())
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(c.UserContext(), `INSERT INTO classroom_activity(classroom_id,actor_id,actor_name,action,target_id,title,reason) SELECT $1::uuid,u.id,trim(u.first_name||' '||u.last_name),'material_deleted',m.id::text,m.title,$4 FROM users u JOIN classroom_materials m ON m.id=$2::uuid WHERE u.id=$3::uuid`, classID.String(), materialID.String(), actor, attribution.Reason)
 	if err != nil {
 		return err
 	}
 	if err := tx.Commit(c.UserContext()); err != nil {
 		return err
 	}
-	// Deleting a nonexistent file is harmless; the DB record and public-in-class link
-	// have already been removed. Do not risk rolling back successful DB changes.
-	_ = os.Remove(filepath.Join(h.directory, classID.String(), storageKey))
-	return c.JSON(fiber.Map{"success": true, "message": "Material deleted"})
+	return c.JSON(fiber.Map{"success": true, "message": "Material moved to trash"})
 }

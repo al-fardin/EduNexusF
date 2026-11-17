@@ -231,7 +231,7 @@ func (h *Handler) List(c *fiber.Ctx) error {
 		return err
 	}
 	user, _ := identity(c)
-	query := `SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq,audience
+	query := `SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,edunexus_exam_duration(id,$2::uuid),CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq,audience
       FROM classroom_exams WHERE classroom_id=$1::uuid AND edunexus_resource_visible(classroom_id,'exam',id,$2::uuid)`
 	if role != "teacher" {
 		query += ` AND status='published'`
@@ -305,8 +305,8 @@ func (h *Handler) examWithKeys(c *fiber.Ctx) (Exam, []Question, error) {
 	var e Exam
 	var raw []byte
 	err = h.db.QueryRow(c.UserContext(), `
-      SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,duration_minutes,CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq,questions,audience
-      FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid`, id, c.Params("id")).Scan(
+      SELECT id::text,classroom_id::text,title,description,starts_at,ends_at,edunexus_exam_duration(id,$3::uuid),CASE WHEN closed_at IS NOT NULL THEN 'closed' ELSE status END,jsonb_array_length(questions),created_at,allow_mobile_mcq,questions,audience
+      FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid`, id, c.Params("id"), c.Locals("user_id")).Scan(
 		&e.ID, &e.ClassroomID, &e.Title, &e.Description, &e.StartsAt, &e.EndsAt, &e.DurationMinutes, &e.Status, &e.QuestionCount, &e.CreatedAt, &e.AllowMobileMCQ, &raw, &e.Audience)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Exam{}, nil, fiber.NewError(fiber.StatusNotFound, "exam not found")
@@ -347,12 +347,13 @@ func (h *Handler) Publish(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	tag, err := h.db.Exec(c.UserContext(), `UPDATE classroom_exams SET status='published',published_at=now()
-      WHERE id=$1::uuid AND classroom_id=$2::uuid AND status='draft'`, id, c.Params("id"))
+	var published int
+	err = h.db.QueryRow(c.UserContext(), `WITH changed AS(UPDATE classroom_exams SET status='published',published_at=now()
+      WHERE id=$1::uuid AND classroom_id=$2::uuid AND status='draft' RETURNING id), schedules AS(UPDATE classroom_content_schedules SET state='published',version=version+1,error='',updated_at=now() WHERE resource_id IN(SELECT id FROM changed) RETURNING resource_id) SELECT count(*)::int FROM changed`, id, c.Params("id")).Scan(&published)
 	if err != nil {
 		return err
 	}
-	if tag.RowsAffected() == 0 {
+	if published == 0 {
 		return failure(c, 409, "exam missing or already published")
 	}
 	return result(c, 200, fiber.Map{"id": id, "status": "published"})

@@ -76,7 +76,7 @@ func (h *Handler) startMobile(c *fiber.Ctx) error {
 	var starts, ends time.Time
 	var duration int
 	var raw []byte
-	err = tx.QueryRow(c.UserContext(), `SELECT allow_mobile_mcq,status,starts_at,ends_at,duration_minutes,questions FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid AND closed_at IS NULL FOR UPDATE`, eid, c.Params("id")).Scan(&allowed, &status, &starts, &ends, &duration, &raw)
+	err = tx.QueryRow(c.UserContext(), `SELECT allow_mobile_mcq,status,starts_at,ends_at,edunexus_exam_duration(id,$3::uuid),questions FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid AND closed_at IS NULL FOR UPDATE`, eid, c.Params("id"), user).Scan(&allowed, &status, &starts, &ends, &duration, &raw)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return failure(c, 404, "exam not found")
 	}

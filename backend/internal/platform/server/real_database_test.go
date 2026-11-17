@@ -66,7 +66,7 @@ func TestExistingDatabaseReadOnlyRoutes(t *testing.T) {
 		paths := []string{"/notifications", "/classrooms/joined", "/classrooms/mine", "/workspace", "/workspace/files", "/messaging/classes", "/messaging/unread", "/notifications/push", "/app/releases/android", "/calling/config", "/calling/active?session=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}
 		base := "/classrooms/" + m.class
 		paths = append(paths, "/workspace/terms", "/workspace/semester-classes", base+"/rechecks")
-		paths = append(paths, "/workspace/tasks", "/workspace/storage", "/workspace/enrollment", "/auth/security", "/auth/security/sessions", base+"/reports")
+		paths = append(paths, "/workspace/trash", "/workspace/tasks", "/workspace/storage", "/workspace/enrollment", "/auth/security", "/auth/security/sessions", base+"/reports")
 		for _, suffix := range []string{"/details", "/message-recipients", "/messaging-settings", "/conversations", "/exams", "/assignments", "/analytics", "/tutor", "/tutor/sources", "/stream", "/materials", "/topics", "/progress?offset=0"} {
 			paths = append(paths, base+suffix)
 		}
@@ -74,7 +74,7 @@ func TestExistingDatabaseReadOnlyRoutes(t *testing.T) {
 			paths = append(paths, base+"/exams/active")
 		}
 		if m.membership == "teacher" {
-			paths = append(paths, base+"/question-bank", base+"/content-schedules", base+"/sections", base+"/roster")
+			paths = append(paths, base+"/question-bank", base+"/content-schedules", base+"/sections", base+"/roster", base+"/trash", base+"/accommodations")
 		}
 		for _, path := range paths {
 			req := httptest.NewRequest("GET", path, nil)

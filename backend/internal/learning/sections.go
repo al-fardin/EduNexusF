@@ -232,8 +232,12 @@ func updateRoster(ctx context.Context, tx pgx.Tx, class, actor, user string, rol
 	if nextRoll == oldRoll && section == oldSection {
 		return nil
 	}
-	before, _ := json.Marshal(fiber.Map{"roll": oldRoll, "section_id": oldSection})
-	after, _ := json.Marshal(fiber.Map{"roll": nextRoll, "section_id": section})
+	var beforeName, afterName string
+	if err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT name FROM classroom_sections WHERE id=NULLIF($1,'')::uuid),''),COALESCE((SELECT name FROM classroom_sections WHERE id=NULLIF($2,'')::uuid),'')`, oldSection, section).Scan(&beforeName, &afterName); err != nil {
+		return err
+	}
+	before, _ := json.Marshal(fiber.Map{"roll": oldRoll, "section_id": oldSection, "section_name": beforeName})
+	after, _ := json.Marshal(fiber.Map{"roll": nextRoll, "section_id": section, "section_name": afterName})
 	_, err = tx.Exec(ctx, `UPDATE classroom_memberships SET student_roll=NULLIF($3,''),section_id=NULLIF($4,'')::uuid,updated_at=now() WHERE classroom_id=$1::uuid AND user_id=$2::uuid`, class, user, nextRoll, section)
 	if err != nil {
 		var pg *pgconn.PgError
@@ -273,5 +277,6 @@ func registerSections(app *fiber.App, h *Handler) {
 	g.Get("/roster", h.SectionRoster)
 	g.Put("/roster/:studentID", h.SectionRoster)
 	g.Post("/roster/import", h.ImportRoster)
+	g.Post("/roster/bulk-section", h.BulkSection)
 	g.Get("/student-view", h.StudentView)
 }

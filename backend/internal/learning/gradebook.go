@@ -90,7 +90,7 @@ func (h *Handler) Gradebook(c *fiber.Ctx) error {
 	if len(students) > 5000 {
 		return fail(422, "Gradebook supports up to 5000 active students per class")
 	}
-	rows, err = h.db.Query(ctx, `SELECT DISTINCT ON(s.assignment_id,s.student_id) s.assignment_id::text,s.student_id::text,s.awarded_points,s.version,s.submitted_at>a.due_at FROM classroom_assignment_submissions s JOIN classroom_assignments a ON a.id=s.assignment_id WHERE a.classroom_id=$1::uuid AND a.status='published' ORDER BY s.assignment_id,s.student_id,s.version DESC`, class)
+	rows, err = h.db.Query(ctx, `SELECT DISTINCT ON(s.assignment_id,s.student_id) s.assignment_id::text,s.student_id::text,s.awarded_points,s.version,s.submitted_at>edunexus_assignment_due(a.id,s.student_id) FROM classroom_assignment_submissions s JOIN classroom_assignments a ON a.id=s.assignment_id WHERE a.classroom_id=$1::uuid AND a.status='published' ORDER BY s.assignment_id,s.student_id,s.version DESC`, class)
 	if err != nil {
 		return err
 	}

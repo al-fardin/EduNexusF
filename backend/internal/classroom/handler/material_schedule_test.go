@@ -66,6 +66,7 @@ func TestScheduledMaterialUploadPrivacyAndPublication(t *testing.T) {
 		return c.Next()
 	})
 	app.Post("/classrooms/:id/materials", h.Upload)
+	app.Delete("/classrooms/:id/materials/:materialID", h.Remove)
 	app.Get("/classrooms/:id/materials", h.List)
 	app.Get("/classrooms/:id/materials/:materialID/download", h.Download)
 	path := "/classrooms/" + f.ClassID + "/materials"
@@ -151,4 +152,30 @@ func TestScheduledMaterialUploadPrivacyAndPublication(t *testing.T) {
 	if err = f.DB.QueryRow(t.Context(), `SELECT count(*) FROM classroom_stream_posts WHERE reference_type='material' AND reference_id=$1::uuid`, id).Scan(&n); err != nil || n != 1 {
 		t.Fatal(n, err)
 	}
+	// Deletion now hides both the public link and teacher download, retaining the file for restoration.
+	req = httptest.NewRequest("DELETE", path+"/"+id, strings.NewReader(`{"reason":"Accidental upload"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Test-User", f.Teacher)
+	deleted, e := app.Test(req)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer deleted.Body.Close()
+	if deleted.StatusCode != 200 {
+		raw, _ := io.ReadAll(deleted.Body)
+		t.Fatal(deleted.StatusCode, string(raw))
+	}
+	if len(list(f.Student)) != 0 || len(list(f.Teacher)) != 0 {
+		t.Fatal("trashed material remained listed")
+	}
+	download(f.Teacher, 403)
+	download(f.Student, 403)
+	var key string
+	if e = f.DB.QueryRow(t.Context(), `SELECT storage_key FROM classroom_materials m JOIN classroom_material_trash t ON t.material_id=m.id WHERE m.id=$1::uuid`, id).Scan(&key); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = os.Stat(filepath.Join(h.directory, f.ClassID, key)); e != nil {
+		t.Fatal("restorable file was destroyed", e)
+	}
+
 }

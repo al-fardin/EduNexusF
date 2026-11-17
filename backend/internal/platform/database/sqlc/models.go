@@ -98,6 +98,18 @@ type ClassroomAcademicReportEvent struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type ClassroomAccommodation struct {
+	ClassroomID  pgtype.UUID        `json:"classroom_id"`
+	ResourceID   pgtype.UUID        `json:"resource_id"`
+	Kind         string             `json:"kind"`
+	ExamID       pgtype.UUID        `json:"exam_id"`
+	AssignmentID pgtype.UUID        `json:"assignment_id"`
+	StudentID    pgtype.UUID        `json:"student_id"`
+	ExtraMinutes int32              `json:"extra_minutes"`
+	DueAt        pgtype.Timestamptz `json:"due_at"`
+	Version      int32              `json:"version"`
+}
+
 type ClassroomActivity struct {
 	ID          int64              `json:"id"`
 	ClassroomID pgtype.UUID        `json:"classroom_id"`
@@ -232,6 +244,7 @@ type ClassroomContentSchedule struct {
 	Version      int32              `json:"version"`
 	Error        string             `json:"error"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	ExamID       pgtype.UUID        `json:"exam_id"`
 }
 
 type ClassroomConversation struct {
@@ -456,6 +469,12 @@ type ClassroomMaterialAccessibility struct {
 	Version     int32              `json:"version"`
 	UpdatedBy   pgtype.UUID        `json:"updated_by"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ClassroomMaterialTrash struct {
+	MaterialID pgtype.UUID        `json:"material_id"`
+	DeletedAt  pgtype.Timestamptz `json:"deleted_at"`
+	PostIds    []pgtype.UUID      `json:"post_ids"`
 }
 
 type ClassroomMembership struct {

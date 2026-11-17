@@ -29,8 +29,8 @@ func (h *Handler) TaskInbox(c *fiber.Ctx) error {
 	rows, err := h.db.Query(c.UserContext(), `WITH access AS (
  SELECT cl.id,cl.name,m.member_role FROM classrooms cl JOIN classroom_memberships m ON m.classroom_id=cl.id WHERE m.user_id=$1::uuid AND m.status='active' AND cl.status='active' AND cl.deleted_at IS NULL AND ($2='' OR cl.id=NULLIF($2,'')::uuid)
  ), tasks AS (
- SELECT 'assignment:'||a.id id,'assignment' kind,a.title,cl.id classroom_id,cl.name classroom_name,cl.member_role role,a.due_at at,
- CASE WHEN cl.member_role='student' THEN CASE WHEN a.due_at<now() THEN 'overdue' ELSE 'pending' END ELSE 'needs_grading' END state,
+ SELECT 'assignment:'||a.id id,'assignment' kind,a.title,cl.id classroom_id,cl.name classroom_name,cl.member_role role,edunexus_assignment_due(a.id,$1::uuid) at,
+ CASE WHEN cl.member_role='student' THEN CASE WHEN edunexus_assignment_due(a.id,$1::uuid)<now() THEN 'overdue' ELSE 'pending' END ELSE 'needs_grading' END state,
  'classwork&work=assignments&assignment='||a.id tab
  FROM classroom_assignments a JOIN access cl ON cl.id=a.classroom_id WHERE a.status='published' AND edunexus_resource_visible(a.classroom_id,'assignment',a.id,$1::uuid) AND
  ((cl.member_role='student' AND NOT EXISTS(SELECT 1 FROM classroom_assignment_submissions s WHERE s.assignment_id=a.id AND s.student_id=$1::uuid)) OR

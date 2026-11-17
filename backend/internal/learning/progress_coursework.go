@@ -34,10 +34,10 @@ func (h *Handler) ProgressCoursework(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT a.id::text,a.title,a.due_at,a.max_points,a.rubric,s.awarded_points,COALESCE(s.feedback,''),COALESCE(s.rubric_scores,'{}'::jsonb),s.submitted_at,
- CASE WHEN s.awarded_points IS NOT NULL THEN 'graded' WHEN s.id IS NOT NULL THEN 'submitted' WHEN a.due_at<now() THEN 'missing' ELSE 'upcoming' END state
+	rows, err := h.db.Query(c.UserContext(), `SELECT a.id::text,a.title,edunexus_assignment_due(a.id,$2::uuid),a.max_points,a.rubric,s.awarded_points,COALESCE(s.feedback,''),COALESCE(s.rubric_scores,'{}'::jsonb),s.submitted_at,
+ CASE WHEN s.awarded_points IS NOT NULL THEN 'graded' WHEN s.id IS NOT NULL THEN 'submitted' WHEN edunexus_assignment_due(a.id,$2::uuid)<now() THEN 'missing' ELSE 'upcoming' END state
  FROM classroom_assignments a LEFT JOIN LATERAL (SELECT id,awarded_points,feedback,rubric_scores,submitted_at FROM classroom_assignment_submissions WHERE assignment_id=a.id AND student_id=$2::uuid ORDER BY version DESC LIMIT 1) s ON true
- WHERE a.classroom_id=$1::uuid AND a.status='published' AND edunexus_resource_visible(a.classroom_id,'assignment',a.id,$2::uuid) ORDER BY (s.id IS NULL AND a.due_at<now()) DESC,a.due_at DESC,a.id LIMIT 51 OFFSET $3`, c.Params("id"), student, offset)
+ WHERE a.classroom_id=$1::uuid AND a.status='published' AND edunexus_resource_visible(a.classroom_id,'assignment',a.id,$2::uuid) ORDER BY (s.id IS NULL AND edunexus_assignment_due(a.id,$2::uuid)<now()) DESC,edunexus_assignment_due(a.id,$2::uuid) DESC,a.id LIMIT 51 OFFSET $3`, c.Params("id"), student, offset)
 	if err != nil {
 		return err
 	}

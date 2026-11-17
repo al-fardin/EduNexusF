@@ -48,7 +48,7 @@ func (h *Handler) ListAssignments(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT a.id::text,a.title,a.instructions,a.due_at,a.max_points,a.allow_late,a.allow_resubmit,a.status,a.rubric,CASE WHEN s.state='scheduled' THEN s.publish_at END,a.audience FROM classroom_assignments a LEFT JOIN classroom_content_schedules s ON s.resource_id=a.id WHERE a.classroom_id=$1::uuid AND ($2='teacher' OR a.status='published') AND edunexus_resource_visible(a.classroom_id,'assignment',a.id,$3::uuid) ORDER BY a.due_at DESC LIMIT 200`, c.Params("id"), role, user)
+	rows, err := h.db.Query(c.UserContext(), `SELECT a.id::text,a.title,a.instructions,edunexus_assignment_due(a.id,$3::uuid),a.max_points,a.allow_late,a.allow_resubmit,a.status,a.rubric,CASE WHEN s.state='scheduled' THEN s.publish_at END,a.audience FROM classroom_assignments a LEFT JOIN classroom_content_schedules s ON s.resource_id=a.id WHERE a.classroom_id=$1::uuid AND ($2='teacher' OR a.status='published') AND edunexus_resource_visible(a.classroom_id,'assignment',a.id,$3::uuid) ORDER BY a.due_at DESC LIMIT 200`, c.Params("id"), role, user)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (h *Handler) SubmitAssignment(c *fiber.Ctx) error {
 	defer tx.Rollback(c.UserContext())
 	var due time.Time
 	var late, resubmit bool
-	err = tx.QueryRow(c.UserContext(), `SELECT due_at,allow_late,allow_resubmit FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid AND status='published' FOR UPDATE`, c.Params("assignmentID"), c.Params("id")).Scan(&due, &late, &resubmit)
+	err = tx.QueryRow(c.UserContext(), `SELECT edunexus_assignment_due(id,$3::uuid),allow_late,allow_resubmit FROM classroom_assignments WHERE id=$1::uuid AND classroom_id=$2::uuid AND status='published' FOR UPDATE`, c.Params("assignmentID"), c.Params("id"), user).Scan(&due, &late, &resubmit)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fail(404, "assignment not found")
 	}
@@ -270,7 +270,7 @@ func (h *Handler) AssignmentSubmissions(c *fiber.Ctx) error {
 	if err = validID(c.Params("assignmentID")); err != nil {
 		return err
 	}
-	rows, err := h.db.Query(c.UserContext(), `SELECT s.id::text,s.student_id::text,trim(u.first_name||' '||u.last_name),s.version,s.answer,s.file_name,s.submitted_at,s.submitted_at>a.due_at,s.awarded_points,s.feedback,s.graded_at,s.rubric_scores
+	rows, err := h.db.Query(c.UserContext(), `SELECT s.id::text,s.student_id::text,trim(u.first_name||' '||u.last_name),s.version,s.answer,s.file_name,s.submitted_at,s.submitted_at>edunexus_assignment_due(a.id,s.student_id),s.awarded_points,s.feedback,s.graded_at,s.rubric_scores
  FROM classroom_assignment_submissions s JOIN classroom_assignments a ON a.id=s.assignment_id JOIN users u ON u.id=s.student_id
  WHERE a.id=$1::uuid AND a.classroom_id=$2::uuid AND ($3='teacher' OR (a.status='published' AND s.student_id=$4::uuid)) ORDER BY s.submitted_at DESC LIMIT 1000`, c.Params("assignmentID"), c.Params("id"), role, user)
 	if err != nil {

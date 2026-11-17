@@ -39,7 +39,7 @@ func (h *Handler) Classwork(c *fiber.Ctx) error {
 		return fail(400, "Invalid sort order")
 	}
 	rows, err := h.db.Query(c.UserContext(), `WITH work AS(
- SELECT id,'assignment' kind,title,instructions description,due_at,created_at,status,'' filename,0::bigint file_size,audience FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') AND edunexus_resource_visible(classroom_id,'assignment',id,$7::uuid)
+ SELECT id,'assignment' kind,title,instructions description,edunexus_assignment_due(id,$7::uuid) due_at,created_at,status,'' filename,0::bigint file_size,audience FROM classroom_assignments WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') AND edunexus_resource_visible(classroom_id,'assignment',id,$7::uuid)
  UNION ALL SELECT m.id,'material',m.title,m.description,NULL,m.created_at,'published',m.original_filename,m.file_size,m.audience FROM classroom_materials m WHERE m.classroom_id=$1::uuid AND edunexus_resource_visible(m.classroom_id,'material',m.id,$7::uuid) AND EXISTS(SELECT 1 FROM classroom_stream_posts p WHERE p.classroom_id=m.classroom_id AND p.reference_type='material' AND p.reference_id=m.id AND p.deleted_at IS NULL)
  UNION ALL SELECT id,'exam',title,description,ends_at,created_at,status,'',0,audience FROM classroom_exams WHERE classroom_id=$1::uuid AND ($2='teacher' OR status='published') AND edunexus_resource_visible(classroom_id,'exam',id,$7::uuid)
  )SELECT w.id::text,w.kind,w.title,w.description,w.due_at,w.created_at,w.status,w.filename,w.file_size,COALESCE(r.topic_id::text,''),w.audience FROM work w LEFT JOIN classroom_topic_resources r ON r.resource_kind=w.kind AND r.resource_id=w.id AND r.classroom_id=$1::uuid
