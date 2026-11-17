@@ -45,6 +45,7 @@ const links = [
   { href: "/storage", label: "Storage", icon: Folder },
   { href: "/files", label: "Files", icon: Folder },
   { href: "/offline", label: "Saved work", icon: Download },
+ { href: "/personal", label: "Personal workspace",icon:Folder },
  { href: "/trash",label:"Trash",icon:Folder },
 ];
 const mobileLinks = [

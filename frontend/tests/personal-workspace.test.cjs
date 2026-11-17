@@ -1,0 +1,23 @@
+const test=require("node:test"),assert=require("node:assert/strict"),React=require("react"),{renderToStaticMarkup}=require("react-dom/server");
+const {loadComponent}=require("./helpers/classroom-component-render.cjs");
+const preferences={usePreferences:()=>({t:s=>s,locale:"en-US"})},Button=({children,...props})=>React.createElement("button",props,children);
+function find(node,predicate){if(!node||typeof node!=="object")return;if(predicate(node))return node;for(const child of React.Children.toArray(node.props?.children)){const found=find(child,predicate);if(found)return found;}}
+test("schedule check stays optional, submits only on request and hides results after dates change",async()=>{
+ let cursor=0;const states=[],calls=[];const fake={...React,useState(initial){const i=cursor++;if(!(i in states))states[i]=initial;return [states[i],v=>states[i]=v]}};
+ const {ScheduleCheck}=loadComponent("components/classroom/schedule-check.tsx",{react:fake,"@/store/auth-store":{useAuthStore:fn=>fn({user:{id:"teacher"}})},"@/lib/api":{api:{post:async(...args)=>{calls.push(args);return {data:{data:{items:[{id:"exam",kind:"exam",classroom_name:"Class A",title:"Another exam",starts_at:"2026-12-01T10:00:00Z",ends_at:"2026-12-01T11:00:00Z",warning:"Overlapping exams",shared_students:12}],truncated:false}}}}}},"@/services/audience":{EVERYONE:{mode:"all"}},"@/providers/preferences-provider":preferences,"@/components/ui/button":{Button},"@/components/ui/app-feedback":{},"@/components/ui/content-skeleton":{},"@/services/exams":{examError:String}});
+ const props={classId:"class",kind:"exam",start:"2026-12-01T10:00:00Z",end:"2026-12-01T11:00:00Z"};function render(p=props){cursor=0;return ScheduleCheck(p)}
+ let tree=render();assert.equal(calls.length,0);assert.equal(tree.props.open,undefined);find(tree,n=>n.type===Button).props.onClick();await new Promise(setImmediate);assert.equal(calls.length,1);assert.equal(calls[0][1].starts_at,"2026-12-01T10:00:00.000Z");assert.equal(calls[0][1].due_at,undefined);assert.deepEqual(JSON.parse(JSON.stringify(calls[0][1].audience)),{mode:"all"});
+ assert.match(renderToStaticMarkup(render()),/Overlapping exams/);assert.doesNotMatch(renderToStaticMarkup(render({...props,start:"2026-12-02T10:00:00Z",end:"2026-12-02T11:00:00Z"})),/Another exam/);
+});
+test("personal note saves an explicit version and reports success outside the editor",async()=>{
+ const initial={id:"note",title:"Private note",body:"Only my notes",checklist:[],links:[],context_class:"",context_kind:"",context_id:"",version:4};const states=[initial,false,"",false,null],calls=[],success=[];let cursor=0;
+ const {PersonalEditor}=loadComponent("components/workspace/personal-editor.tsx",{react:{...React,useRef:()=>({current:true}),useEffect(){},useState(){const i=cursor++;return [states[i],v=>states[i]=v]}},"next/link":()=>null,"next/navigation":{useRouter:()=>({replace:()=>{}})},"@tanstack/react-query":{useQueryClient:()=>({invalidateQueries:async()=>{}})},"@/services/personal-workspace":{personalWorkspace:{save:async item=>{calls.push(item);return {id:item.id,version:5}}}},"@/providers/preferences-provider":preferences,"@/components/ui/button":{Button},"@/components/ui/app-feedback":{},"@/services/exams":{examError:String},"./personal-fields":{PersonalCollections:()=>null,PersonalAttachments:()=>null}});
+ const tree=PersonalEditor({initial,files:[],onSaved:id=>success.push(id)});assert.equal(calls.length,0);find(tree,n=>n.type==="form").props.onSubmit({preventDefault(){}});await new Promise(setImmediate);assert.equal(calls[0].version,4);assert.equal(calls[0].body,"Only my notes");assert.equal(success.at(-1),"note");assert.equal(states[0].version,5);
+});
+test("personal attachments require a saved clean note before mutation",()=>{
+ const {PersonalAttachments}=loadComponent("components/workspace/personal-fields.tsx",{"@/services/personal-workspace":{},"@/providers/preferences-provider":preferences,"@/lib/client-id":{},"@/components/ui/button":{Button}});
+ const props={item:{id:"note"},files:[],dirty:true,busy:false,action(){},setError(){},setFileDelete(){}};assert.equal(find(PersonalAttachments(props),n=>n.type==="input"&&n.props.type==="file").props.disabled,true);assert.equal(find(PersonalAttachments({...props,dirty:false}),n=>n.type==="input"&&n.props.type==="file").props.disabled,false);
+});
+test("message note links retain numeric message IDs and do not include conversation text",()=>{
+ const {personalNoteHref}=loadComponent("services/personal-workspace.ts",{"@/lib/api":{},"@/lib/academic-tools":{}});const href=personalNoteHref("class","message","12345","Message note");assert.match(href,/resource=12345/);assert.match(href,/kind=message/);assert.doesNotMatch(href,/body=/);
+});

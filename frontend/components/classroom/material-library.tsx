@@ -1,4 +1,5 @@
 "use client";
+import {PersonalNoteLink} from "@/components/workspace/personal-note-link";
 import { AudienceFields, AudienceBadge } from "./audience-fields";
 import { type AudienceRule, EVERYONE } from "@/services/audience";
 
@@ -463,6 +464,7 @@ export function MaterialLibrary({
                       </p>
                     </div>
                     <div className="flex flex-wrap items-start gap-2">
+ <PersonalNoteLink classId={classroomId} kind="material" id={item.id} title={item.title}/>
                       <ProtectedFilePreview
                         path={`/classrooms/${classroomId}/materials/${item.id}/download`}
                         filename={item.file_name}

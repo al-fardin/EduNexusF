@@ -1,4 +1,5 @@
 "use client";
+import {personalNoteHref} from "@/services/personal-workspace";
 import { SectionSettings } from "./section-settings";
 import { ContentSchedules } from "./content-schedules";
 import { ClassEnrollment } from "./class-enrollment";
@@ -209,6 +210,7 @@ export function ClassroomHeader({
             <MoreHorizontal size={22} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="en-action-menu w-52">
+ <DropdownMenuItem onClick={()=>router.push(personalNoteHref(classroom.id,"class",classroom.id,classroom.name))}><Localized>Personal note</Localized></DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => router.push(`/progress?class=${classroom.id}`)}
             >

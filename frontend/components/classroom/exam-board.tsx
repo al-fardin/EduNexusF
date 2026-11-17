@@ -1,4 +1,6 @@
 "use client";
+import { PersonalNoteLink } from "@/components/workspace/personal-note-link";
+import { ScheduleCheck } from "./schedule-check";
 import { AudienceBadge } from "./audience-fields";
 import { SavedExamPreview, AnswerReviewSettings } from "./exam-preview";
 import { ExamEntryGate } from "@/components/classroom/exam-entry-gate";
@@ -312,6 +314,25 @@ function ExamCard({
   const ended = now >= Date.parse(exam.ends_at);
   return (
     <article className={panel}>
+      <div className="mb-3">
+        <PersonalNoteLink
+          classId={exam.classroom_id}
+          kind="exam"
+          id={exam.id}
+          title={exam.title}
+        />
+      </div>
+      {canManage && (
+        <ScheduleCheck
+          classId={exam.classroom_id}
+          kind="exam"
+          start={exam.starts_at}
+          end={exam.ends_at}
+          resourceId={exam.id}
+          audience={exam.audience}
+          disabled={busy}
+        />
+      )}
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold capitalize text-foreground">
           {exam.status}

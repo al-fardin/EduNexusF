@@ -1,4 +1,5 @@
 "use client";
+import {PersonalNoteLink} from "@/components/workspace/personal-note-link";
 import {ReportMessage} from "./message-moderation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -189,6 +190,7 @@ export function MessageActions({
               {message.body || message.attachment?.name}
             </DialogDescription>
           </DialogHeader>
+          {!message.deleted_at&&<PersonalNoteLink classId={classId} kind="message" id={message.id} title="Message note" className="en-message-action-row"/>}
           <button
             className="en-message-action-row"
             disabled={!canSend}

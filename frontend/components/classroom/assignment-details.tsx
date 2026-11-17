@@ -1,4 +1,5 @@
 "use client";
+import {PersonalNoteLink} from "@/components/workspace/personal-note-link";
 import { useQuery } from "@tanstack/react-query";
 import { assignments, type Assignment } from "@/services/assignments";
 import { examError } from "@/services/exams";
@@ -29,6 +30,7 @@ export function AssignmentDetails({
     (!latest || latest.version < 10);
   return (
     <div className="mt-4 space-y-4 border-t border-border pt-4">
+ <PersonalNoteLink classId={classroomId} kind="assignment" id={a.id} title={a.title}/>
       <p className="whitespace-pre-wrap text-sm">
         {a.instructions || "No additional instructions."}
       </p>

@@ -1,4 +1,5 @@
 "use client";
+import { ScheduleCheck } from "./schedule-check";
 import { AudienceFields } from "./audience-fields";
 import { type AudienceRule, EVERYONE } from "@/services/audience";
 import {
@@ -546,6 +547,7 @@ function ExamEditForm({
   classroomId: string;
   detail: {
     exam: {
+      id?:string;
       title: string;
       description: string;
       starts_at: string;
@@ -660,6 +662,7 @@ function ExamEditForm({
           className={field}
         />
       </label>
+      <ScheduleCheck classId={classroomId} kind="exam" start={starts} end={ends} resourceId={detail.exam.id} audience={audience} disabled={busy}/>
       <AudienceFields
         classId={classroomId}
         value={audience}

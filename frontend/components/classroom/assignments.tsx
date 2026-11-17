@@ -1,4 +1,5 @@
 "use client";
+import { ScheduleCheck } from "./schedule-check";
 import { AudienceFields, AudienceBadge } from "./audience-fields";
 import { AssignmentRubricEditor } from "./grading-tools";
 import {
@@ -292,6 +293,7 @@ function AssignmentEditor({
           </span>
         </label>
       )}
+      <ScheduleCheck classId={classroomId} kind="assignment" due={a.due_at} resourceId={a.id} audience={a.audience} disabled={busy}/>
       <AudienceFields
         classId={classroomId}
         value={a.audience}

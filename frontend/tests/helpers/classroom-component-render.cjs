@@ -21,6 +21,8 @@ function loadComponent(file, mocks, extra = "") {
   ).outputText;
   vm.runInNewContext(source, {
     exports,
+    URL,
+    URLSearchParams,
     require(name) {
       if (Object.hasOwn(mocks, name)) return mocks[name];
       if (name === "react" || name === "react/jsx-runtime") return require(name);

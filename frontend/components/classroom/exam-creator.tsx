@@ -1,4 +1,5 @@
 "use client";
+import { ScheduleCheck } from "./schedule-check";
 import { AudienceFields } from "./audience-fields";
 import { type AudienceRule, EVERYONE } from "@/services/audience";
 import { ExamDraftPreview } from "./exam-preview";
@@ -379,6 +380,7 @@ export function ExamCreator({
           {examError(mutation.error)}
         </p>
       )}
+      <ScheduleCheck classId={classroomId} kind="exam" start={starts} end={ends} audience={audience} disabled={mutation.isPending}/>
       <AudienceFields
         classId={classroomId}
         value={audience}
