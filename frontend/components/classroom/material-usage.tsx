@@ -59,7 +59,7 @@ export function MaterialDeleteDialog({
             </p>
             <p className="text-xs text-muted-foreground">
               {t(
-                "Deleting removes the shared file. Previously downloaded copies and external links cannot be recalled.",
+                "The material moves to class trash for 30 days. Previously downloaded copies cannot be recalled.",
               )}
             </p>
           </div>

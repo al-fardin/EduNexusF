@@ -38,6 +38,18 @@ export type StudentView = {
   next_offset: number;
 };
 export const sections = {
+  async bulk(
+    id: string,
+    students: RosterStudent[],
+    section_id: string,
+    reason: string,
+  ) {
+    await api.post(`/classrooms/${id}/roster/bulk-section`, {
+      students: students.map((s) => ({ id: s.id, version: s.version })),
+      section_id,
+      reason,
+    });
+  },
   async list(id: string): Promise<Section[]> {
     return (await api.get(`/classrooms/${id}/sections`)).data.data;
   },

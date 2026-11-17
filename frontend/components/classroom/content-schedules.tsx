@@ -1,4 +1,5 @@
 "use client";
+import { ExamPublishSchedule } from "./exam-publish-schedule";
 import { useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -60,6 +61,7 @@ export function ContentSchedules({
         [
           ["content-schedules"],
           ["assignments", classId],
+          ["exams", classId],
           ["materials", classId],
           ["classrooms", "stream", classId],
         ].map((queryKey) => client.invalidateQueries({ queryKey })),
@@ -77,10 +79,11 @@ export function ContentSchedules({
           <DialogTitle>{t("Scheduled content")}</DialogTitle>
           <DialogDescription>
             {t(
-              "Manage scheduled assignments and materials. Posts are in announcement drafts.",
+              "Manage scheduled exams, assignments and materials. Posts are in announcement drafts.",
             )}
           </DialogDescription>
         </DialogHeader>
+        {open && <ExamPublishSchedule classId={classId} />}
         {error && <ErrorState message={error} />}
         {query.isPending ? (
           <ContentSkeleton rows={3} />
@@ -101,8 +104,14 @@ export function ContentSchedules({
               >
                 <h3 className="font-semibold">{item.title}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {t(item.kind === "material" ? "Material" : "Assignment")} ·{" "}
-                  {t(item.state)} ·{" "}
+                  {t(
+                    item.kind === "material"
+                      ? "Material"
+                      : item.kind === "exam"
+                        ? "Exam"
+                        : "Assignment",
+                  )}{" "}
+                  · {t(item.state)} ·{" "}
                   {new Date(item.publish_at).toLocaleString(locale)}
                 </p>
                 {item.error && (

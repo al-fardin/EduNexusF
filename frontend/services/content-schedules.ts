@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 export type ContentSchedule = {
   id: string;
-  kind: "material" | "assignment";
+  kind: "material" | "assignment" | "exam";
   title: string;
   publish_at: string;
   state: string;
@@ -9,6 +9,15 @@ export type ContentSchedule = {
   error: string;
 };
 export const contentSchedules = {
+  async scheduleExam(classId: string, id: string, publish_at: string) {
+    await api.put(`/classrooms/${classId}/content-schedules`, {
+      id,
+      kind: "exam",
+      action: "schedule",
+      version: 0,
+      publish_at,
+    });
+  },
   async list(
     classId: string,
     offset = 0,

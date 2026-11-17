@@ -1,4 +1,7 @@
 "use client";
+import { BulkSection } from "./bulk-section";
+import { PersonalTiming } from "./personal-timing";
+import { TrashContents } from "@/components/workspace/trash";
 import { useState, useRef } from "react";
 import {
   useInfiniteQuery,
@@ -59,6 +62,9 @@ export function SectionSettings({
           {[
             ["sections", "Sections"],
             ["roster", "Student sections"],
+            ["bulk", "Bulk section transfer"],
+            ["timing", "Personal timing"],
+            ["trash", "Class trash"],
             ["import", "CSV roster import"],
             ["preview", "Student-view preview"],
           ].map(([id, label]) => (
@@ -77,6 +83,12 @@ export function SectionSettings({
             <ManageSections classId={classId} />
           ) : tab === "roster" ? (
             <SectionRoster classId={classId} />
+          ) : tab === "bulk" ? (
+            <BulkSection classId={classId} />
+          ) : tab === "timing" ? (
+            <PersonalTiming classId={classId} />
+          ) : tab === "trash" ? (
+            <TrashContents classId={classId} />
           ) : tab === "import" ? (
             <ImportRoster classId={classId} />
           ) : (

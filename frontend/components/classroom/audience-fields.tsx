@@ -71,7 +71,10 @@ export function AudienceFields({
   const { t } = usePreferences(),
     id = useId(),
     user = useAuthStore((s) => s.user?.id),
-    [open, setOpen] = useState(false);
+    [open, setOpen] = useState(false),
+    [selection, setSelection] = useState("selected"),
+    [offset, setOffset] = useState(0),
+    [pageRule, setPageRule] = useState("");
   const rule = value ?? EVERYONE,
     encoded = JSON.stringify(rule),
     [debounced, setDebounced] = useState(encoded);
@@ -79,10 +82,24 @@ export function AudienceFields({
     const timer = setTimeout(() => setDebounced(encoded), 350);
     return () => clearTimeout(timer);
   }, [encoded]);
+  const pageOffset = pageRule === encoded ? offset : 0;
   const preview = useQuery({
-    queryKey: ["audience-preview", user, classId, debounced],
+    queryKey: [
+      "audience-preview",
+      user,
+      classId,
+      debounced,
+      selection,
+      pageOffset,
+    ],
     queryFn: ({ signal }) =>
-      previewAudience(classId, JSON.parse(debounced), signal),
+      previewAudience(
+        classId,
+        JSON.parse(debounced),
+        signal,
+        selection,
+        pageOffset,
+      ),
     enabled: !filterMode && open && !!classId && !!user,
     retry: false,
   });
@@ -128,7 +145,10 @@ export function AudienceFields({
           {t("Who can access this?")}
           <select
             value={rule.mode}
-            onChange={(e) => choose(e.target.value as AudienceRule["mode"])}
+            onChange={(e) => {
+              setOffset(0);
+              choose(e.target.value as AudienceRule["mode"]);
+            }}
             className={field}
           >
             {(
@@ -351,10 +371,63 @@ export function AudienceFields({
                 )}
               </p>
             )}
-            <p className="break-words text-xs text-muted-foreground">
-              {preview.data.sample.map((s) => s.roll ?? s.name).join(", ")}
-              {preview.data.eligible > 50 ? " …" : ""}
-            </p>
+            <div className="flex flex-wrap gap-2">
+              {["selected", "excluded"].map((v) => (
+                <Button
+                  key={v}
+                  type="button"
+                  variant={selection === v ? "default" : "outline"}
+                  aria-pressed={selection === v}
+                  onClick={() => {
+                    setSelection(v);
+                    setOffset(0);
+                  }}
+                >
+                  {t(
+                    v === "selected"
+                      ? "Selected students"
+                      : "Excluded students",
+                  )}{" "}
+                  ·{" "}
+                  {v === "selected"
+                    ? preview.data.eligible
+                    : preview.data.total - preview.data.eligible}
+                </Button>
+              ))}
+            </div>
+            <ul className="max-h-60 space-y-2 overflow-y-auto text-sm">
+              {(preview.data.students ?? preview.data.sample).map((s, i) => (
+                <li key={i} className="break-words">
+                  {s.name}
+                  {s.roll ? ` · ${s.roll}` : ""}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pageOffset === 0}
+                onClick={() => {
+                  setPageRule(encoded);
+                  setOffset(Math.max(0, pageOffset - 50));
+                }}
+              >
+                {t("Previous")}
+              </Button>
+              {(preview.data.next_offset ?? -1) >= 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setPageRule(encoded);
+                    setOffset(preview.data!.next_offset!);
+                  }}
+                >
+                  {t("Next")}
+                </Button>
+              )}
+            </div>
           </section>
         )
       )}

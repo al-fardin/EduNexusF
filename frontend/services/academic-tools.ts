@@ -67,8 +67,13 @@ export const academic = {
   calendar: async (
     from: string,
     to: string,
+    includeOpen = false,
   ): Promise<{ items: CalendarItem[]; truncated: boolean }> =>
-    (await api.get("/workspace/calendar", { params: { from, to } })).data.data,
+    (
+      await api.get("/workspace/calendar", {
+        params: { from, to, ...(includeOpen ? { include_open: "1" } : {}) },
+      })
+    ).data.data,
   search: async (
     q: string,
     kind: string,

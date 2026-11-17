@@ -12,15 +12,22 @@ export type AudiencePreview = {
   total: number;
   eligible: number;
   missing_rolls: number;
+  students?: Array<{ id: string; name: string; roll: string | null }>;
+  next_offset?: number;
   sample: Array<{ name: string; roll: string | null }>;
 };
 export async function previewAudience(
   classId: string,
   rule: AudienceRule,
   signal?: AbortSignal,
+  selection = "selected",
+  offset = 0,
 ): Promise<AudiencePreview> {
   return (
-    await api.post(`/classrooms/${classId}/audience/preview`, rule, { signal })
+    await api.post(`/classrooms/${classId}/audience/preview`, rule, {
+      signal,
+      params: { selection, offset },
+    })
   ).data.data;
 }
 export function audienceLabel(rule?: AudienceRule | null) {

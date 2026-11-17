@@ -40,10 +40,12 @@ const links = [
   { href: "/tasks", label: "Task inbox", icon: BookOpen },
   { href: "/progress", label: "Progress", icon: ChartNoAxesCombined },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
+ { href: "/planner", label: "Student planner", icon: CalendarDays },
   { href: "/semesters", label: "Semesters", icon: Layers },
   { href: "/storage", label: "Storage", icon: Folder },
   { href: "/files", label: "Files", icon: Folder },
   { href: "/offline", label: "Saved work", icon: Download },
+ { href: "/trash",label:"Trash",icon:Folder },
 ];
 const mobileLinks = [
   links[0],
