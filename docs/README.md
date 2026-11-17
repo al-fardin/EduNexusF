@@ -13,6 +13,7 @@
 - [Optional roll audiences: Everyone, odd/even, ranges and custom groups](guides/roll-audiences.md)
 - [Optional sections, roster reconciliation, filters and student-view preview](guides/optional-sections.md)
 - [Optional audience previews, bulk sections, personal timing, planner and restore](guides/optional-workflow-tools.md)
+- [Private personal workspace and optional schedule conflict checks](guides/personal-workspace-and-conflicts.md)
 - [Violet interface and messaging](guides/violet-messaging.md)
 - [Audio/video calls and rich messages](guides/calling-and-rich-messages.md)
 - [Android and mobile setup](guides/mobile-android.md)
