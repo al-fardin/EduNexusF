@@ -162,7 +162,9 @@ func TestTwoStepEnrollmentCannotBeEnabledWithoutProof(t *testing.T) {
 		raw, _ := json.Marshal(map[string]string{"password": req.Password, "code": code})
 		r := httptest.NewRequest("POST", "/"+action, bytes.NewReader(raw))
 		r.Header.Set("Content-Type", "application/json")
-		res, e := app.Test(r)
+		// Password proof uses bcrypt; race instrumentation on a busy runner can
+		// exceed Fiber's one-second default without indicating an auth failure.
+		res, e := app.Test(r, 10000)
 		if e != nil {
 			t.Fatal(e)
 		}
