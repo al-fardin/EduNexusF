@@ -841,6 +841,29 @@ type PasswordResetToken struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type PersonalWorkspaceFile struct {
+	ID        pgtype.UUID        `json:"id"`
+	ItemID    pgtype.UUID        `json:"item_id"`
+	Name      string             `json:"name"`
+	Bytes     []byte             `json:"bytes"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type PersonalWorkspaceItem struct {
+	ID           pgtype.UUID        `json:"id"`
+	UserID       pgtype.UUID        `json:"user_id"`
+	Title        string             `json:"title"`
+	Body         string             `json:"body"`
+	Checklist    []byte             `json:"checklist"`
+	Links        []byte             `json:"links"`
+	ContextClass pgtype.UUID        `json:"context_class"`
+	ContextKind  string             `json:"context_kind"`
+	ContextID    pgtype.Text        `json:"context_id"`
+	Version      int32              `json:"version"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 type RealtimeTicket struct {
 	TicketHash       string             `json:"ticket_hash"`
 	UserID           pgtype.UUID        `json:"user_id"`

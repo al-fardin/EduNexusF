@@ -19,6 +19,16 @@ type Handler struct {
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := &Handler{db: db}
 	registerSections(app, h)
+	personal := app.Group("/personal/items", authMiddleware.JWTProtected())
+	personal.Get("/", h.PersonalItems)
+	personal.Post("/", h.PersonalItems)
+	personal.Get("/:itemID", h.PersonalItems)
+	personal.Put("/:itemID", h.PersonalItems)
+	personal.Delete("/:itemID", h.PersonalItems)
+	personal.Post("/:itemID/files", h.PersonalFile)
+	personal.Get("/:itemID/files/:fileID", h.PersonalFile)
+	personal.Delete("/:itemID/files/:fileID", h.PersonalFile)
+	app.Post("/classrooms/:id/schedule-conflicts", authMiddleware.JWTProtected(), h.ScheduleConflicts)
 	app.Get("/classrooms/:id/accommodations", authMiddleware.JWTProtected(), h.Accommodations)
 	app.Put("/classrooms/:id/accommodations", authMiddleware.JWTProtected(), h.Accommodations)
 	app.Get("/workspace/trash", authMiddleware.JWTProtected(), h.TrashClasses)
