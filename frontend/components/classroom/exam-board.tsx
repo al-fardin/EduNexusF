@@ -1,5 +1,7 @@
 "use client";
 import { PersonalNoteLink } from "@/components/workspace/personal-note-link";
+import { ExamSets } from "./exam-sets";
+import { ExamReadiness } from "./exam-readiness";
 import { ScheduleCheck } from "./schedule-check";
 import { AudienceBadge } from "./audience-fields";
 import { SavedExamPreview, AnswerReviewSettings } from "./exam-preview";
@@ -259,7 +261,7 @@ export function ExamBoard({ classroomId, canManage }: Props) {
             onPublish={() => {
               if (
                 window.confirm(
-                  "Publish this exam for enrolled students? Questions can no longer be edited.",
+                  "Publish this exam for its selected students? Review the schedule and audience first.",
                 )
               )
                 publish.mutate(exam.id);
@@ -322,6 +324,10 @@ function ExamCard({
           title={exam.title}
         />
       </div>
+      {canManage && exam.status === "draft" && <ExamSets exam={exam} />}
+      {canManage && exam.status === "draft" && (
+        <ExamReadiness classId={exam.classroom_id} examId={exam.id} />
+      )}
       {canManage && (
         <ScheduleCheck
           classId={exam.classroom_id}

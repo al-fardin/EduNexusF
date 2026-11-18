@@ -20,7 +20,7 @@ const text = (value: unknown) =>
       ? String(value)
       : "";
 export const IMPORT_TEMPLATE =
-  'question,option_a,option_b,option_c,answer,points,selection,topic,difficulty,explanation,section\n"Select the prime numbers",2,3,4,"A,B",5,multiple,Numbers,easy,"2 and 3 are prime",Mathematics\n';
+  'question,option_a,option_b,option_c,answer,points,selection,topic,difficulty,explanation,section,subject,chapter\n"Select the prime numbers",2,3,4,"A,B",5,multiple,Numbers,easy,"2 and 3 are prime",Mathematics,Mathematics,Number theory\n';
 
 export function delimitedRows(input: string, delimiter = ","): string[][] {
   const rows: string[][] = [];
@@ -188,6 +188,15 @@ export function previewItems(items: unknown[]): ImportRow[] {
       ),
       selection = text(raw.selection) || "single";
     const q: ExamQuestion = {
+      subject: text(raw.subject),
+      chapter: text(raw.chapter),
+      difficulty: ["easy", "medium", "hard"].includes(
+        text(envelope.difficulty ?? raw.difficulty),
+      )
+        ? (text(
+            envelope.difficulty ?? raw.difficulty,
+          ) as ExamQuestion["difficulty"])
+        : undefined,
       image: raw.image as QuestionImage | undefined,
       option_images: raw.option_images as
         | Record<string, QuestionImage>
@@ -217,6 +226,11 @@ export function previewItems(items: unknown[]): ImportRow[] {
       language: text(raw.language),
     };
     const errors: string[] = [];
+    if (
+      new TextEncoder().encode(q.subject ?? "").length > 120 ||
+      new TextEncoder().encode(q.chapter ?? "").length > 120
+    )
+      errors.push("Subject / chapter exceeds 120 bytes");
     if (q.image) {
       const e = imageProblem(q.image);
       if (e) errors.push(e);
@@ -284,7 +298,7 @@ export function previewItems(items: unknown[]): ImportRow[] {
         q.correct_options = [...keys].sort((a, b) => a - b);
       }
     }
-    const difficulty = text(envelope.difficulty) || "medium";
+    const difficulty = text(envelope.difficulty ?? raw.difficulty) || "medium";
     if (!["easy", "medium", "hard"].includes(difficulty))
       errors.push("Difficulty must be easy, medium or hard");
     return {

@@ -1,4 +1,5 @@
 "use client";
+import { ExamReadiness } from "./exam-readiness";
 import { QuestionImport } from "./question-import";
 import { QuestionMediaFields } from "./question-image-editor";
 import { QuestionText, QuestionPicture } from "./question-content";
@@ -21,7 +22,8 @@ import { MobileExamOption } from "@/components/classroom/mobile-exam-option";
 import { QuestionTesterUpload } from "@/components/classroom/question-tester-upload";
 import { TeacherExamMonitoring } from "@/components/classroom/exam-monitoring";
 import { prettyWorkspaceAnswer } from "@/services/workspace-phase6";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardCheck, Edit3, Lock, Save, Send, XCircle } from "lucide-react";
 import {
@@ -43,16 +45,44 @@ function inLocal(iso: string) {
     .slice(0, 16);
 }
 export function ExamManagement({ classroomId }: { classroomId: string }) {
+  const params = useSearchParams(),
+    requested = params.get("manage_exam"),
+    target = requested && /^[0-9a-f-]{36}$/i.test(requested) ? requested : null;
+  useEffect(() => {
+    if (!target) return;
+    const node = document.getElementById("exam-management");
+    const details = node?.closest("details");
+    if (details) details.open = true;
+    node?.scrollIntoView({ block: "start" });
+  }, [target]);
+  return (
+    <ExamManagementBody
+      key={`${classroomId}:${target ?? "manual"}`}
+      classroomId={classroomId}
+      initialExam={target}
+      initialEditing={!!target && params.get("edit") === "1"}
+    />
+  );
+}
+function ExamManagementBody({
+  classroomId,
+  initialExam,
+  initialEditing,
+}: {
+  classroomId: string;
+  initialExam: string | null;
+  initialEditing: boolean;
+}) {
   const client = useQueryClient();
   const listing = useQuery({
     queryKey: ["classrooms", classroomId, "exams"],
     queryFn: () => examService.list(classroomId),
   });
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialExam);
   const [previewPublication, setPreviewPublication] = useState<string[] | null>(
     null,
   );
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing);
   const [closing, setClosing] = useState(false);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -101,7 +131,10 @@ export function ExamManagement({ classroomId }: { classroomId: string }) {
     }
   }
   return (
-    <section className="mt-6 space-y-4 rounded-3xl border border-border bg-card p-5 text-foreground shadow-sm">
+    <section
+      id="exam-management"
+      className="mt-6 space-y-4 rounded-3xl border border-border bg-card p-5 text-foreground shadow-sm"
+    >
       <ReasonDialog
         open={closing}
         onOpenChange={setClosing}
@@ -616,6 +649,7 @@ function ExamEditForm({
       <label className="block text-sm">
         Title
         <input
+          data-exam-field="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className={field}
@@ -625,6 +659,7 @@ function ExamEditForm({
       <label className="block text-sm">
         Instructions
         <textarea
+          data-exam-field="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className={field}
@@ -636,6 +671,7 @@ function ExamEditForm({
           <input
             type="datetime-local"
             className={field}
+            data-exam-field="starts_at"
             value={starts}
             onChange={(e) => setStarts(e.target.value)}
           />
@@ -645,6 +681,7 @@ function ExamEditForm({
           <input
             type="datetime-local"
             className={field}
+            data-exam-field="ends_at"
             value={ends}
             onChange={(e) => setEnds(e.target.value)}
           />
@@ -656,6 +693,7 @@ function ExamEditForm({
             min={1}
             max={240}
             className={field}
+            data-exam-field="duration_minutes"
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
           />
@@ -692,6 +730,19 @@ function ExamEditForm({
         onChange={setAllowPhone}
         mcqOnly={questions.every((q) => q.kind === "mcq")}
       />
+      <ExamReadiness
+        classId={classroomId}
+        draft={{
+          title,
+          description,
+          starts_at: starts ? new Date(starts).toISOString() : "",
+          ends_at: ends ? new Date(ends).toISOString() : "",
+          duration_minutes: duration,
+          allow_mobile_mcq: allowPhone,
+          questions,
+          audience,
+        }}
+      />
       <QuestionImport
         existingQuestions={questions}
         classroomId={classroomId}
@@ -708,6 +759,8 @@ function ExamEditForm({
         <div
           className="space-y-2 rounded-xl border border-border bg-card p-3"
           key={q.id}
+          id={`exam-question-${q.id}`}
+          tabIndex={-1}
         >
           <div className="flex items-center justify-between gap-2">
             <strong className="text-xs">Question {i + 1}</strong>

@@ -4,7 +4,7 @@ export type BankItem = {
   id: string;
   question: ExamQuestion;
   topic: string;
-  difficulty: string;
+  difficulty: "easy" | "medium" | "hard";
   version: number;
   updated_at: string;
 };
@@ -14,7 +14,43 @@ export type BankInput = {
   difficulty: string;
   version?: number;
 };
+export type BankFilters = {
+  subject?: string;
+  chapter?: string;
+  topic?: string;
+  difficulty?: string;
+  q?: string;
+};
 export const questionBank = {
+  async page(
+    classId: string,
+    filters: BankFilters = {},
+    offset = 0,
+  ): Promise<{ items: BankItem[]; next_offset: number }> {
+    return (
+      await api.get(`/classrooms/${classId}/question-bank/page`, {
+        params: { ...filters, offset },
+      })
+    ).data.data;
+  },
+  async taxonomy(
+    classId: string,
+  ): Promise<
+    { subject: string; chapter: string; topic: string; count: number }[]
+  > {
+    return (await api.get(`/classrooms/${classId}/question-bank/taxonomy`)).data
+      .data;
+  },
+  async usage(
+    classId: string,
+    id: string,
+  ): Promise<{
+    items: { id: string; title: string; status: string; match: string }[];
+    truncated: boolean;
+  }> {
+    return (await api.get(`/classrooms/${classId}/question-bank/${id}/usage`))
+      .data.data;
+  },
   async duplicates(
     classId: string,
     prompts: string[],
@@ -55,12 +91,13 @@ export const questionBank = {
     count: number,
     topic: string,
     difficulty: string,
+    filters: BankFilters = {},
   ): Promise<BankItem[]> {
     return (
       await api.post(
         `/classrooms/${classId}/question-bank/draw`,
         {},
-        { params: { count, topic, difficulty } },
+        { params: { ...filters, count, topic, difficulty } },
       )
     ).data.data;
   },

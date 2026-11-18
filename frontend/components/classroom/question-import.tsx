@@ -267,6 +267,9 @@ export function QuestionImport({
                           question: {
                             ...row.question,
                             tester: data.questions[i].tester,
+                            source_bank_id: data.questions[i].source_bank_id,
+                            source_bank_version:
+                              data.questions[i].source_bank_version,
                           },
                         })),
                       );

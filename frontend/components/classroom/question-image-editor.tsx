@@ -106,6 +106,41 @@ export function QuestionMediaFields({
           Image, equation and section
         </summary>
         <div className="space-y-3 pt-2">
+          <fieldset className="grid min-w-0 gap-2 sm:grid-cols-2">
+            <legend className="text-sm font-semibold">
+              Syllabus tags (optional)
+            </legend>
+            {(["subject", "chapter", "topic"] as const).map((key) => (
+              <label key={key} className="min-w-0 text-sm capitalize">
+                {key}
+                <input
+                  className={field}
+                  value={q[key] ?? ""}
+                  maxLength={120}
+                  onChange={(e) => onChange({ [key]: e.target.value })}
+                />
+              </label>
+            ))}
+            <label className="text-sm">
+              Difficulty
+              <select
+                className={field}
+                value={q.difficulty ?? ""}
+                onChange={(e) =>
+                  onChange({
+                    difficulty: e.target.value
+                      ? (e.target.value as ExamQuestion["difficulty"])
+                      : undefined,
+                  })
+                }
+              >
+                <option value="">Unspecified</option>
+                {["easy", "medium", "hard"].map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
           <QuestionImageEditor
             onBusyChange={onBusyChange}
             label="Question image (optional)"

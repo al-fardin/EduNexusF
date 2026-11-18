@@ -12,6 +12,11 @@ export type QuestionImage = {
   height: number;
 };
 export type ExamQuestion = {
+  subject?: string;
+  chapter?: string;
+  difficulty?: "easy" | "medium" | "hard";
+  source_bank_id?: string;
+  source_bank_version?: number;
   required?: boolean;
   image?: QuestionImage;
   option_images?: Record<string, QuestionImage>;

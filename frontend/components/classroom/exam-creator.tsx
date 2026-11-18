@@ -1,5 +1,6 @@
 "use client";
 import { clientId } from "@/lib/client-id";
+import { ExamReadiness } from "./exam-readiness";
 import { QuestionImport } from "./question-import";
 import { QuestionMediaFields } from "./question-image-editor";
 import { MCQFields, QuestionOrder } from "./mcq-fields";
@@ -107,6 +108,7 @@ export function ExamCreator({
           <input
             className={field}
             maxLength={200}
+            data-exam-field="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Midterm practical"
@@ -119,6 +121,7 @@ export function ExamCreator({
             type="number"
             min={1}
             max={240}
+            data-exam-field="duration_minutes"
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
           />
@@ -128,6 +131,7 @@ export function ExamCreator({
           <input
             className={field}
             type="datetime-local"
+            data-exam-field="starts_at"
             value={starts}
             onChange={(e) => setStarts(e.target.value)}
           />
@@ -137,6 +141,7 @@ export function ExamCreator({
           <input
             className={field}
             type="datetime-local"
+            data-exam-field="ends_at"
             value={ends}
             onChange={(e) => setEnds(e.target.value)}
           />
@@ -146,6 +151,7 @@ export function ExamCreator({
         Instructions
         <textarea
           className={field}
+          data-exam-field="description"
           value={description}
           rows={2}
           maxLength={5000}
@@ -157,6 +163,19 @@ export function ExamCreator({
         enabled={allowPhone}
         onChange={setAllowPhone}
         mcqOnly={questions.every((q) => q.kind === "mcq")}
+      />
+      <ExamReadiness
+        classId={classroomId}
+        draft={{
+          title,
+          description,
+          starts_at: starts ? new Date(starts).toISOString() : "",
+          ends_at: ends ? new Date(ends).toISOString() : "",
+          duration_minutes: duration,
+          allow_mobile_mcq: allowPhone,
+          questions,
+          audience,
+        }}
       />
       <QuestionImport
         existingQuestions={questions}
@@ -219,6 +238,8 @@ export function ExamCreator({
         {questions.map((q, i) => (
           <section
             key={q.id}
+            id={`exam-question-${q.id}`}
+            tabIndex={-1}
             className="rounded-[22px_10px_20px_12px] border border-border bg-background p-4"
           >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

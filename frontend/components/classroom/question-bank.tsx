@@ -1,12 +1,17 @@
 "use client";
 import { clientId } from "@/lib/client-id";
 import { QuestionImport } from "./question-import";
+import { BankFiltersFields, BankEntryTools } from "./bank-catalogue-tools";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { questionBank, type BankItem } from "@/services/question-bank";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  questionBank,
+  type BankItem,
+  type BankFilters,
+} from "@/services/question-bank";
 import { examError, type ExamQuestion } from "@/services/exams";
 const btn =
-  "rounded-lg border border-border px-3 py-2 text-sm font-semibold hover:bg-secondary disabled:opacity-50";
+  "min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-semibold hover:bg-secondary disabled:opacity-50";
 const field = "rounded-lg border border-border bg-card px-3 py-2 text-sm";
 export function SaveBankQuestion({
   classroomId,
@@ -16,8 +21,10 @@ export function SaveBankQuestion({
   question: ExamQuestion;
 }) {
   const [open, setOpen] = useState(false);
-  const [topic, setTopic] = useState("");
-  const [difficulty, setDifficulty] = useState("medium");
+  const [topic, setTopic] = useState(question.topic ?? "");
+  const [subject, setSubject] = useState(question.subject ?? ""),
+    [chapter, setChapter] = useState(question.chapter ?? "");
+  const [difficulty, setDifficulty] = useState(question.difficulty ?? "medium");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const client = useQueryClient();
@@ -29,6 +36,22 @@ export function SaveBankQuestion({
       {open && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <input
+            aria-label="Question subject"
+            placeholder="Subject (optional)"
+            maxLength={120}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className={field}
+          />
+          <input
+            aria-label="Question chapter"
+            placeholder="Chapter (optional)"
+            maxLength={120}
+            value={chapter}
+            onChange={(e) => setChapter(e.target.value)}
+            className={field}
+          />{" "}
+          <input
             aria-label="Question topic"
             placeholder="Topic"
             maxLength={120}
@@ -39,7 +62,11 @@ export function SaveBankQuestion({
           <select
             aria-label="Difficulty"
             value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value)}
+            onChange={(e) =>
+              setDifficulty(
+                e.target.value as NonNullable<ExamQuestion["difficulty"]>,
+              )
+            }
             className={field}
           >
             {["easy", "medium", "hard"].map((v) => (
@@ -54,7 +81,7 @@ export function SaveBankQuestion({
               setBusy(true);
               try {
                 await questionBank.save(classroomId, {
-                  question,
+                  question: { ...question, subject, chapter },
                   topic,
                   difficulty,
                 });
@@ -88,18 +115,31 @@ export function QuestionBank({
   classroomId: string;
   onAdd?: (questions: ExamQuestion[]) => void;
 }) {
-  const [topic, setTopic] = useState("");
-  const [difficulty, setDifficulty] = useState("");
+  const [filters, setFilters] = useState<BankFilters>({});
+  const topic = filters.topic ?? "",
+    difficulty = filters.difficulty ?? "";
   const [count, setCount] = useState(5);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const client = useQueryClient();
-  const list = useQuery({
-    queryKey: ["question-bank", classroomId, topic, difficulty],
-    queryFn: () => questionBank.list(classroomId, topic, difficulty),
+  const list = useInfiniteQuery({
+    queryKey: ["question-bank", classroomId, filters],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      questionBank.page(classroomId, filters, pageParam),
+    getNextPageParam: (p) => (p.next_offset < 0 ? undefined : p.next_offset),
   });
+  const items = list.data?.pages.flatMap((p) => p.items) ?? [];
   const add = (items: BankItem[]) =>
-    onAdd?.(items.map((i) => ({ ...i.question, id: clientId() })));
+    onAdd?.(
+      items.map((i) => ({
+        ...i.question,
+        source_bank_id: i.id,
+        source_bank_version: i.version,
+        difficulty: i.difficulty,
+        id: clientId(),
+      })),
+    );
   const refresh = () =>
     client.invalidateQueries({ queryKey: ["question-bank", classroomId] });
   async function perform(fn: () => Promise<unknown>) {
@@ -118,6 +158,11 @@ export function QuestionBank({
     <details className="my-4 rounded-2xl border border-border bg-card p-4">
       <summary className="cursor-pointer font-semibold">Question bank</summary>
       <div className="mt-4 space-y-4">
+        <BankFiltersFields
+          classId={classroomId}
+          value={filters}
+          onChange={setFilters}
+        />
         <QuestionImport
           classroomId={classroomId}
           label="Save selected to bank"
@@ -127,31 +172,13 @@ export function QuestionBank({
           }}
         />
         <div className="flex flex-wrap gap-2">
-          <input
-            aria-label="Filter by topic"
-            placeholder="Filter by topic"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            className={field}
-          />
-          <select
-            aria-label="Filter by difficulty"
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value)}
-            className={field}
-          >
-            <option value="">All difficulties</option>
-            {["easy", "medium", "hard"].map((v) => (
-              <option key={v}>{v}</option>
-            ))}
-          </select>
           <button
             type="button"
             className={btn}
-            disabled={!list.data?.length}
+            disabled={!items.length}
             onClick={() => {
               const url = URL.createObjectURL(
-                new Blob([JSON.stringify(list.data, null, 2)], {
+                new Blob([JSON.stringify(items, null, 2)], {
                   type: "application/json",
                 }),
               );
@@ -187,6 +214,7 @@ export function QuestionBank({
                     count,
                     topic,
                     difficulty,
+                    filters,
                   );
                   if (!drawn.length) throw new Error("No matching questions");
                   add(drawn);
@@ -211,9 +239,9 @@ export function QuestionBank({
           </p>
         )}
         <div className="max-h-96 space-y-3 overflow-auto">
-          {list.data?.map((item) => (
+          {items.map((item) => (
             <article
-              key={item.id}
+              key={`${item.id}:${item.version}`}
               className="rounded-xl border border-border p-3"
             >
               <p className="text-xs text-muted-foreground">
@@ -272,10 +300,21 @@ export function QuestionBank({
                   Delete
                 </button>
               </div>
+              <BankEntryTools classId={classroomId} item={item} />
             </article>
           ))}
         </div>
-        {list.data?.length === 0 && (
+        {list.hasNextPage && (
+          <button
+            type="button"
+            className={btn}
+            disabled={list.isFetchingNextPage}
+            onClick={() => void list.fetchNextPage()}
+          >
+            More questions
+          </button>
+        )}
+        {items.length === 0 && !list.isPending && (
           <p className="text-sm text-muted-foreground">
             No questions saved. Use Save to question bank in the exam editor.
           </p>
