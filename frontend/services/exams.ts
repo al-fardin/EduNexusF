@@ -6,6 +6,10 @@ import type { TesterAttachment } from "@/services/question-testers";
 type Envelope<T> = { success: boolean; data: T; message?: string };
 export type QuestionKind = "mcq" | "theory" | "coding";
 export type ExamQuestion = {
+  selection?: "single" | "multiple" | "dropdown";
+  correct_options?: number[];
+  section?: string;
+  shuffle_options?: boolean;
   explanation?: string;
   topic?: string;
   tester?: TesterAttachment;
@@ -83,9 +87,7 @@ export const examService = {
   }> {
     return (await api.get(`${prefix(classroomId)}/${id}/access`)).data.data;
   },
-  async active(
-    classroomId: string,
-  ): Promise<
+  async active(classroomId: string): Promise<
     Array<{
       exam_id: string;
       title: string;

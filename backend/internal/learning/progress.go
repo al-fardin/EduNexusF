@@ -61,7 +61,7 @@ func (h *Handler) buildProgressPage(ctx context.Context, class, student, role st
  ), latest AS (
  SELECT DISTINCT ON(s.assignment_id,s.student_id) s.student_id,s.assignment_id,s.awarded_points,s.submitted_at,a.title,a.max_points FROM classroom_assignment_submissions s JOIN classroom_assignments a ON a.id=s.assignment_id JOIN roster r ON r.id=s.student_id WHERE a.classroom_id=$1::uuid AND a.status='published' ORDER BY s.assignment_id,s.student_id,s.version DESC
  ), exam_scores AS (
- SELECT at.student_id,e.id,e.title,e.ends_at,COALESCE(sum(COALESCE(m.awarded_points,CASE WHEN q->>'kind'='mcq' THEN CASE WHEN at.answers->>(q->>'id')=q->>'correct_option' THEN (q->>'points')::int ELSE 0 END WHEN trim(COALESCE(at.answers->>(q->>'id'),''))='' THEN 0 END)),0)::int score,sum((q->>'points')::int)::int maximum,
+ SELECT at.student_id,e.id,e.title,e.ends_at,COALESCE(sum(COALESCE(m.awarded_points,CASE WHEN q->>'kind'='mcq' THEN edunexus_mcq_score(q,at.answers->>(q->>'id')) WHEN trim(COALESCE(at.answers->>(q->>'id'),''))='' THEN 0 END)),0)::int score,sum((q->>'points')::int)::int maximum,
  bool_and(q->>'kind'='mcq' OR m.awarded_points IS NOT NULL OR trim(COALESCE(at.answers->>(q->>'id'),''))='') complete
  FROM classroom_exam_attempts at JOIN roster r ON r.id=at.student_id JOIN classroom_exams e ON e.id=at.exam_id CROSS JOIN LATERAL jsonb_array_elements(e.questions) q
  LEFT JOIN classroom_exam_question_marks m ON m.attempt_id=at.id AND m.question_id=q->>'id' LEFT JOIN classroom_exam_result_publications p ON p.attempt_id=at.id

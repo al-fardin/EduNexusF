@@ -8,7 +8,6 @@ import (
 	"github.com/edunexus/edunexus/internal/activity"
 	"github.com/edunexus/edunexus/internal/platform/audience"
 	"math"
-	"strconv"
 	"strings"
 	"time"
 
@@ -152,15 +151,19 @@ type markRow struct {
 
 func (h *Handler) syncAutoMarks(c *fiber.Ctx, exam string, questions []Question) error {
 	for _, q := range questions {
-		if q.Kind != "mcq" || q.CorrectOption == nil {
+		if q.Kind != "mcq" {
 			continue
 		}
-		_, err := h.db.Exec(c.UserContext(), `INSERT INTO classroom_exam_question_marks(attempt_id,question_id,awarded_points,feedback,grader_kind)
-            SELECT a.id,$2::text, CASE WHEN a.answers->>$2::text=$3::text THEN $4::int ELSE 0 END,
-            CASE WHEN a.answers->>$2::text=$3::text THEN 'Correct' ELSE 'Incorrect or unanswered' END,'auto'
+		raw, err := json.Marshal(q)
+		if err != nil {
+			return err
+		}
+		_, err = h.db.Exec(c.UserContext(), `INSERT INTO classroom_exam_question_marks(attempt_id,question_id,awarded_points,feedback,grader_kind)
+            SELECT a.id,$2::text,edunexus_mcq_score($3::jsonb,a.answers->>$2::text),
+            CASE WHEN edunexus_mcq_score($3::jsonb,a.answers->>$2::text)>0 THEN 'Correct' ELSE 'Incorrect or unanswered' END,'auto'
             FROM classroom_exam_attempts a JOIN classroom_exams e ON e.id=a.exam_id
             WHERE a.exam_id=$1::uuid AND (a.status='submitted' OR a.expires_at <= now() OR e.ends_at <= now())
-            ON CONFLICT(attempt_id,question_id) DO NOTHING`, exam, q.ID, strconv.Itoa(*q.CorrectOption), q.Points)
+            ON CONFLICT(attempt_id,question_id) DO NOTHING`, exam, q.ID, string(raw))
 		if err != nil {
 			return err
 		}
@@ -641,16 +644,12 @@ func (h *Handler) MyResult(c *fiber.Ctx) error {
 		max += q.Points
 		item := fiber.Map{"question_id": q.ID, "prompt": q.Prompt, "kind": q.Kind, "awarded": m.Points, "maximum": q.Points, "answer": answers[q.ID], "feedback": m.Feedback}
 		if q.Kind == "mcq" {
-			answer, e := strconv.Atoi(answers[q.ID])
-			item["answer_text"] = "No response"
-			if e == nil && answer >= 0 && answer < len(q.Options) {
-				item["answer_text"] = q.Options[answer]
-			}
+			item["answer_text"] = mcqAnswerText(q, answers[q.ID])
 		}
 		if review {
 			item["explanation"] = q.Explanation
-			if q.Kind == "mcq" && q.CorrectOption != nil && *q.CorrectOption >= 0 && *q.CorrectOption < len(q.Options) {
-				item["correct_answer"] = q.Options[*q.CorrectOption]
+			if q.Kind == "mcq" {
+				item["correct_answer"] = mcqAnswerText(q, mcqKey(q))
 			} else if q.Kind != "mcq" {
 				item["correct_answer"] = q.SampleAnswer
 			}

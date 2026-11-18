@@ -1,4 +1,7 @@
 "use client";
+import { clientId } from "@/lib/client-id";
+import { QuestionImport } from "./question-import";
+import { MCQFields, QuestionOrder } from "./mcq-fields";
 import { ScheduleCheck } from "./schedule-check";
 import { AudienceFields } from "./audience-fields";
 import { type AudienceRule, EVERYONE } from "@/services/audience";
@@ -154,6 +157,32 @@ export function ExamCreator({
         onChange={setAllowPhone}
         mcqOnly={questions.every((q) => q.kind === "mcq")}
       />
+      <QuestionImport
+        classroomId={classroomId}
+        onImport={(rows) => {
+          const existing = questions.filter(
+            (q) =>
+              q.prompt.trim() ||
+              q.options?.some((o) => o.trim()) ||
+              q.sample_answer?.trim() ||
+              q.tester,
+          );
+          if (existing.length + rows.length > 40)
+            throw new Error(
+              "An exam supports up to 40 questions. Remove unused questions or select fewer rows.",
+            );
+          setQuestions((current) => [
+            ...current.filter(
+              (q) =>
+                q.prompt.trim() ||
+                q.options?.some((o) => o.trim()) ||
+                q.sample_answer?.trim() ||
+                q.tester,
+            ),
+            ...rows.map((r) => r.question),
+          ]);
+        }}
+      />
       <QuestionBank
         classroomId={classroomId}
         onAdd={(items) =>
@@ -192,6 +221,32 @@ export function ExamCreator({
           >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <strong>Question {i + 1}</strong>
+              <QuestionOrder
+                index={i}
+                count={questions.length}
+                onMove={(to) =>
+                  setQuestions((current) => {
+                    const next = [...current];
+                    const [item] = next.splice(i, 1);
+                    next.splice(to, 0, item);
+                    return next;
+                  })
+                }
+                onDuplicate={() =>
+                  setQuestions((current) => {
+                    const next = [...current];
+                    next.splice(i + 1, 0, {
+                      ...q,
+                      id: clientId(),
+                      options: q.options ? [...q.options] : undefined,
+                      correct_options: q.correct_options
+                        ? [...q.correct_options]
+                        : undefined,
+                    });
+                    return next;
+                  })
+                }
+              />
               <button
                 type="button"
                 className="text-xs font-semibold text-destructive"
@@ -213,6 +268,8 @@ export function ExamCreator({
                     const kind = e.target.value as QuestionKind;
                     updateQuestion(i, {
                       kind,
+                      selection: "single",
+                      correct_options: undefined,
                       tester: kind === "coding" ? q.tester : undefined,
                       options: kind === "mcq" ? ["", ""] : [],
                       correct_option: kind === "mcq" ? 0 : undefined,
@@ -262,58 +319,10 @@ export function ExamCreator({
               />
             </label>
             {q.kind === "mcq" ? (
-              <div className="mt-3 space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Select the correct answer.
-                </p>
-                {q.options?.map((option, j) => (
-                  <div key={j} className="flex items-center gap-2">
-                    <input
-                      aria-label={`Correct option ${j + 1}`}
-                      type="radio"
-                      name={`correct-${q.id}`}
-                      checked={q.correct_option === j}
-                      onChange={() => updateQuestion(i, { correct_option: j })}
-                    />
-                    <input
-                      aria-label={`Option ${j + 1}`}
-                      className={field}
-                      value={option}
-                      onChange={(e) =>
-                        updateQuestion(i, {
-                          options: q.options?.map((o, k) =>
-                            k === j ? e.target.value : o,
-                          ),
-                        })
-                      }
-                    />
-                    {(q.options?.length ?? 0) > 2 && (
-                      <button
-                        type="button"
-                        className="text-destructive"
-                        onClick={() =>
-                          updateQuestion(i, {
-                            options: q.options?.filter((_, k) => k !== j),
-                            correct_option: 0,
-                          })
-                        }
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className={outline}
-                  disabled={(q.options?.length ?? 0) >= 6}
-                  onClick={() =>
-                    updateQuestion(i, { options: [...(q.options ?? []), ""] })
-                  }
-                >
-                  Add option
-                </button>
-              </div>
+              <MCQFields
+                question={q}
+                onChange={(patch) => updateQuestion(i, patch)}
+              />
             ) : (
               <div className="mt-3 grid gap-3">
                 <label className="space-y-1 text-sm">
@@ -380,7 +389,14 @@ export function ExamCreator({
           {examError(mutation.error)}
         </p>
       )}
-      <ScheduleCheck classId={classroomId} kind="exam" start={starts} end={ends} audience={audience} disabled={mutation.isPending}/>
+      <ScheduleCheck
+        classId={classroomId}
+        kind="exam"
+        start={starts}
+        end={ends}
+        audience={audience}
+        disabled={mutation.isPending}
+      />
       <AudienceFields
         classId={classroomId}
         value={audience}

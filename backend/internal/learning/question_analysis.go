@@ -80,6 +80,24 @@ func (h *Handler) QuestionAnalysis(c *fiber.Ctx) error {
 		options, _ := q["options"].([]any)
 		counts := make([]int, len(options))
 		correctOption, _ := q["correct_option"].(float64)
+		keys := map[int]bool{int(correctOption): true}
+		if q["selection"] == "multiple" {
+			keys = map[int]bool{}
+			values, _ := q["correct_options"].([]any)
+			for _, v := range values {
+				n, ok := v.(float64)
+				if ok {
+					keys[int(n)] = true
+				}
+			}
+		}
+		keyParts := []string{}
+		for i := range options {
+			if keys[i] {
+				keyParts = append(keyParts, strconv.Itoa(i))
+			}
+		}
+		keyAnswer := strings.Join(keyParts, ",")
 		unanswered, correct, graded := 0, 0, 0
 		earned := 0.0
 		for _, a := range attempts {
@@ -88,11 +106,13 @@ func (h *Handler) QuestionAnalysis(c *fiber.Ctx) error {
 				unanswered++
 			}
 			if kind == "mcq" && answer != "" {
-				index, e := strconv.Atoi(answer)
-				if e == nil && index >= 0 && index < len(counts) {
-					counts[index]++
+				for _, part := range strings.Split(answer, ",") {
+					index, e := strconv.Atoi(part)
+					if e == nil && index >= 0 && index < len(counts) {
+						counts[index]++
+					}
 				}
-				if e == nil && index == int(correctOption) {
+				if answer == keyAnswer {
 					correct++
 				}
 			}
@@ -103,8 +123,7 @@ func (h *Handler) QuestionAnalysis(c *fiber.Ctx) error {
 			} else if answer == "" {
 				graded++
 			} else if kind == "mcq" {
-				index, e := strconv.Atoi(answer)
-				if e == nil && index == int(correctOption) {
+				if answer == keyAnswer {
 					earned += maximum
 				}
 				graded++
@@ -117,7 +136,7 @@ func (h *Handler) QuestionAnalysis(c *fiber.Ctx) error {
 		}
 		choiceStats := []fiber.Map{}
 		for i, option := range options {
-			choiceStats = append(choiceStats, fiber.Map{"index": i, "text": option, "count": counts[i], "correct": kind == "mcq" && i == int(correctOption)})
+			choiceStats = append(choiceStats, fiber.Map{"index": i, "text": option, "count": counts[i], "correct": kind == "mcq" && keys[i]})
 		}
 		var incorrect *int
 		if kind == "mcq" {

@@ -117,7 +117,7 @@ func (h *Handler) Gradebook(c *fiber.Ctx) error {
 	}
 	rows, err = h.db.Query(ctx, `SELECT a.exam_id::text,a.student_id::text,
  (a.status='submitted' OR a.expires_at<=now() OR e.ends_at<=now()),p.attempt_id IS NOT NULL,
- COALESCE(sum(COALESCE(m.awarded_points,CASE WHEN q->>'kind'='mcq' THEN CASE WHEN a.answers->>(q->>'id')=q->>'correct_option' THEN (q->>'points')::int ELSE 0 END WHEN trim(COALESCE(a.answers->>(q->>'id'),''))='' THEN 0 END)),0)::int,
+ COALESCE(sum(COALESCE(m.awarded_points,CASE WHEN q->>'kind'='mcq' THEN edunexus_mcq_score(q,a.answers->>(q->>'id')) WHEN trim(COALESCE(a.answers->>(q->>'id'),''))='' THEN 0 END)),0)::int,
  bool_and(q->>'kind'='mcq' OR m.awarded_points IS NOT NULL OR trim(COALESCE(a.answers->>(q->>'id'),''))='')
  FROM classroom_exam_attempts a JOIN classroom_exams e ON e.id=a.exam_id CROSS JOIN LATERAL jsonb_array_elements(e.questions) q
  LEFT JOIN classroom_exam_question_marks m ON m.attempt_id=a.id AND m.question_id=q->>'id'

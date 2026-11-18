@@ -18,7 +18,7 @@ func (h *Handler) Analytics(c *fiber.Ctx) error {
 	}
 	rows, err := h.db.Query(c.UserContext(), `WITH question_scores AS(
  SELECT e.id,e.title,e.starts_at,a.id attempt_id,a.student_id,q->>'id' question_id,q->>'kind' kind,COALESCE(NULLIF(q->>'topic',''),'General') topic,q->>'prompt' prompt,(q->>'points')::int maximum,
- CASE WHEN m.awarded_points IS NOT NULL THEN m.awarded_points WHEN q->>'kind'='mcq' THEN CASE WHEN a.answers->>(q->>'id')=q->>'correct_option' THEN (q->>'points')::int ELSE 0 END ELSE NULL END awarded
+ CASE WHEN m.awarded_points IS NOT NULL THEN m.awarded_points WHEN q->>'kind'='mcq' THEN edunexus_mcq_score(q,a.answers->>(q->>'id')) ELSE NULL END awarded
  FROM classroom_exams e JOIN classroom_exam_attempts a ON a.exam_id=e.id CROSS JOIN LATERAL jsonb_array_elements(e.questions) q
  LEFT JOIN classroom_exam_question_marks m ON m.attempt_id=a.id AND m.question_id=q->>'id'
  LEFT JOIN classroom_exam_result_publications p ON p.attempt_id=a.id
@@ -56,7 +56,7 @@ func (h *Handler) Analytics(c *fiber.Ctx) error {
 	rows.Close()
 	trendRows, err := h.db.Query(c.UserContext(), `WITH exam_scores AS(
  SELECT e.id,e.title,e.starts_at at,a.id attempt_id,sum((q->>'points')::int) maximum,
- sum(COALESCE(m.awarded_points,CASE WHEN q->>'kind'='mcq' THEN CASE WHEN a.answers->>(q->>'id')=q->>'correct_option' THEN (q->>'points')::int ELSE 0 END END)) score,
+ sum(COALESCE(m.awarded_points,CASE WHEN q->>'kind'='mcq' THEN edunexus_mcq_score(q,a.answers->>(q->>'id')) END)) score,
  count(*)=count(COALESCE(m.awarded_points,CASE WHEN q->>'kind'='mcq' THEN 0 END)) complete
  FROM classroom_exams e JOIN classroom_exam_attempts a ON a.exam_id=e.id CROSS JOIN LATERAL jsonb_array_elements(e.questions)q
  LEFT JOIN classroom_exam_question_marks m ON m.attempt_id=a.id AND m.question_id=q->>'id'

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/edunexus/edunexus/internal/platform/audience"
-	"strconv"
 	"strings"
 	"time"
 
@@ -111,33 +110,40 @@ func examID(c *fiber.Ctx) (string, error) {
 }
 
 type Question struct {
-	Explanation   string            `json:"explanation,omitempty"`
-	Topic         string            `json:"topic,omitempty"`
-	Tester        *TesterAttachment `json:"tester,omitempty"`
-	ID            string            `json:"id"`
-	Kind          string            `json:"kind"`
-	Prompt        string            `json:"prompt"`
-	Points        int               `json:"points"`
-	Options       []string          `json:"options,omitempty"`
-	CorrectOption *int              `json:"correct_option,omitempty"`
-	SampleAnswer  string            `json:"sample_answer,omitempty"`
-	Language      string            `json:"language,omitempty"`
+	Selection      string            `json:"selection,omitempty"`
+	CorrectOptions []int             `json:"correct_options,omitempty"`
+	Section        string            `json:"section,omitempty"`
+	ShuffleOptions bool              `json:"shuffle_options,omitempty"`
+	Explanation    string            `json:"explanation,omitempty"`
+	Topic          string            `json:"topic,omitempty"`
+	Tester         *TesterAttachment `json:"tester,omitempty"`
+	ID             string            `json:"id"`
+	Kind           string            `json:"kind"`
+	Prompt         string            `json:"prompt"`
+	Points         int               `json:"points"`
+	Options        []string          `json:"options,omitempty"`
+	CorrectOption  *int              `json:"correct_option,omitempty"`
+	SampleAnswer   string            `json:"sample_answer,omitempty"`
+	Language       string            `json:"language,omitempty"`
 }
 type PublicQuestion struct {
-	Topic    string            `json:"topic,omitempty"`
-	Tester   *TesterAttachment `json:"tester,omitempty"`
-	ID       string            `json:"id"`
-	Kind     string            `json:"kind"`
-	Prompt   string            `json:"prompt"`
-	Points   int               `json:"points"`
-	Options  []string          `json:"options,omitempty"`
-	Language string            `json:"language,omitempty"`
+	Selection      string            `json:"selection,omitempty"`
+	Section        string            `json:"section,omitempty"`
+	ShuffleOptions bool              `json:"shuffle_options,omitempty"`
+	Topic          string            `json:"topic,omitempty"`
+	Tester         *TesterAttachment `json:"tester,omitempty"`
+	ID             string            `json:"id"`
+	Kind           string            `json:"kind"`
+	Prompt         string            `json:"prompt"`
+	Points         int               `json:"points"`
+	Options        []string          `json:"options,omitempty"`
+	Language       string            `json:"language,omitempty"`
 }
 
 func publicQuestions(questions []Question) []PublicQuestion {
 	out := make([]PublicQuestion, 0, len(questions))
 	for _, q := range questions {
-		out = append(out, PublicQuestion{ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language, Tester: q.Tester, Topic: q.Topic})
+		out = append(out, PublicQuestion{Selection: q.Selection, Section: q.Section, ShuffleOptions: q.ShuffleOptions, ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language, Tester: q.Tester, Topic: q.Topic})
 	}
 	return out
 }
@@ -165,6 +171,9 @@ func normalizeQuestions(questions []Question) (string, error) {
 		if len(q.Explanation) > 16000 {
 			return "", errors.New("answer explanation is too long")
 		}
+		if len(q.Section) > 120 {
+			return "", errors.New("section exceeds 120 characters")
+		}
 		if len(q.Topic) > 120 {
 			return "", errors.New("question topic exceeds 120 characters")
 		}
@@ -180,20 +189,23 @@ func normalizeQuestions(questions []Question) (string, error) {
 		}
 		switch q.Kind {
 		case "mcq":
-			if len(q.Options) < 2 || len(q.Options) > 6 {
-				return "", errors.New("MCQ requires 2-6 options")
+			if len(q.Options) < 2 || len(q.Options) > 20 {
+				return "", errors.New("MCQ requires 2-20 options")
 			}
 			for _, o := range q.Options {
 				if strings.TrimSpace(o) == "" || len(o) > 1000 {
 					return "", errors.New("MCQ choices must contain 1-1000 characters")
 				}
 			}
-			if q.CorrectOption == nil || *q.CorrectOption < 0 || *q.CorrectOption >= len(q.Options) {
-				return "", errors.New("MCQ correct option is required")
+			if err := normalizeMCQ(q); err != nil {
+				return "", err
 			}
 			q.SampleAnswer = ""
 			q.Language = ""
 		case "theory", "coding":
+			q.Selection = ""
+			q.CorrectOptions = nil
+			q.ShuffleOptions = false
 			q.Options = nil
 			q.CorrectOption = nil
 			if len(q.SampleAnswer) > 15000 || len(q.Language) > 50 {
@@ -482,7 +494,7 @@ func validateAnswers(answers map[string]string, questions []Question) error {
 		}
 		size := 20000
 		if q.Kind == "mcq" {
-			size = 10
+			size = 60
 		} else if q.Kind == "theory" {
 			size = 8000
 		}
@@ -490,9 +502,8 @@ func validateAnswers(answers map[string]string, questions []Question) error {
 			return errors.New("answer exceeds allowed length")
 		}
 		if q.Kind == "mcq" && value != "" {
-			index, err := strconv.Atoi(value)
-			if err != nil || index < 0 || index >= len(q.Options) {
-				return errors.New("invalid MCQ answer")
+			if _, err := mcqIndices(q, value); err != nil {
+				return err
 			}
 		}
 	}

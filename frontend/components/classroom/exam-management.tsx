@@ -1,4 +1,6 @@
 "use client";
+import { QuestionImport } from "./question-import";
+import { MCQFields, QuestionOrder } from "./mcq-fields";
 import { ScheduleCheck } from "./schedule-check";
 import { AudienceFields } from "./audience-fields";
 import { type AudienceRule, EVERYONE } from "@/services/audience";
@@ -481,7 +483,12 @@ function MarkQuestion({
       <pre className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-card p-3 font-mono text-xs">
         Answer:{" "}
         {q.kind === "mcq"
-          ? (q.options?.[Number(student.answers[q.id])] ?? "Not answered")
+          ? student.answers[q.id]
+            ? student.answers[q.id]
+                .split(",")
+                .map((n) => q.options?.[Number(n)] ?? "Invalid option")
+                .join("; ")
+            : "Not answered"
           : prettyWorkspaceAnswer(student.answers[q.id] || "Not answered")}
       </pre>
       <div className="mt-2 grid gap-2 sm:grid-cols-[100px_1fr_auto]">
@@ -547,7 +554,7 @@ function ExamEditForm({
   classroomId: string;
   detail: {
     exam: {
-      id?:string;
+      id?: string;
       title: string;
       description: string;
       starts_at: string;
@@ -662,7 +669,15 @@ function ExamEditForm({
           className={field}
         />
       </label>
-      <ScheduleCheck classId={classroomId} kind="exam" start={starts} end={ends} resourceId={detail.exam.id} audience={audience} disabled={busy}/>
+      <ScheduleCheck
+        classId={classroomId}
+        kind="exam"
+        start={starts}
+        end={ends}
+        resourceId={detail.exam.id}
+        audience={audience}
+        disabled={busy}
+      />
       <AudienceFields
         classId={classroomId}
         value={audience}
@@ -674,6 +689,17 @@ function ExamEditForm({
         onChange={setAllowPhone}
         mcqOnly={questions.every((q) => q.kind === "mcq")}
       />
+      <QuestionImport
+        classroomId={classroomId}
+        onImport={(rows) => {
+          if (questions.length + rows.length > 40)
+            throw new Error("An exam supports up to 40 questions");
+          setQuestions((current) => [
+            ...current,
+            ...rows.map((r) => r.question),
+          ]);
+        }}
+      />
       {questions.map((q, i) => (
         <div
           className="space-y-2 rounded-xl border border-border bg-card p-3"
@@ -681,6 +707,32 @@ function ExamEditForm({
         >
           <div className="flex items-center justify-between gap-2">
             <strong className="text-xs">Question {i + 1}</strong>
+            <QuestionOrder
+              index={i}
+              count={questions.length}
+              onMove={(to) =>
+                setQuestions((current) => {
+                  const next = [...current];
+                  const [item] = next.splice(i, 1);
+                  next.splice(to, 0, item);
+                  return next;
+                })
+              }
+              onDuplicate={() =>
+                setQuestions((current) => {
+                  const next = [...current];
+                  next.splice(i + 1, 0, {
+                    ...q,
+                    id: clientId(),
+                    options: q.options ? [...q.options] : undefined,
+                    correct_options: q.correct_options
+                      ? [...q.correct_options]
+                      : undefined,
+                  });
+                  return next;
+                })
+              }
+            />
             <button
               type="button"
               disabled={questions.length <= 1}
@@ -722,29 +774,7 @@ function ExamEditForm({
             />
           </label>
           {q.kind === "mcq" ? (
-            <div>
-              {q.options?.map((value, j) => (
-                <label key={j} className="flex items-center gap-2 py-1">
-                  <input
-                    type="radio"
-                    name={q.id}
-                    checked={q.correct_option === j}
-                    onChange={() => updateQ(i, { correct_option: j })}
-                  />
-                  <input
-                    className={field}
-                    value={value}
-                    onChange={(e) =>
-                      updateQ(i, {
-                        options: q.options?.map((o, k) =>
-                          j === k ? e.target.value : o,
-                        ),
-                      })
-                    }
-                  />
-                </label>
-              ))}
-            </div>
+            <MCQFields question={q} onChange={(patch) => updateQ(i, patch)} />
           ) : (
             <label className="block text-sm">
               Marking key

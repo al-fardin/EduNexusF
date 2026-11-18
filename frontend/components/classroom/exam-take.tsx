@@ -1,5 +1,6 @@
 "use client";
 
+import { MCQAnswer } from "./mcq-fields";
 import { useAuthStore } from "@/store/auth-store";
 import {
   readExamDraft,
@@ -509,23 +510,18 @@ export function ExamTake({
                         {q.points} pts
                       </span>
                     </div>
+                    {q.section && (
+                      <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
+                        {q.section}
+                      </h4>
+                    )}
                     {q.kind === "mcq" ? (
-                      <div className="space-y-2">
-                        {q.options?.map((o, j) => (
-                          <label
-                            key={j}
-                            className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm"
-                          >
-                            <input
-                              type="radio"
-                              name={q.id}
-                              checked={answers[q.id] === String(j)}
-                              onChange={() => change(q.id, String(j))}
-                            />
-                            {o}
-                          </label>
-                        ))}
-                      </div>
+                      <MCQAnswer
+                        question={q}
+                        value={answers[q.id] ?? ""}
+                        attemptId={live.attempt.id}
+                        onChange={(v) => change(q.id, v)}
+                      />
                     ) : (
                       <>
                         <p className="mb-2 text-xs font-medium text-muted-foreground">

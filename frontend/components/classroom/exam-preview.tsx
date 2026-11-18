@@ -1,4 +1,5 @@
 "use client";
+import { correctIndices, MCQAnswer } from "./mcq-fields";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, Clock, Check } from "lucide-react";
@@ -21,6 +22,7 @@ function PreviewBody({
   questions: ExamQuestion[];
 }) {
   const [keys, setKeys] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   return (
     <>
       <div className="en-exam-preview-summary">
@@ -50,13 +52,27 @@ function PreviewBody({
             <p>{q.prompt || "Question text"}</p>
             {q.kind === "mcq" ? (
               <div className="en-exam-preview-options">
-                {q.options?.map((o, index) => (
-                  <label key={index}>
-                    <input type="radio" name={`preview-${q.id}`} />
-                    <span>{o || `Option ${index + 1}`}</span>
-                    {keys && q.correct_option === index && <Check size={16} />}
-                  </label>
-                ))}
+                <MCQAnswer
+                  question={q}
+                  value={answers[q.id] ?? ""}
+                  attemptId="preview"
+                  onChange={(value) =>
+                    setAnswers((current) => ({ ...current, [q.id]: value }))
+                  }
+                />
+                {keys && (
+                  <ul
+                    aria-label="Correct answers"
+                    className="space-y-1 text-sm"
+                  >
+                    {correctIndices(q).map((index) => (
+                      <li key={index} className="flex items-center gap-2">
+                        <Check size={16} />
+                        {q.options?.[index]}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ) : (
               <textarea
