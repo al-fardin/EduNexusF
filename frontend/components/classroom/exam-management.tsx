@@ -1,5 +1,7 @@
 "use client";
 import { QuestionImport } from "./question-import";
+import { QuestionMediaFields } from "./question-image-editor";
+import { QuestionText, QuestionPicture } from "./question-content";
 import { MCQFields, QuestionOrder } from "./mcq-fields";
 import { ScheduleCheck } from "./schedule-check";
 import { AudienceFields } from "./audience-fields";
@@ -475,11 +477,12 @@ function MarkQuestion({
   return (
     <div className="rounded-xl bg-secondary p-3 text-sm">
       <p className="font-semibold">
-        {q.prompt}{" "}
+        <QuestionText text={q.prompt} />{" "}
         <span className="text-muted-foreground">
           ({q.kind}, max {q.points})
         </span>
       </p>
+      <QuestionPicture image={q.image} />
       <pre className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-card p-3 font-mono text-xs">
         Answer:{" "}
         {q.kind === "mcq"
@@ -773,8 +776,28 @@ function ExamEditForm({
               onChange={(e) => updateQ(i, { explanation: e.target.value })}
             />
           </label>
+          <QuestionMediaFields
+            onBusyChange={(delta) => setUploads((n) => n + delta)}
+            question={q}
+            onChange={(patch) =>
+              setQuestions((current) =>
+                current.map((item) =>
+                  item.id === q.id ? { ...item, ...patch } : item,
+                ),
+              )
+            }
+          />{" "}
           {q.kind === "mcq" ? (
-            <MCQFields question={q} onChange={(patch) => updateQ(i, patch)} />
+            <MCQFields
+              question={q}
+              onChange={(patch) =>
+                setQuestions((current) =>
+                  current.map((item) =>
+                    item.id === q.id ? { ...item, ...patch } : item,
+                  ),
+                )
+              }
+            />
           ) : (
             <label className="block text-sm">
               Marking key

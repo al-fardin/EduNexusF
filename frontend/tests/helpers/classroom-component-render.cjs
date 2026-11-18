@@ -23,6 +23,7 @@ function loadComponent(file, mocks, extra = "") {
     exports,
     URL,
     URLSearchParams,
+    TextEncoder,
     require(name) {
       if (Object.hasOwn(mocks, name)) return mocks[name];
       if (name === "react" || name === "react/jsx-runtime") return require(name);

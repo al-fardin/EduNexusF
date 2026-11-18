@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     ".next-*/**",
     "public/pdfjs/**",
+    "public/ocr/**",
     "public/monaco/**",
     "out/**",
     "build/**",

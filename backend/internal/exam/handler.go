@@ -110,40 +110,46 @@ func examID(c *fiber.Ctx) (string, error) {
 }
 
 type Question struct {
-	Selection      string            `json:"selection,omitempty"`
-	CorrectOptions []int             `json:"correct_options,omitempty"`
-	Section        string            `json:"section,omitempty"`
-	ShuffleOptions bool              `json:"shuffle_options,omitempty"`
-	Explanation    string            `json:"explanation,omitempty"`
-	Topic          string            `json:"topic,omitempty"`
-	Tester         *TesterAttachment `json:"tester,omitempty"`
-	ID             string            `json:"id"`
-	Kind           string            `json:"kind"`
-	Prompt         string            `json:"prompt"`
-	Points         int               `json:"points"`
-	Options        []string          `json:"options,omitempty"`
-	CorrectOption  *int              `json:"correct_option,omitempty"`
-	SampleAnswer   string            `json:"sample_answer,omitempty"`
-	Language       string            `json:"language,omitempty"`
+	Required       bool                      `json:"required,omitempty"`
+	Image          *QuestionImage            `json:"image,omitempty"`
+	OptionImages   map[string]*QuestionImage `json:"option_images,omitempty"`
+	Selection      string                    `json:"selection,omitempty"`
+	CorrectOptions []int                     `json:"correct_options,omitempty"`
+	Section        string                    `json:"section,omitempty"`
+	ShuffleOptions bool                      `json:"shuffle_options,omitempty"`
+	Explanation    string                    `json:"explanation,omitempty"`
+	Topic          string                    `json:"topic,omitempty"`
+	Tester         *TesterAttachment         `json:"tester,omitempty"`
+	ID             string                    `json:"id"`
+	Kind           string                    `json:"kind"`
+	Prompt         string                    `json:"prompt"`
+	Points         int                       `json:"points"`
+	Options        []string                  `json:"options,omitempty"`
+	CorrectOption  *int                      `json:"correct_option,omitempty"`
+	SampleAnswer   string                    `json:"sample_answer,omitempty"`
+	Language       string                    `json:"language,omitempty"`
 }
 type PublicQuestion struct {
-	Selection      string            `json:"selection,omitempty"`
-	Section        string            `json:"section,omitempty"`
-	ShuffleOptions bool              `json:"shuffle_options,omitempty"`
-	Topic          string            `json:"topic,omitempty"`
-	Tester         *TesterAttachment `json:"tester,omitempty"`
-	ID             string            `json:"id"`
-	Kind           string            `json:"kind"`
-	Prompt         string            `json:"prompt"`
-	Points         int               `json:"points"`
-	Options        []string          `json:"options,omitempty"`
-	Language       string            `json:"language,omitempty"`
+	Required       bool                      `json:"required,omitempty"`
+	Image          *QuestionImage            `json:"image,omitempty"`
+	OptionImages   map[string]*QuestionImage `json:"option_images,omitempty"`
+	Selection      string                    `json:"selection,omitempty"`
+	Section        string                    `json:"section,omitempty"`
+	ShuffleOptions bool                      `json:"shuffle_options,omitempty"`
+	Topic          string                    `json:"topic,omitempty"`
+	Tester         *TesterAttachment         `json:"tester,omitempty"`
+	ID             string                    `json:"id"`
+	Kind           string                    `json:"kind"`
+	Prompt         string                    `json:"prompt"`
+	Points         int                       `json:"points"`
+	Options        []string                  `json:"options,omitempty"`
+	Language       string                    `json:"language,omitempty"`
 }
 
 func publicQuestions(questions []Question) []PublicQuestion {
 	out := make([]PublicQuestion, 0, len(questions))
 	for _, q := range questions {
-		out = append(out, PublicQuestion{Selection: q.Selection, Section: q.Section, ShuffleOptions: q.ShuffleOptions, ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language, Tester: q.Tester, Topic: q.Topic})
+		out = append(out, PublicQuestion{Required: q.Required, Image: q.Image, OptionImages: q.OptionImages, Selection: q.Selection, Section: q.Section, ShuffleOptions: q.ShuffleOptions, ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language, Tester: q.Tester, Topic: q.Topic})
 	}
 	return out
 }
@@ -163,9 +169,24 @@ func normalizeQuestions(questions []Question) (string, error) {
 	if len(questions) < 1 || len(questions) > 40 {
 		return "", errors.New("1-40 questions required")
 	}
+	initial, e := json.Marshal(questions)
+	if e != nil {
+		return "", e
+	}
+	if len(initial) > 2*1024*1024 {
+		return "", errors.New("questions including images must fit within 2 MB")
+	}
+	imagePixels := 0
 	seen := map[string]bool{}
 	for i := range questions {
 		q := &questions[i]
+		if err := validateQuestionMedia(q); err != nil {
+			return "", err
+		}
+		imagePixels += questionImagePixels(*q)
+		if imagePixels > 32_000_000 {
+			return "", errors.New("question images exceed the combined 32-megapixel limit")
+		}
 		q.ID = strings.TrimSpace(q.ID)
 		q.Prompt = strings.TrimSpace(q.Prompt)
 		if len(q.Explanation) > 16000 {
@@ -219,6 +240,9 @@ func normalizeQuestions(questions []Question) (string, error) {
 		}
 	}
 	raw, err := json.Marshal(questions)
+	if len(raw) > 2*1024*1024 {
+		return "", errors.New("questions including images must fit within 2 MB")
+	}
 	return string(raw), err
 }
 
@@ -540,6 +564,26 @@ func (h *Handler) writeAnswers(c *fiber.Ctx, submit bool) error {
 	}
 	if err = validateAnswers(req.Answers, questions); err != nil {
 		return failure(c, 400, err.Error())
+	}
+	if submit {
+		missing := []string{}
+		for _, q := range questions {
+			if q.Required && strings.TrimSpace(req.Answers[q.ID]) == "" {
+				missing = append(missing, q.ID)
+			}
+		}
+		if len(missing) > 0 {
+			stored, readErr := scanAttempt(h.db.QueryRow(c.UserContext(), `SELECT id::text,started_at,expires_at,status,answers,submitted_at,revision,last_saved_at,entry_mode FROM classroom_exam_attempts WHERE exam_id=$1::uuid AND student_id=$2::uuid`, e.ID, user))
+			if readErr != nil && !errors.Is(readErr, pgx.ErrNoRows) {
+				return readErr
+			}
+			if readErr == nil && stored.Status == "submitted" {
+				return result(c, 200, stored)
+			}
+			if readErr == nil && stored.Status == "in_progress" && time.Now().Before(stored.ExpiresAt) && time.Now().Before(e.EndsAt) {
+				return failure(c, 400, "Answer all required questions before submitting")
+			}
+		}
 	}
 	raw, err := json.Marshal(req.Answers)
 	if err != nil {

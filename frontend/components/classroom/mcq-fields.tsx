@@ -1,4 +1,6 @@
 "use client";
+import { QuestionImageEditor } from "./question-image-editor";
+import { QuestionText, QuestionPicture } from "./question-content";
 import type { ExamQuestion } from "@/services/exams";
 import { field, outline } from "./exam-presentation";
 
@@ -12,14 +14,18 @@ export function correctIndices(q: ExamQuestion) {
 export function MCQFields({
   question: q,
   onChange,
+  onBusyChange,
+  disabled = false,
 }: {
   question: ExamQuestion;
   onChange: (patch: Partial<ExamQuestion>) => void;
+  onBusyChange?: (delta: number) => void;
+  disabled?: boolean;
 }) {
   const multiple = q.selection === "multiple";
   const keys = correctIndices(q);
   return (
-    <fieldset className="mt-3 min-w-0 space-y-3">
+    <fieldset disabled={disabled} className="mt-3 min-w-0 space-y-3">
       <legend className="text-sm font-semibold">Answer choices and key</legend>
       <div className="flex flex-wrap items-end gap-2">
         <label className="min-w-0 flex-1 basis-60 text-sm">
@@ -50,6 +56,7 @@ export function MCQFields({
             onChange({
               selection: "single",
               options: ["True", "False"],
+              option_images: undefined,
               correct_option: 0,
               correct_options: undefined,
             })
@@ -64,7 +71,10 @@ export function MCQFields({
           : "Select the correct answer."}
       </p>
       {q.options?.map((option, j) => (
-        <div key={j} className="flex min-w-0 items-center gap-1">
+        <div
+          key={j}
+          className="grid min-w-0 grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-1"
+        >
           <label className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center">
             <span className="sr-only">Correct option {j + 1}</span>
             <input
@@ -108,6 +118,14 @@ export function MCQFields({
                 .map((n) => (n > j ? n - 1 : n));
               onChange({
                 options: q.options?.filter((_, n) => n !== j),
+                option_images: Object.fromEntries(
+                  Object.entries(q.option_images ?? {})
+                    .filter(([key]) => Number(key) !== j)
+                    .map(([key, v]) => [
+                      String(Number(key) > j ? Number(key) - 1 : Number(key)),
+                      v,
+                    ]),
+                ),
                 correct_option: multiple ? undefined : next[0],
                 correct_options: multiple ? next : undefined,
               });
@@ -115,6 +133,25 @@ export function MCQFields({
           >
             ×
           </button>
+          <details className="col-span-3 min-w-0 rounded-xl border border-border p-2">
+            <summary className="min-h-11 cursor-pointer text-xs">
+              Option {j + 1} image / equation preview
+            </summary>
+            <div className="min-w-0 space-y-2">
+              <QuestionText text={option} />
+              <QuestionImageEditor
+                onBusyChange={onBusyChange}
+                label={`Option ${j + 1} image`}
+                image={q.option_images?.[j]}
+                onChange={(image) => {
+                  const images = { ...q.option_images };
+                  if (image) images[j] = image;
+                  else delete images[j];
+                  onChange({ option_images: images });
+                }}
+              />
+            </div>
+          </details>
         </div>
       ))}
       <button
@@ -132,15 +169,6 @@ export function MCQFields({
           onChange={(e) => onChange({ shuffle_options: e.target.checked })}
         />
         Shuffle choices for each attempt
-      </label>
-      <label className="block text-sm">
-        Section / heading (optional)
-        <input
-          className={field}
-          maxLength={120}
-          value={q.section ?? ""}
-          onChange={(e) => onChange({ section: e.target.value })}
-        />
       </label>
     </fieldset>
   );
@@ -230,6 +258,21 @@ export function MCQAnswer({
             </option>
           ))}
         </select>
+        {order.some(
+          (i) => q.option_images?.[i] || q.options?.[i]?.includes("$"),
+        ) && (
+          <span className="mt-2 grid min-w-0 gap-2">
+            {order.map((i) => (
+              <span
+                key={i}
+                className="block min-w-0 rounded-lg border border-border p-2"
+              >
+                <QuestionText text={q.options?.[i] ?? ""} />
+                <QuestionPicture image={q.option_images?.[i]} />
+              </span>
+            ))}
+          </span>
+        )}
       </label>
     );
   return (
@@ -262,7 +305,10 @@ export function MCQAnswer({
               )
             }
           />
-          <span className="min-w-0 break-words">{q.options?.[i]}</span>
+          <span className="min-w-0 break-words">
+            <QuestionText text={q.options?.[i] ?? ""} />
+            <QuestionPicture image={q.option_images?.[i]} />
+          </span>
         </label>
       ))}
       <button

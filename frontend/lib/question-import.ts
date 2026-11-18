@@ -1,4 +1,5 @@
-import type { ExamQuestion } from "@/services/exams";
+import { imageProblem } from "./question-images";
+import type { ExamQuestion, QuestionImage } from "@/services/exams";
 
 export type ImportRow = {
   line: number;
@@ -141,21 +142,30 @@ function plainItems(input: string): unknown[] {
     const options: string[] = [];
     let answer = "";
     for (const line of lines) {
-      const option = line.match(/^\s*([A-T])[.)]\s+(.+)$/i),
-        key = line.match(/^\s*ANSWER\s*:\s*(.+)$/i);
+      const option = line.match(/^\s*([A-Tকখগঘঙচছজঝঞটঠডঢণতথদধন])[.)]\s+(.+)$/i),
+        key = line.match(/^\s*(?:ANSWER|উত্তর|সঠিক উত্তর)\s*:\s*(.+)$/i);
       if (key) answer = key[1];
       else if (option) {
-        if (option[1].toUpperCase().charCodeAt(0) - 65 !== options.length)
+        if (
+          ("ABCDEFGHIJKLMNOPQRST".includes(option[1].toUpperCase())
+            ? option[1].toUpperCase().charCodeAt(0) - 65
+            : "কখগঘঙচছজঝঞটঠডঢণতথদধন".indexOf(option[1])) !== options.length
+        )
           throw Error("Option labels must be consecutive, starting with A");
         options.push(option[2]);
-      } else if (line.trim()) prompt.push(line.replace(/^\s*\d+[.)]\s*/, ""));
+      } else if (line.trim())
+        prompt.push(line.replace(/^\s*[0-9০-৯]+[.)]\s*/, ""));
     }
     if (!prompt.length && !options.length) continue;
     const keys = answer
       .split(/[,;|]/)
       .map((v) => v.trim().toUpperCase())
       .filter(Boolean)
-      .map((v) => (/^[A-T]$/.test(v) ? v.charCodeAt(0) - 65 : -1));
+      .map((v) =>
+        /^[A-T]$/.test(v)
+          ? v.charCodeAt(0) - 65
+          : "কখগঘঙচছজঝঞটঠডঢণতথদধন".indexOf(v),
+      );
     out.push({
       kind: "mcq",
       prompt: prompt.join("\n"),
@@ -178,6 +188,11 @@ export function previewItems(items: unknown[]): ImportRow[] {
       ),
       selection = text(raw.selection) || "single";
     const q: ExamQuestion = {
+      image: raw.image as QuestionImage | undefined,
+      option_images: raw.option_images as
+        | Record<string, QuestionImage>
+        | undefined,
+      required: raw.required === true,
       id: `import-${index}`,
       kind:
         raw.kind === "theory"
@@ -202,7 +217,30 @@ export function previewItems(items: unknown[]): ImportRow[] {
       language: text(raw.language),
     };
     const errors: string[] = [];
-    if (q.prompt.length < 3 || q.prompt.length > 10000)
+    if (q.image) {
+      const e = imageProblem(q.image);
+      if (e) errors.push(e);
+    }
+    if (q.option_images) {
+      if (
+        typeof q.option_images !== "object" ||
+        Array.isArray(q.option_images)
+      ) {
+        errors.push("Invalid option images");
+        q.option_images = undefined;
+      } else
+        for (const [key, picture] of Object.entries(q.option_images)) {
+          if (!/^\d+$/.test(key) || Number(key) >= (q.options?.length ?? 0))
+            errors.push("Image belongs to a missing option");
+          const e = imageProblem(picture);
+          if (e) errors.push(e);
+        }
+    }
+
+    if (
+      new TextEncoder().encode(q.prompt).length < 3 ||
+      new TextEncoder().encode(q.prompt).length > 10000
+    )
       errors.push("Question needs 3–10,000 characters");
     if (!Number.isInteger(q.points) || q.points < 1 || q.points > 100)
       errors.push("Points must be 1–100");
@@ -219,7 +257,9 @@ export function previewItems(items: unknown[]): ImportRow[] {
       if (
         options.length < 2 ||
         options.length > 20 ||
-        options.some((v) => !v.trim() || v.length > 1000)
+        options.some(
+          (v) => !v.trim() || new TextEncoder().encode(v).length > 1000,
+        )
       )
         errors.push("Use 2–20 nonempty choices, up to 1,000 characters each");
       if (!["single", "multiple", "dropdown"].includes(selection))

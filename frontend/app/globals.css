@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "katex/dist/katex.min.css";
 @import "./vendor/shadcn.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -485,3 +486,7 @@ main .animate-pulse[class*="bg-"]::after {
 }
 /* Keep errors/warnings recognizable instead of tinting all statuses olive. */
 
+
+.en-question-math {white-space:pre-wrap;overflow-wrap:anywhere;}
+.en-question-math .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding-block:.25rem;}
+.en-question-math .katex{font-size:1.1em;}

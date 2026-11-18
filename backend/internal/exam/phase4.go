@@ -642,7 +642,7 @@ func (h *Handler) MyResult(c *fiber.Ctx) error {
 		m := marks[q.ID]
 		total += m.Points
 		max += q.Points
-		item := fiber.Map{"question_id": q.ID, "prompt": q.Prompt, "kind": q.Kind, "awarded": m.Points, "maximum": q.Points, "answer": answers[q.ID], "feedback": m.Feedback}
+		item := fiber.Map{"image": q.Image, "question_id": q.ID, "prompt": q.Prompt, "kind": q.Kind, "awarded": m.Points, "maximum": q.Points, "answer": answers[q.ID], "feedback": m.Feedback}
 		if q.Kind == "mcq" {
 			item["answer_text"] = mcqAnswerText(q, answers[q.ID])
 		}

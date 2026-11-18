@@ -75,7 +75,7 @@ func TestMCQDatabaseScoreAndAutoMarks(t *testing.T) {
 
 func TestCheckboxPhoneSubmissionAndAutoMarks(t *testing.T) {
 	f := testsupport.Database(t)
-	q := Question{ID: "q", Kind: "mcq", Prompt: "Select primes", Points: 5, Options: []string{"2", "4", "3"}, Selection: "multiple", CorrectOptions: []int{0, 2}}
+	q := Question{ID: "q", Kind: "mcq", Prompt: "Select primes", Points: 5, Options: []string{"2", "4", "3"}, Selection: "multiple", CorrectOptions: []int{0, 2}, Required: true}
 	id := uuid.NewString()
 	questions, _ := json.Marshal([]Question{q})
 	if _, err := f.DB.Exec(t.Context(), `INSERT INTO classroom_exams(id,classroom_id,created_by,title,starts_at,ends_at,duration_minutes,status,questions,allow_mobile_mcq) VALUES($1::uuid,$2::uuid,$3::uuid,'Checkbox exam',now()-interval '1 minute',now()+interval '1 hour',60,'published',$4::jsonb,true)`, id, f.ClassID, f.Teacher, string(questions)); err != nil {
@@ -109,8 +109,11 @@ func TestCheckboxPhoneSubmissionAndAutoMarks(t *testing.T) {
 		t.Fatal("checkbox key leaked")
 	}
 	call("PUT", "/attempt", `{"answers":{"q":"2,0"},"expected_revision":0}`, 400)
-	call("PUT", "/attempt", `{"answers":{"q":"0,2"},"expected_revision":0}`, 200)
-	call("POST", "/submit", `{"answers":{"q":"0,2"},"expected_revision":1}`, 200)
+	call("PUT", "/attempt", `{"answers":{},"expected_revision":0}`, 200)
+	call("POST", "/submit", `{"answers":{},"expected_revision":1}`, 400)
+	call("PUT", "/attempt", `{"answers":{"q":"0,2"},"expected_revision":1}`, 200)
+	call("POST", "/submit", `{"answers":{"q":"0,2"},"expected_revision":2}`, 200)
+	call("POST", "/submit", `{"answers":{},"expected_revision":0}`, 200)
 	app.Get("/auto-marks", func(c *fiber.Ctx) error {
 		if err := h.syncAutoMarks(c, id, []Question{q}); err != nil {
 			return err

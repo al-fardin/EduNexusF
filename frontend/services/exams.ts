@@ -5,7 +5,16 @@ import type { TesterAttachment } from "@/services/question-testers";
 
 type Envelope<T> = { success: boolean; data: T; message?: string };
 export type QuestionKind = "mcq" | "theory" | "coding";
+export type QuestionImage = {
+  data: string;
+  alt: string;
+  width: number;
+  height: number;
+};
 export type ExamQuestion = {
+  required?: boolean;
+  image?: QuestionImage;
+  option_images?: Record<string, QuestionImage>;
   selection?: "single" | "multiple" | "dropdown";
   correct_options?: number[];
   section?: string;

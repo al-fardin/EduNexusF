@@ -1,5 +1,6 @@
 "use client";
 
+import { QuestionText, QuestionPicture } from "./question-content";
 import { MCQAnswer } from "./mcq-fields";
 import { useAuthStore } from "@/store/auth-store";
 import {
@@ -317,6 +318,14 @@ export function ExamTake({
       )
     )
       return;
+    const missing =
+      live?.questions.flatMap((q, i) =>
+        q.required && !answersRef.current[q.id]?.trim() ? [i + 1] : [],
+      ) ?? [];
+    if (missing.length) {
+      setError(`Answer required questions: ${missing.join(", ")}`);
+      return;
+    }
     submittingRef.current = true;
     setSaving(true);
     setError("");
@@ -504,12 +513,16 @@ export function ExamTake({
                   >
                     <div className="mb-3 flex items-start justify-between gap-4">
                       <p className="font-semibold">
-                        {i + 1}. {q.prompt}
+                        {i + 1}. <QuestionText text={q.prompt} />
+                        {q.required && (
+                          <span aria-label="Required question"> *</span>
+                        )}
                       </p>
                       <span className="shrink-0 rounded-lg bg-secondary px-2 py-1 text-xs">
                         {q.points} pts
                       </span>
                     </div>
+                    <QuestionPicture image={q.image} />
                     {q.section && (
                       <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
                         {q.section}

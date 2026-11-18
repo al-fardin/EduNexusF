@@ -1,6 +1,7 @@
 "use client";
 import { clientId } from "@/lib/client-id";
 import { QuestionImport } from "./question-import";
+import { QuestionMediaFields } from "./question-image-editor";
 import { MCQFields, QuestionOrder } from "./mcq-fields";
 import { ScheduleCheck } from "./schedule-check";
 import { AudienceFields } from "./audience-fields";
@@ -270,6 +271,7 @@ export function ExamCreator({
                       kind,
                       selection: "single",
                       correct_options: undefined,
+                      option_images: undefined,
                       tester: kind === "coding" ? q.tester : undefined,
                       options: kind === "mcq" ? ["", ""] : [],
                       correct_option: kind === "mcq" ? 0 : undefined,
@@ -318,10 +320,29 @@ export function ExamCreator({
                 placeholder="Explain the expected answer. Students see this only when answer review is released."
               />
             </label>
+            <QuestionMediaFields
+              onBusyChange={(delta) => setUploads((n) => n + delta)}
+              question={q}
+              onChange={(patch) =>
+                setQuestions((current) =>
+                  current.map((item) =>
+                    item.id === q.id ? { ...item, ...patch } : item,
+                  ),
+                )
+              }
+            />{" "}
             {q.kind === "mcq" ? (
               <MCQFields
+                disabled={uploads > 0 || mutation.isPending}
+                onBusyChange={(delta) => setUploads((n) => n + delta)}
                 question={q}
-                onChange={(patch) => updateQuestion(i, patch)}
+                onChange={(patch) =>
+                  setQuestions((current) =>
+                    current.map((item) =>
+                      item.id === q.id ? { ...item, ...patch } : item,
+                    ),
+                  )
+                }
               />
             ) : (
               <div className="mt-3 grid gap-3">

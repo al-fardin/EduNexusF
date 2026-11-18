@@ -23,6 +23,7 @@ func registerQuestionBank(app *fiber.App, h *Handler) {
 	g.Get("/", h.BankList)
 	g.Post("/", h.BankSave)
 	g.Post("/draw", h.BankDraw)
+	g.Post("/duplicates", h.BankDuplicates)
 	g.Put("/:bankID", h.BankSave)
 	g.Delete("/:bankID", h.BankDelete)
 }
@@ -91,6 +92,7 @@ func (h *Handler) BankSave(c *fiber.Ctx) error {
 			return failure(c, 400, "invalid bank question")
 		}
 	}
+	imagePixels := 0
 	for i := range items {
 		item := &items[i]
 		item.Question.ID = uuid.NewString()
@@ -110,6 +112,10 @@ func (h *Handler) BankSave(c *fiber.Ctx) error {
 			return failure(c, 400, err.Error())
 		}
 		item.Question = qs[0]
+		imagePixels += questionImagePixels(qs[0])
+		if imagePixels > 32_000_000 {
+			return failure(c, 400, "imported images exceed the combined 32-megapixel limit")
+		}
 	}
 	tx, err := h.db.Begin(c.UserContext())
 	if err != nil {

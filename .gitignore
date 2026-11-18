@@ -58,3 +58,6 @@ deploy/backups/
 /archive/backups/
 go.work.sum
 /archive/outputs/
+
+# Generated local OCR engine and language assets
+frontend/public/ocr/

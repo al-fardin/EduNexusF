@@ -1,4 +1,5 @@
 "use client";
+import { QuestionText, QuestionPicture } from "./question-content";
 import { correctIndices, MCQAnswer } from "./mcq-fields";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,7 +50,12 @@ function PreviewBody({
                 {q.points} points · {q.kind}
               </span>
             </header>
-            <p>{q.prompt || "Question text"}</p>
+            {q.section && <h4>{q.section}</h4>}
+            <p>
+              <QuestionText text={q.prompt || "Question text"} />
+              {q.required && " *"}
+            </p>
+            <QuestionPicture image={q.image} />
             {q.kind === "mcq" ? (
               <div className="en-exam-preview-options">
                 <MCQAnswer
@@ -68,7 +74,7 @@ function PreviewBody({
                     {correctIndices(q).map((index) => (
                       <li key={index} className="flex items-center gap-2">
                         <Check size={16} />
-                        {q.options?.[index]}
+                        <QuestionText text={q.options?.[index] ?? ""} />
                       </li>
                     ))}
                   </ul>
@@ -88,7 +94,9 @@ function PreviewBody({
             {keys && (q.explanation || q.sample_answer) && (
               <aside>
                 <strong>Answer explanation</strong>
-                <p>{q.explanation || q.sample_answer}</p>
+                <p>
+                  <QuestionText text={q.explanation || q.sample_answer || ""} />
+                </p>
               </aside>
             )}
           </article>
