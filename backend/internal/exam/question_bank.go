@@ -21,6 +21,9 @@ type BankItem struct {
 func registerQuestionBank(app *fiber.App, h *Handler) {
 	g := app.Group("/classrooms/:id/question-bank", authMiddleware.JWTProtected())
 	g.Get("/", h.BankList)
+	g.Get("/page", h.BankCatalogue)
+	g.Get("/taxonomy", h.BankTaxonomy)
+	g.Get("/:bankID/usage", h.BankUsage)
 	g.Post("/", h.BankSave)
 	g.Post("/draw", h.BankDraw)
 	g.Post("/duplicates", h.BankDuplicates)
@@ -44,7 +47,7 @@ func (h *Handler) bankRead(c *fiber.Ctx, random bool) error {
 	}
 	rows, err := h.db.Query(c.UserContext(), `SELECT id::text,question,topic,difficulty,version,updated_at FROM classroom_question_bank
  WHERE classroom_id=$1::uuid AND ($2='' OR topic ILIKE '%'||$2||'%') AND ($3='' OR difficulty=$3)
- AND ($4='' OR question->>'kind'=$4) ORDER BY `+order+` LIMIT $5`, c.Params("id"), c.Query("topic"), c.Query("difficulty"), c.Query("kind"), limit)
+ AND ($4='' OR question->>'kind'=$4) AND($6='' OR question->>'subject'=$6) AND($7='' OR question->>'chapter'=$7) ORDER BY `+order+` LIMIT $5`, c.Params("id"), c.Query("topic"), c.Query("difficulty"), c.Query("kind"), limit, c.Query("subject"), c.Query("chapter"))
 	if err != nil {
 		return err
 	}
@@ -104,6 +107,9 @@ func (h *Handler) BankSave(c *fiber.Ctx) error {
 			return failure(c, 400, "invalid topic or difficulty")
 		}
 		item.Question.Topic = item.Topic
+		item.Question.Difficulty = item.Difficulty
+		item.Question.SourceBankID = ""
+		item.Question.SourceBankVersion = 0
 		qs := []Question{item.Question}
 		if err := h.hydrateTesters(c, qs); err != nil {
 			return err

@@ -389,6 +389,8 @@ func copySemesterExams(ctx context.Context, tx pgx.Tx, source, dest, actor strin
 	for _, item := range items {
 		for _, q := range item.questions {
 			q["id"] = uuid.NewString()
+			delete(q, "source_bank_id")
+			delete(q, "source_bank_version")
 			if tester, ok := q["tester"].(map[string]any); ok {
 				old, _ := tester["id"].(string)
 				if validID(old) != nil {

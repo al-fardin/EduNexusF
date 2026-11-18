@@ -73,7 +73,7 @@ func TestSemesterRolloverKeepsPrivateRecordsOutAndCopiesFiles(t *testing.T) {
 	if _, err = f.DB.Exec(t.Context(), `INSERT INTO classroom_question_testers(id,classroom_id,uploaded_by,name,sha256,executable) VALUES($1::uuid,$2::uuid,$3::uuid,'fixture.exe',$4,$5)`, tester, f.ClassID, f.Teacher, strings.Repeat("a", 64), []byte("MZ"+strings.Repeat("X", 62))); err != nil {
 		t.Fatal(err)
 	}
-	questions, _ := json.Marshal([]map[string]any{{"id": "original-question", "kind": "coding", "prompt": "Solve", "points": 10, "tester": map[string]any{"id": tester, "name": "fixture.exe"}}})
+	questions, _ := json.Marshal([]map[string]any{{"id": "original-question", "source_bank_id": uuid.NewString(), "source_bank_version": 1, "kind": "coding", "prompt": "Solve", "points": 10, "tester": map[string]any{"id": tester, "name": "fixture.exe"}}})
 	if _, err = f.DB.Exec(t.Context(), `INSERT INTO classroom_exams(id,classroom_id,created_by,title,starts_at,ends_at,duration_minutes,questions) VALUES($1::uuid,$2::uuid,$3::uuid,'Copied exam',now()+interval '1 day',now()+interval '2 days',60,$4::jsonb)`, sourceExam, f.ClassID, f.Teacher, questions); err != nil {
 		t.Fatal(err)
 	}
@@ -97,6 +97,10 @@ func TestSemesterRolloverKeepsPrivateRecordsOutAndCopiesFiles(t *testing.T) {
 		t.Fatal("duplicate class")
 	}
 	var questionID, testerID, status string
+	var hasOrigin bool
+	if err = f.DB.QueryRow(t.Context(), `SELECT questions->0 ? 'source_bank_id' OR questions->0 ? 'source_bank_version' FROM classroom_exams WHERE classroom_id=$1::uuid`, fresh).Scan(&hasOrigin); err != nil || hasOrigin {
+		t.Fatal("cross-class copy retained bank provenance", err)
+	}
 	if err = f.DB.QueryRow(t.Context(), `SELECT questions->0->>'id',questions->0->'tester'->>'id',status FROM classroom_exams WHERE classroom_id=$1::uuid`, fresh).Scan(&questionID, &testerID, &status); err != nil {
 		t.Fatal(err)
 	}

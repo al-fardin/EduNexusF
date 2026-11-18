@@ -64,7 +64,7 @@ func TestManualExamPublicationCompletesPendingSchedule(t *testing.T) {
 	app.Use(func(c *fiber.Ctx) error { c.Locals("user_id", f.Teacher); return c.Next() })
 	app.Post("/classrooms/:id/exams/:examID/publish", h.Publish)
 	id := uuid.NewString()
-	if _, e := f.DB.Exec(t.Context(), `INSERT INTO classroom_exams(id,classroom_id,created_by,title,starts_at,ends_at,duration_minutes,questions) VALUES($1::uuid,$2::uuid,$3::uuid,'Manual publication',now()+interval '2 hours',now()+interval '3 hours',60,'[]')`, id, f.ClassID, f.Teacher); e != nil {
+	if _, e := f.DB.Exec(t.Context(), `INSERT INTO classroom_exams(id,classroom_id,created_by,title,starts_at,ends_at,duration_minutes,questions) VALUES($1::uuid,$2::uuid,$3::uuid,'Manual publication',now()+interval '2 hours',now()+interval '3 hours',60,'[{"id":"q","kind":"mcq","prompt":"Choose one","points":5,"options":["A","B"],"correct_option":0}]')`, id, f.ClassID, f.Teacher); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := f.DB.Exec(t.Context(), `INSERT INTO classroom_content_schedules(resource_id,classroom_id,kind,exam_id,actor_id,publish_at) VALUES($1::uuid,$2::uuid,'exam',$1::uuid,$3::uuid,now()+interval '1 hour')`, id, f.ClassID, f.Teacher); e != nil {

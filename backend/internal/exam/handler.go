@@ -29,6 +29,10 @@ func Register(app *fiber.App, db *pgxpool.Pool) {
 	g.Get("/", h.List)
 	g.Get("/active", h.ActiveAttempts)
 	g.Post("/", h.Create)
+	g.Post("/readiness", h.ExamReadiness)
+	g.Get("/:examID/readiness", h.ExamReadiness)
+	g.Post("/:examID/sets/preview", h.PreviewExamSets)
+	g.Post("/:examID/sets/approve", h.ApproveExamSets)
 	g.Get("/:examID", h.Get)
 	g.Get("/:examID/access", h.ExamAccess)
 	g.Post("/:examID/publish", h.Publish)
@@ -110,24 +114,29 @@ func examID(c *fiber.Ctx) (string, error) {
 }
 
 type Question struct {
-	Required       bool                      `json:"required,omitempty"`
-	Image          *QuestionImage            `json:"image,omitempty"`
-	OptionImages   map[string]*QuestionImage `json:"option_images,omitempty"`
-	Selection      string                    `json:"selection,omitempty"`
-	CorrectOptions []int                     `json:"correct_options,omitempty"`
-	Section        string                    `json:"section,omitempty"`
-	ShuffleOptions bool                      `json:"shuffle_options,omitempty"`
-	Explanation    string                    `json:"explanation,omitempty"`
-	Topic          string                    `json:"topic,omitempty"`
-	Tester         *TesterAttachment         `json:"tester,omitempty"`
-	ID             string                    `json:"id"`
-	Kind           string                    `json:"kind"`
-	Prompt         string                    `json:"prompt"`
-	Points         int                       `json:"points"`
-	Options        []string                  `json:"options,omitempty"`
-	CorrectOption  *int                      `json:"correct_option,omitempty"`
-	SampleAnswer   string                    `json:"sample_answer,omitempty"`
-	Language       string                    `json:"language,omitempty"`
+	Subject           string                    `json:"subject,omitempty"`
+	Chapter           string                    `json:"chapter,omitempty"`
+	Difficulty        string                    `json:"difficulty,omitempty"`
+	SourceBankID      string                    `json:"source_bank_id,omitempty"`
+	SourceBankVersion int64                     `json:"source_bank_version,omitempty"`
+	Required          bool                      `json:"required,omitempty"`
+	Image             *QuestionImage            `json:"image,omitempty"`
+	OptionImages      map[string]*QuestionImage `json:"option_images,omitempty"`
+	Selection         string                    `json:"selection,omitempty"`
+	CorrectOptions    []int                     `json:"correct_options,omitempty"`
+	Section           string                    `json:"section,omitempty"`
+	ShuffleOptions    bool                      `json:"shuffle_options,omitempty"`
+	Explanation       string                    `json:"explanation,omitempty"`
+	Topic             string                    `json:"topic,omitempty"`
+	Tester            *TesterAttachment         `json:"tester,omitempty"`
+	ID                string                    `json:"id"`
+	Kind              string                    `json:"kind"`
+	Prompt            string                    `json:"prompt"`
+	Points            int                       `json:"points"`
+	Options           []string                  `json:"options,omitempty"`
+	CorrectOption     *int                      `json:"correct_option,omitempty"`
+	SampleAnswer      string                    `json:"sample_answer,omitempty"`
+	Language          string                    `json:"language,omitempty"`
 }
 type PublicQuestion struct {
 	Required       bool                      `json:"required,omitempty"`
@@ -189,6 +198,14 @@ func normalizeQuestions(questions []Question) (string, error) {
 		}
 		q.ID = strings.TrimSpace(q.ID)
 		q.Prompt = strings.TrimSpace(q.Prompt)
+		q.Subject = strings.TrimSpace(q.Subject)
+		q.Chapter = strings.TrimSpace(q.Chapter)
+		if len(q.Subject) > 120 || len(q.Chapter) > 120 {
+			return "", errors.New("subject and chapter require at most 120 bytes")
+		}
+		if q.Difficulty != "" && q.Difficulty != "easy" && q.Difficulty != "medium" && q.Difficulty != "hard" {
+			return "", errors.New("invalid question difficulty")
+		}
 		if len(q.Explanation) > 16000 {
 			return "", errors.New("answer explanation is too long")
 		}
@@ -314,6 +331,9 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	if err := h.hydrateTesters(c, req.Questions); err != nil {
 		return err
 	}
+	if err := h.hydrateBankSources(c, req.Questions); err != nil {
+		return err
+	}
 	if req.AllowMobileMCQ && !mcqOnly(req.Questions) {
 		return failure(c, 400, "phone access is available for MCQ-only exams")
 	}
@@ -383,14 +403,25 @@ func (h *Handler) Publish(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	tx, err := h.db.Begin(c.UserContext())
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(c.UserContext())
+	if err = validatePublishingExam(c, tx, id); err != nil {
+		return err
+	}
 	var published int
-	err = h.db.QueryRow(c.UserContext(), `WITH changed AS(UPDATE classroom_exams SET status='published',published_at=now()
+	err = tx.QueryRow(c.UserContext(), `WITH changed AS(UPDATE classroom_exams SET status='published',published_at=now()
       WHERE id=$1::uuid AND classroom_id=$2::uuid AND status='draft' RETURNING id), schedules AS(UPDATE classroom_content_schedules SET state='published',version=version+1,error='',updated_at=now() WHERE resource_id IN(SELECT id FROM changed) RETURNING resource_id) SELECT count(*)::int FROM changed`, id, c.Params("id")).Scan(&published)
 	if err != nil {
 		return err
 	}
 	if published == 0 {
 		return failure(c, 409, "exam missing or already published")
+	}
+	if err = tx.Commit(c.UserContext()); err != nil {
+		return err
 	}
 	return result(c, 200, fiber.Map{"id": id, "status": "published"})
 }

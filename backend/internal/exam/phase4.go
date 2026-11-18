@@ -61,6 +61,9 @@ func (h *Handler) EditExam(c *fiber.Ctx) error {
 	if err := h.hydrateTesters(c, req.Questions); err != nil {
 		return err
 	}
+	if err := h.hydrateBankSources(c, req.Questions); err != nil {
+		return err
+	}
 	if req.AllowMobileMCQ && !mcqOnly(req.Questions) {
 		return failure(c, 400, "phone access is available for MCQ-only exams")
 	}
