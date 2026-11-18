@@ -63,11 +63,11 @@ func TestExistingDatabaseReadOnlyRoutes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		paths := []string{"/notifications", "/classrooms/joined", "/classrooms/mine", "/workspace", "/workspace/files", "/messaging/classes", "/messaging/unread", "/notifications/push", "/app/releases/android", "/calling/config", "/calling/active?session=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}
+		paths := []string{"/institutions", "/institutions/invitations", "/notifications", "/classrooms/joined", "/classrooms/mine", "/workspace", "/workspace/files", "/messaging/classes", "/messaging/unread", "/notifications/push", "/app/releases/android", "/calling/config", "/calling/active?session=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}
 		base := "/classrooms/" + m.class
 		paths = append(paths, "/workspace/terms", "/workspace/semester-classes", base+"/rechecks")
 		paths = append(paths, "/personal/items", "/workspace/trash", "/workspace/tasks", "/workspace/storage", "/workspace/enrollment", "/auth/security", "/auth/security/sessions", base+"/reports")
-		for _, suffix := range []string{"/details", "/message-recipients", "/messaging-settings", "/conversations", "/exams", "/assignments", "/analytics", "/tutor", "/tutor/sources", "/stream", "/materials", "/topics", "/progress?offset=0"} {
+		for _, suffix := range []string{"/institution", "/details", "/message-recipients", "/messaging-settings", "/conversations", "/exams", "/assignments", "/analytics", "/tutor", "/tutor/sources", "/stream", "/materials", "/topics", "/progress?offset=0"} {
 			paths = append(paths, base+suffix)
 		}
 		if m.membership == "student" {

@@ -290,6 +290,10 @@ func handleServiceError(
 	c *fiber.Ctx,
 	err error,
 ) error {
+	var httpError *fiber.Error
+	if errors.As(err, &httpError) {
+		return errorResponse(c, httpError.Code, httpError.Message)
+	}
 	switch {
 	case errors.Is(
 		err,

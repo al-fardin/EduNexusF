@@ -789,6 +789,73 @@ type EmailVerificationToken struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type Institution struct {
+	ID        pgtype.UUID        `json:"id"`
+	OwnerID   pgtype.UUID        `json:"owner_id"`
+	Name      string             `json:"name"`
+	Version   int32              `json:"version"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type InstitutionActivity struct {
+	ID            int64              `json:"id"`
+	InstitutionID pgtype.UUID        `json:"institution_id"`
+	ActorID       pgtype.UUID        `json:"actor_id"`
+	ActorName     string             `json:"actor_name"`
+	Action        string             `json:"action"`
+	TargetID      string             `json:"target_id"`
+	BeforeValue   []byte             `json:"before_value"`
+	AfterValue    []byte             `json:"after_value"`
+	Reason        string             `json:"reason"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type InstitutionClassroom struct {
+	ClassroomID   pgtype.UUID        `json:"classroom_id"`
+	InstitutionID pgtype.UUID        `json:"institution_id"`
+	DepartmentID  pgtype.UUID        `json:"department_id"`
+	TermID        pgtype.UUID        `json:"term_id"`
+	Version       int32              `json:"version"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type InstitutionDepartment struct {
+	ID            pgtype.UUID `json:"id"`
+	InstitutionID pgtype.UUID `json:"institution_id"`
+	Name          string      `json:"name"`
+	Version       int32       `json:"version"`
+}
+
+type InstitutionInvitation struct {
+	ID            pgtype.UUID        `json:"id"`
+	InstitutionID pgtype.UUID        `json:"institution_id"`
+	Email         string             `json:"email"`
+	Role          string             `json:"role"`
+	InvitedBy     pgtype.UUID        `json:"invited_by"`
+	Status        string             `json:"status"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	Version       int32              `json:"version"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type InstitutionMember struct {
+	InstitutionID pgtype.UUID        `json:"institution_id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	Role          string             `json:"role"`
+	Active        bool               `json:"active"`
+	Version       int32              `json:"version"`
+	JoinedAt      pgtype.Timestamptz `json:"joined_at"`
+}
+
+type InstitutionTerm struct {
+	ID            pgtype.UUID `json:"id"`
+	InstitutionID pgtype.UUID `json:"institution_id"`
+	Name          string      `json:"name"`
+	StartsOn      pgtype.Date `json:"starts_on"`
+	EndsOn        pgtype.Date `json:"ends_on"`
+	Version       int32       `json:"version"`
+}
+
 type NotificationDevice struct {
 	ID           pgtype.UUID        `json:"id"`
 	UserID       pgtype.UUID        `json:"user_id"`

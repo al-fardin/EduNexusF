@@ -6,8 +6,8 @@ test("class creation sends selected approval, code access and expiry together",(
   let payload;
   const policy={join_mode:"approval",code_join_enabled:false,class_code_expires_at:"2026-12-01T12:00:00Z"};
   const page=loadComponent("app/instructor/classrooms/create/page.tsx",{
-    react:{...React,useState:initial=>[initial?.join_mode?policy:{name:"  Database Systems ",section:" A ",subject:" CSE ",room:" 101 ",description:" Notes "},()=>{}]},
-    "@/components/classroom/join-policy-fields":{JoinPolicyFields:()=>null},
+    react:{...React,useState:initial=>[initial===null?null:initial?.join_mode?policy:{name:"  Database Systems ",section:" A ",subject:" CSE ",room:" 101 ",description:" Notes "},()=>{}]},
+    "@/components/institutions/placement-fields":{},"@/components/classroom/join-policy-fields":{JoinPolicyFields:()=>null},
     "@tanstack/react-query":{useMutation:()=>({mutate:data=>{payload=data}})},
     "lucide-react":new Proxy({},{get:()=>()=>null}),
     "next/link":()=>null,
@@ -17,7 +17,7 @@ test("class creation sends selected approval, code access and expiry together",(
   }).default();
   function findForm(node){if(!node||typeof node!=="object")return null;if(node.type==="form")return node;for(const child of [].concat(node.props?.children??[])){const found=findForm(child);if(found)return found}return null}
   const form=findForm(page);assert.ok(form);form.props.onSubmit({preventDefault(){}});
-  assert.equal(payload.join_mode,"approval");assert.equal(payload.code_join_enabled,false);assert.equal(payload.class_code_expires_at,policy.class_code_expires_at);assert.equal(payload.name,"Database Systems");assert.equal(payload.section,"A");
+  assert.equal(payload.join_mode,"approval");assert.equal(payload.code_join_enabled,false);assert.equal(payload.class_code_expires_at,policy.class_code_expires_at);assert.equal(payload.institution,undefined);assert.equal(payload.name,"Database Systems");assert.equal(payload.section,"A");
 });
 test("join policy renders direct/approval, expiry and invitation-only states",()=>{
  const direct=policyMarkup({join_mode:"direct",code_join_enabled:true,class_code_expires_at:null});assert.match(direct,/<option value="direct" selected="">/);assert.doesNotMatch(direct,/type="datetime-local"/);

@@ -40,6 +40,7 @@ export type ClassroomMember = {
 };
 
 export type CreateClassroomInput = {
+ institution?:import("./institutions").InstitutionPlacement;
   join_mode?: "direct"|"approval";
   code_join_enabled?: boolean;
   class_code_expires_at?: string|null;

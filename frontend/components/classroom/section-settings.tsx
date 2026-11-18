@@ -1,4 +1,5 @@
 "use client";
+import {ClassInstitutionSettings} from "@/components/institutions/placement-fields";
 import { BulkSection } from "./bulk-section";
 import { PersonalTiming } from "./personal-timing";
 import { TrashContents } from "@/components/workspace/trash";
@@ -61,6 +62,7 @@ export function SectionSettings({
         >
           {[
             ["sections", "Sections"],
+ ["institution","Institution"],
             ["roster", "Student sections"],
             ["bulk", "Bulk section transfer"],
             ["timing", "Personal timing"],
@@ -81,7 +83,7 @@ export function SectionSettings({
         {open &&
           (tab === "sections" ? (
             <ManageSections classId={classId} />
-          ) : tab === "roster" ? (
+          ) : tab === "institution" ? (<ClassInstitutionSettings classId={classId}/>) : tab === "roster" ? (
             <SectionRoster classId={classId} />
           ) : tab === "bulk" ? (
             <BulkSection classId={classId} />

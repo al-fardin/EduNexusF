@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	orgs "github.com/edunexus/edunexus/internal/platform/institutions"
+	"github.com/google/uuid"
 	"time"
 
 	db "github.com/edunexus/edunexus/internal/platform/database/sqlc"
@@ -34,7 +36,7 @@ func (r *ClassroomRepository) Create(
 	)
 }
 
-func (r *ClassroomRepository) CreateWithEnrollment(ctx context.Context, params db.CreateClassroomParams, mode string, enabled bool, expires *time.Time) (db.Classroom, error) {
+func (r *ClassroomRepository) CreateWithEnrollment(ctx context.Context, params db.CreateClassroomParams, mode string, enabled bool, expires *time.Time, placement *orgs.Placement) (db.Classroom, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return db.Classroom{}, err
@@ -46,6 +48,11 @@ func (r *ClassroomRepository) CreateWithEnrollment(ctx context.Context, params d
 	}
 	if _, err = tx.Exec(ctx, `UPDATE classrooms SET join_mode=$2,code_join_enabled=$3,class_code_expires_at=$4 WHERE id=$1`, class.ID, mode, enabled, expires); err != nil {
 		return db.Classroom{}, err
+	}
+	if placement != nil {
+		if _, err = orgs.Place(ctx, tx, uuid.UUID(class.ID.Bytes).String(), uuid.UUID(params.OwnerID.Bytes).String(), placement, 0, "Class created"); err != nil {
+			return db.Classroom{}, err
+		}
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return db.Classroom{}, err

@@ -132,7 +132,7 @@ func (s *ClassroomService) Create(
 
 				ClassCode: classCode,
 			},
-			mode, enabled, req.CodeExpiresAt,
+			mode, enabled, req.CodeExpiresAt, req.Institution,
 		)
 
 		if err == nil {

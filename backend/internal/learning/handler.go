@@ -19,6 +19,7 @@ type Handler struct {
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := &Handler{db: db}
 	registerSections(app, h)
+	registerInstitutions(app, h)
 	personal := app.Group("/personal/items", authMiddleware.JWTProtected())
 	personal.Get("/", h.PersonalItems)
 	personal.Post("/", h.PersonalItems)

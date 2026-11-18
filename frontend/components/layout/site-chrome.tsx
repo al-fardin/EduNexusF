@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Plus,
   Settings,
+ School,
 } from "lucide-react";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import {
@@ -46,6 +47,7 @@ const links = [
   { href: "/files", label: "Files", icon: Folder },
   { href: "/offline", label: "Saved work", icon: Download },
  { href: "/personal", label: "Personal workspace",icon:Folder },
+ { href: "/institutions",label:"Institutions",icon:School },
  { href: "/trash",label:"Trash",icon:Folder },
 ];
 const mobileLinks = [

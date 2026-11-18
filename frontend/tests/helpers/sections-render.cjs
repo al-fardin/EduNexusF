@@ -6,7 +6,7 @@ const {Button}=loadComponent("components/ui/button.tsx",{"@base-ui/react/button"
 const A="11111111-1111-4111-8111-111111111111",B="22222222-2222-4222-8222-222222222222",choices=[{id:A,name:"A",version:1,students:1},{id:B,name:"B",version:1,students:1}];
 function common(locale){return {"@/providers/preferences-provider":{usePreferences:()=>({t:text=>translate(locale,text),locale:locale==="bn"?"bn-BD":"en-US"})},"@/store/auth-store":{useAuthStore:select=>select({user:{id:"teacher"}})},"@/components/ui/button":{Button},"@/components/ui/app-feedback":{ErrorState:({message})=>React.createElement("p",{role:"alert"},message),EmptyState:({title})=>React.createElement("p",null,title),ConfirmAction:()=>null},"@/components/ui/content-skeleton":{ContentSkeleton:()=>null},"@/services/exams":{examError:e=>e.message}}}
 function audienceMarkup(locale="en"){
- const mocks={...common(locale),"./bulk-section":{},"./personal-timing":{},"@/components/workspace/trash":{},"@/services/sections":{},"@tanstack/react-query":{useQuery:({queryKey})=>({data:queryKey[0]==="class-sections"?choices:{total:2,eligible:1,sample:[{roll:"001",name:"Rafi Ahmed"}]}})}};
+ const mocks={...common(locale),"@/components/institutions/placement-fields":{},"./bulk-section":{},"./personal-timing":{},"@/components/workspace/trash":{},"@/services/sections":{},"@tanstack/react-query":{useQuery:({queryKey})=>({data:queryKey[0]==="class-sections"?choices:{total:2,eligible:1,sample:[{roll:"001",name:"Rafi Ahmed"}]}})}};
  const {SectionPicker}=loadComponent("components/classroom/section-picker.tsx",mocks);
  const audience=loadComponent("services/audience.ts",{"@/lib/api":{}});
  let cursor=0;const fake={...React,useId:()=>"audience-label",useEffect(){},useState:initial=>[cursor++===0?true:initial,()=>{}]};
@@ -19,7 +19,7 @@ function settingsMarkup(kind="preview",locale="en"){
  const slots=kind==="import"?["name,email,roll,section\nRafi Ahmed,rafi@example.invalid,001,A\n","Verified roster",preview,false,"",null]:kind==="preview"?["001",0]:[false,"",null,""];
  const fake={...React,useRef:()=>({current:0}),useState:initial=>[cursor in slots?slots[cursor++]:typeof initial==="function"?initial():initial,()=>{}]};
  const data={student:{name:"Rafi Ahmed",roll:"001",section:"A"},items:[{id:"one",kind:"exam",title:"Section A · Odd-roll exam",visible:true,reason:"Available"},{id:"two",kind:"material",title:"Section B · Lab notes",visible:false,reason:"Not assigned"}],next_offset:-1};
- const mods=loadComponent("components/classroom/section-settings.tsx",{...common(locale),react:fake,"@tanstack/react-query":{useQueryClient:()=>({}),useQuery:({queryKey})=>({data:queryKey[0]==="class-sections"?choices:data})},"./bulk-section":{},"./personal-timing":{},"@/components/workspace/trash":{},"@/services/sections":{},"@/components/ui/dialog":{}},"\nexport {ImportRoster,StudentPreview,ManageSections};");
+ const mods=loadComponent("components/classroom/section-settings.tsx",{...common(locale),react:fake,"@tanstack/react-query":{useQueryClient:()=>({}),useQuery:({queryKey})=>({data:queryKey[0]==="class-sections"?choices:data})},"@/components/institutions/placement-fields":{},"./bulk-section":{},"./personal-timing":{},"@/components/workspace/trash":{},"@/services/sections":{},"@/components/ui/dialog":{}},"\nexport {ImportRoster,StudentPreview,ManageSections};");
  const component=kind==="import"?mods.ImportRoster:kind==="preview"?mods.StudentPreview:mods.ManageSections;
  return renderToStaticMarkup(React.createElement(component,{classId:"class"}));
 }

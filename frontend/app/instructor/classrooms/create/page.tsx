@@ -1,4 +1,6 @@
 "use client";
+import {InstitutionPlacementFields} from "@/components/institutions/placement-fields";
+import type {InstitutionPlacement} from "@/services/institutions";
 import { JoinPolicyFields } from "@/components/classroom/join-policy-fields";
 import type { JoinPolicy } from "@/services/enrollment";
 
@@ -25,6 +27,7 @@ const initialForm: CreateClassroomInput = {
 
 export default function CreateClassroomPage() {
   const router = useRouter();
+ const [institution,setInstitution]=useState<InstitutionPlacement|null>(null);
   const [policy, setPolicy] = useState<JoinPolicy>({
     join_mode: "direct",
     code_join_enabled: true,
@@ -53,6 +56,7 @@ export default function CreateClassroomPage() {
 
     createMutation.mutate({
       ...policy,
+ ...(institution?{institution}:{}),
       name: form.name.trim(),
       section: form.section.trim(),
       subject: form.subject.trim(),
@@ -205,6 +209,7 @@ export default function CreateClassroomPage() {
                   disabled={createMutation.isPending}
                 />
               </section>
+              <InstitutionPlacementFields value={institution} onChange={setInstitution} disabled={createMutation.isPending}/>
               {createMutation.isError && (
                 <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                   {getClassroomErrorMessage(createMutation.error)}
