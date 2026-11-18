@@ -159,6 +159,7 @@ export function ExamCreator({
         mcqOnly={questions.every((q) => q.kind === "mcq")}
       />
       <QuestionImport
+        existingQuestions={questions}
         classroomId={classroomId}
         onImport={(rows) => {
           const existing = questions.filter(

@@ -693,6 +693,7 @@ function ExamEditForm({
         mcqOnly={questions.every((q) => q.kind === "mcq")}
       />
       <QuestionImport
+        existingQuestions={questions}
         classroomId={classroomId}
         onImport={(rows) => {
           if (questions.length + rows.length > 40)

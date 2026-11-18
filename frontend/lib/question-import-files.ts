@@ -127,7 +127,7 @@ export async function readQuestionFile(file: File): Promise<ImportRow[]> {
       const value = pages.join("\n");
       if (value.trim().length < 3)
         throw Error(
-          "Scanned PDFs need OCR; upload selectable text or a table instead",
+          "This PDF needs OCR. Choose the Scan / photo / PDF source",
         );
       return parseQuestionText(
         value.replace(/(ANSWER\s*:[^\n]+)\n/gi, "$1\n\n"),

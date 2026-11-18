@@ -10,12 +10,5 @@ function institutionMarkup(locale='en'){
  const {InstitutionSettings}=loadComponent('components/institutions/settings.tsx',mocks);
  return renderToStaticMarkup(React.createElement(InstitutionPlacementFields,{value:{institution_id:'org',department_id:'dept',term_id:'term'},onChange(){}}))+renderToStaticMarkup(React.createElement(InstitutionSettings,{org}));
 }
-function mcqMarkup(){
- const styles={field:'min-h-11 min-w-0 w-full rounded-xl border border-border bg-background p-3 text-sm',outline:'inline-flex min-h-11 items-center justify-center rounded-xl border border-border px-3 py-2 text-sm',primary:'min-h-11 rounded-xl bg-primary p-3 text-primary-foreground'};
- const q={id:'q',kind:'mcq',prompt:'Select the prime numbers.',points:5,options:['2','4','3'],selection:'multiple',correct_options:[0,2],shuffle_options:true};
- const fields=loadComponent('components/classroom/mcq-fields.tsx',{'./exam-presentation':styles});
- const states=[true,'paste','text','Select primes\nA. 2\nB. 4\nANSWER: A',[{line:1,question:q,topic:'Logic',difficulty:'easy',errors:[]}],[0],'',false,''];let cursor=0;
- const {QuestionImport}=loadComponent('components/classroom/question-import.tsx',{react:{...React,useState:()=>[states[cursor++],()=>{}]},'@tanstack/react-query':{useQuery:()=>({})},'@/lib/client-id':{},'@/lib/question-import':{},'@/lib/question-import-files':{},'@/services/exams':{},'./exam-presentation':styles});
- return renderToStaticMarkup(React.createElement(fields.MCQFields,{question:q,onChange(){}}))+renderToStaticMarkup(React.createElement(fields.MCQAnswer,{question:q,value:'0,2',attemptId:'attempt',onChange(){}}))+renderToStaticMarkup(React.createElement(QuestionImport,{classroomId:'class',onImport(){}}));
-}
+function mcqMarkup(){return require('./question-tools-render.cjs').questionToolsMarkup();}
 module.exports={institutionMarkup,mcqMarkup};

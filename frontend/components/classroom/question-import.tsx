@@ -1,6 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { duplicateWarnings } from "@/lib/question-duplicates";
+import { questionBank } from "@/services/question-bank";
+import { QuestionImportRow } from "./question-import-row";
+import { QuestionScanImport } from "./question-scan-import";
 import { clientId } from "@/lib/client-id";
 import {
   IMPORT_TEMPLATE,
@@ -17,10 +21,12 @@ export function QuestionImport({
   classroomId,
   onImport,
   label = "Add selected questions",
+  existingQuestions = [],
 }: {
   classroomId: string;
   onImport: (rows: BankInput[]) => Promise<void> | void;
   label?: string;
+  existingQuestions?: ExamQuestion[];
 }) {
   const [open, setOpen] = useState(false),
     [source, setSource] = useState("file"),
@@ -36,8 +42,70 @@ export function QuestionImport({
     queryFn: () => examService.list(classroomId),
     enabled: open && source === "exam",
   });
+  const [allowDuplicates, setAllowDuplicates] = useState(false),
+    [bankMatches, setBankMatches] = useState<{ prompt: string }[]>([]),
+    [duplicateError, setDuplicateError] = useState("");
+  const [imageJobs, setImageJobs] = useState(0);
+  const prompts = JSON.stringify(rows.map((r) => r.question.prompt));
+  useEffect(() => {
+    if (!open || !rows.length) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void questionBank
+        .duplicates(classroomId, JSON.parse(prompts), controller.signal)
+        .then((matches) => {
+          if (!controller.signal.aborted) {
+            setBankMatches(matches);
+            setDuplicateError("");
+          }
+        })
+        .catch(() => {
+          if (!controller.signal.aborted)
+            setDuplicateError(
+              "Bank duplicate check unavailable. Check again before adding.",
+            );
+        });
+    }, 350);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [open, classroomId, prompts, rows.length]);
+  const warnings = duplicateWarnings(
+    rows.map((r) => r.question),
+    existingQuestions,
+    bankMatches,
+  );
+  const ready = (i: number) =>
+    !rows[i].errors.length && (allowDuplicates || !warnings[i].length);
+  const chosenIndices = selected.filter(ready);
+  function editRow(
+    index: number,
+    patch: Partial<ExamQuestion>,
+    meta?: { topic?: string; difficulty?: string },
+  ) {
+    setRows((current) =>
+      current.map((row, i) => {
+        if (i !== index) return row;
+        const question = { ...row.question, ...patch },
+          next = previewItems([{ ...row, ...meta, question }])[0];
+        return {
+          ...next,
+          line: row.line,
+          question: {
+            ...next.question,
+            id: question.id,
+            tester: question.tester,
+          },
+        };
+      }),
+    );
+  }
   function preview(next: ImportRow[]) {
     setRows(next);
+    setAllowDuplicates(false);
+    setBankMatches([]);
+    setDuplicateError("");
     setSelected(next.flatMap((r, i) => (r.errors.length ? [] : [i])));
     setNotice("");
   }
@@ -70,7 +138,7 @@ export function QuestionImport({
               <select
                 className={field}
                 value={source}
-                disabled={busy}
+                disabled={busy || imageJobs > 0}
                 onChange={(e) => {
                   setSource(e.target.value);
                   setRows([]);
@@ -81,6 +149,7 @@ export function QuestionImport({
                 <option value="file">Upload file</option>
                 <option value="paste">Paste questions</option>
                 <option value="exam">Existing exam in this class</option>
+                <option value="scan">Scan / photo / PDF (OCR)</option>
               </select>
             </label>
             <button
@@ -109,15 +178,29 @@ export function QuestionImport({
                 className={`${field} mt-1 min-w-0 text-xs`}
                 type="file"
                 accept=".csv,.tsv,.xlsx,.json,.txt,.aiken,.docx,.pdf"
-                disabled={busy}
+                disabled={busy || imageJobs > 0}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   e.target.value = "";
+                  if (file) {
+                    setRows([]);
+                    setSelected([]);
+                  }
                   if (file)
                     void run(async () => preview(await readQuestionFile(file)));
                 }}
               />
             </label>
+          )}
+          {source === "scan" && (
+            <QuestionScanImport
+              disabled={busy || imageJobs > 0}
+              onInvalidate={() => {
+                setRows([]);
+                setSelected([]);
+              }}
+              onPreview={preview}
+            />
           )}
           {source === "paste" && (
             <>
@@ -126,12 +209,16 @@ export function QuestionImport({
                 <select
                   className={field}
                   value={format}
-                  onChange={(e) => setFormat(e.target.value as typeof format)}
+                  onChange={(e) => {
+                    setFormat(e.target.value as typeof format);
+                    setRows([]);
+                    setSelected([]);
+                  }}
                 >
                   <option value="text">Aiken / labelled text</option>
                   <option value="csv">CSV</option>
                   <option value="tsv">TSV</option>
-                  <option value="json">EduNexus / Google Forms API JSON</option>
+                  <option value="json">EduNexus JSON</option>
                 </select>
               </label>
               <textarea
@@ -140,7 +227,12 @@ export function QuestionImport({
                 rows={7}
                 maxLength={2 * 1024 * 1024}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                disabled={busy || imageJobs > 0}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setRows([]);
+                  setSelected([]);
+                }}
                 placeholder={"Which is prime?\nA. 2\nB. 4\nANSWER: A"}
               />
               <button
@@ -193,12 +285,17 @@ export function QuestionImport({
               )}
             </label>
           )}
-          <p className="text-xs text-muted-foreground">
-            Google Forms: upload its API JSON export. DOCX / PDF text needs
-            labelled choices and an ANSWER line; scanned images are unsupported.
-            XLSX uses the lowest-numbered worksheet. Review answer keys before
-            adding.
-          </p>
+          <details className="text-xs text-muted-foreground">
+            <summary className="min-h-11 cursor-pointer">
+              Import format guidance
+            </summary>
+            <p>
+              DOCX / text PDF use labelled choices and an ANSWER line. For
+              scanned pages, choose Scan / photo / PDF. XLSX uses the
+              lowest-numbered worksheet. Missing keys can be filled in the
+              preview editor.
+            </p>
+          </details>
           {busy && <p role="status">Processing questions…</p>}
           {error && (
             <p role="alert" className="break-words text-sm text-destructive">
@@ -214,16 +311,14 @@ export function QuestionImport({
             <>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <strong>
-                  {selected.length} selected ·{" "}
+                  {chosenIndices.length} selected ·{" "}
                   {rows.filter((r) => r.errors.length).length} need correction
                 </strong>
                 <button
                   type="button"
                   className={outline}
                   onClick={() =>
-                    setSelected(
-                      rows.flatMap((r, i) => (r.errors.length ? [] : [i])),
-                    )
+                    setSelected(rows.flatMap((_, i) => (ready(i) ? [i] : [])))
                   }
                 >
                   Select valid
@@ -236,69 +331,53 @@ export function QuestionImport({
                   Clear selection
                 </button>
               </div>
-              <div className="max-h-96 space-y-2 overflow-y-auto">
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={allowDuplicates}
+                  onChange={(e) => setAllowDuplicates(e.target.checked)}
+                />
+                Allow possible duplicate questions
+              </label>
+              {duplicateError && (
+                <p
+                  role="status"
+                  className="text-xs text-amber-700 dark:text-amber-300"
+                >
+                  {duplicateError}
+                </p>
+              )}
+              <div className="max-h-[70vh] space-y-2 overflow-y-auto">
                 {rows.map((r, i) => (
-                  <article
-                    key={i}
-                    className="min-w-0 rounded-xl border border-border p-3"
-                  >
-                    <label className="flex min-h-11 items-start gap-3">
-                      <input
-                        type="checkbox"
-                        className="mt-1 shrink-0"
-                        disabled={busy || !!r.errors.length}
-                        checked={selected.includes(i)}
-                        onChange={() =>
-                          setSelected((current) =>
-                            current.includes(i)
-                              ? current.filter((n) => n !== i)
-                              : [...current, i],
-                          )
-                        }
-                      />
-                      <span className="min-w-0 break-words text-sm">
-                        <strong>
-                          {i + 1}. {r.question.prompt || "Missing question"}
-                        </strong>
-                        <span className="block text-xs text-muted-foreground">
-                          {r.question.selection ?? r.question.kind} ·{" "}
-                          {r.question.points} points
-                        </span>
-                      </span>
-                    </label>
-                    {r.question.options?.map((o, j) => (
-                      <p key={j} className="break-words pl-6 text-xs">
-                        {String.fromCharCode(65 + j)}. {o}
-                      </p>
-                    ))}
-                    <p className="mt-1 text-xs">
-                      Answer key:{" "}
-                      {(r.question.selection === "multiple"
-                        ? r.question.correct_options
-                        : r.question.correct_option === undefined
-                          ? []
-                          : [r.question.correct_option]
+                  <QuestionImportRow
+                    key={r.line}
+                    row={r}
+                    index={i}
+                    checked={chosenIndices.includes(i)}
+                    disabled={busy || !ready(i)}
+                    editingDisabled={busy || imageJobs > 0}
+                    onBusyChange={(delta) => setImageJobs((n) => n + delta)}
+                    warnings={warnings[i]}
+                    onSelect={() =>
+                      setSelected((current) =>
+                        current.includes(i)
+                          ? current.filter((n) => n !== i)
+                          : [...current, i],
                       )
-                        ?.map((n) => String.fromCharCode(65 + n))
-                        .join(", ") || "Missing"}
-                    </p>
-                    {r.errors.map((message) => (
-                      <p key={message} className="text-xs text-destructive">
-                        {message}
-                      </p>
-                    ))}
-                  </article>
+                    }
+                    onChange={(patch, meta) => editRow(i, patch, meta)}
+                  />
                 ))}
               </div>
               <button
                 type="button"
                 className={primary}
-                disabled={busy || !selected.length}
+                disabled={busy || imageJobs > 0 || !chosenIndices.length}
                 onClick={() =>
                   void run(async () => {
                     const chosen = rows
                       .filter(
-                        (r, i) => selected.includes(i) && !r.errors.length,
+                        (r, i) => chosenIndices.includes(i) && !r.errors.length,
                       )
                       .map((r) => ({
                         question: {
@@ -308,6 +387,13 @@ export function QuestionImport({
                         topic: r.topic,
                         difficulty: r.difficulty,
                       }));
+                    if (
+                      new TextEncoder().encode(JSON.stringify(chosen)).length >
+                      2 * 1024 * 1024
+                    )
+                      throw new Error(
+                        "Selected questions and images exceed 2 MB. Select fewer rows.",
+                      );
                     await onImport(chosen);
                     setRows([]);
                     setSelected([]);
