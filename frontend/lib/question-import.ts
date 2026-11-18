@@ -244,7 +244,10 @@ export function previewItems(items: unknown[]): ImportRow[] {
         q.option_images = undefined;
       } else
         for (const [key, picture] of Object.entries(q.option_images)) {
-          if (!/^\d+$/.test(key) || Number(key) >= (q.options?.length ?? 0))
+          if (
+            !/^(0|[1-9]\d*)$/.test(key) ||
+            Number(key) >= (q.options?.length ?? 0)
+          )
             errors.push("Image belongs to a missing option");
           const e = imageProblem(picture);
           if (e) errors.push(e);
@@ -255,15 +258,18 @@ export function previewItems(items: unknown[]): ImportRow[] {
       new TextEncoder().encode(q.prompt).length < 3 ||
       new TextEncoder().encode(q.prompt).length > 10000
     )
-      errors.push("Question needs 3–10,000 characters");
+      errors.push("Question needs 3–10,000 bytes");
     if (!Number.isInteger(q.points) || q.points < 1 || q.points > 100)
       errors.push("Points must be 1–100");
-    if ((q.topic?.length ?? 0) > 120 || (q.section?.length ?? 0) > 120)
-      errors.push("Topic / section exceeds 120 characters");
     if (
-      (q.explanation?.length ?? 0) > 16000 ||
-      (q.sample_answer?.length ?? 0) > 15000 ||
-      (q.language?.length ?? 0) > 50
+      new TextEncoder().encode(q.topic ?? "").length > 120 ||
+      new TextEncoder().encode(q.section ?? "").length > 120
+    )
+      errors.push("Topic / section exceeds 120 bytes");
+    if (
+      new TextEncoder().encode(q.explanation ?? "").length > 16000 ||
+      new TextEncoder().encode(q.sample_answer ?? "").length > 15000 ||
+      new TextEncoder().encode(q.language ?? "").length > 50
     )
       errors.push("Answer notes exceed the supported length");
     if (q.kind === "mcq") {
@@ -275,7 +281,7 @@ export function previewItems(items: unknown[]): ImportRow[] {
           (v) => !v.trim() || new TextEncoder().encode(v).length > 1000,
         )
       )
-        errors.push("Use 2–20 nonempty choices, up to 1,000 characters each");
+        errors.push("Use 2–20 nonempty choices, up to 1,000 bytes each");
       if (!["single", "multiple", "dropdown"].includes(selection))
         errors.push(
           "Unsupported question type; convert to choice / checkbox / dropdown",

@@ -24,8 +24,11 @@ export function inspectDraft(
     question_id?: string,
     severity: ReadinessIssue["severity"] = "error",
   ) => issues.push({ code, message, field, question_id, severity });
-  if (draft.title.trim().length < 3)
-    add("title", "Add a title with at least 3 characters", "title");
+  const bytes = (value: string) => new TextEncoder().encode(value).length;
+  if (bytes(draft.title.trim()) < 3 || bytes(draft.title.trim()) > 200)
+    add("title", "Use a title with 3–200 bytes", "title");
+  if (bytes(draft.description ?? "") > 5000)
+    add("description", "Description exceeds 5,000 bytes", "description");
   const start = Date.parse(draft.starts_at),
     end = Date.parse(draft.ends_at);
   if (
@@ -46,8 +49,13 @@ export function inspectDraft(
     add("count", "Use 1–40 questions", "questions");
   const seen = new Set<string>();
   for (const q of draft.questions) {
-    if (seen.has(q.id))
-      add("id", "Question identifiers must be unique", "question", q.id);
+    if (!q.id || bytes(q.id) > 64 || seen.has(q.id))
+      add(
+        "id",
+        "Question identifiers must be unique and use 1–64 bytes",
+        "question",
+        q.id,
+      );
     seen.add(q.id);
   }
   if (draft.questions.length && draft.questions.length <= 40)

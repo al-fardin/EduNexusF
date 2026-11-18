@@ -386,7 +386,7 @@ func (h *Handler) ApproveExamSets(c *fiber.Ctx) error {
 				}
 			}
 		}
-		if err = h.hydrateTesters(c, set.Questions); err != nil {
+		if err = hydrateTesters(c, tx, set.Questions); err != nil {
 			return err
 		}
 		questions, normalizeErr := normalizeQuestions(set.Questions)

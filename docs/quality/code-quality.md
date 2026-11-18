@@ -18,6 +18,39 @@ Android APK build/signature. Browser checks covered profile dialog, message send
 held emoji, 390px layout without overflow, and exam consent surviving refresh and
 returning to the exam list. Only isolated fixture accounts were used for UI writes.
 
+## Review on 2026-11-18
+
+This review fixes the following reproduced failures without adding features:
+
+- Restricted local storage no longer prevents reading a session fallback or
+  interrupts cleanup after submission. Both storage copies are account-scoped;
+  recovery chooses the newest valid copy. Unowned legacy session drafts are not
+  adopted by a signed-in account. Session-only saves still warn that recovery
+  after closing the browser is unavailable.
+- Editing an imported question retains its trusted bank provenance and applies
+  topic/difficulty changes. File imports still cannot supply bank provenance.
+- Import/readiness validation follows the server's UTF-8 byte limits, validates
+  question identifiers, and rejects noncanonical option-image indices.
+- Failed or superseded readiness checks cannot retain a successful report.
+  Cached checks are scoped to the account, class and draft/exam selection.
+- Coding-set approval hydrates tester metadata through its existing transaction,
+  avoiding connection-pool starvation. A real PostgreSQL regression runs the
+  entire create/preview/approve flow with `MaxConns=1` and a bounded deadline.
+
+Verification passed: zero-warning frontend lint, TypeScript, 85 Node tests and
+production build; scoped Go tests, vet and Linux race tests against isolated
+PostgreSQL; 170 authenticated GETs against existing data with read-only connections.
+Headless Chrome checked source components/libraries with mocked routing/data:
+320/390/768/1440px layouts, Bengali, dark mode, enlarged text, keyboard controls,
+file input/image processing, offline draft persistence, blocked-storage fallback,
+account isolation and browser Back. These browser checks did not use a live Next
+server. GitHub CI also checks desktop and Android separately.
+
+Regression tests reproduce the storage, import and approval failures before the
+fixes. These checks cover the reviewed paths, not every possible codebase bug.
+Existing user records are checked only through read-only database connections.
+Physical-phone QA remains pending because no device is available.
+
 ## Local checks
 
 Verification on 2026-11-12 adds migration 42, 32 frontend tests, isolated academic

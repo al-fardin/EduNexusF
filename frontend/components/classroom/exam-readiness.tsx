@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuthStore } from "@/store/auth-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
@@ -35,24 +36,36 @@ export function ExamReadiness({
       }[];
       conflictError: string;
     } | null>(null),
-    [busy, setBusy] = useState(false),
+    [busy, setBusy] = useState<{ key: string; version: number } | null>(null),
     [error, setError] = useState("");
   const client = useQueryClient();
-  const key = JSON.stringify(draft ?? examId),
+  const userId = useAuthStore((s) => s.user?.id ?? "");
+  const key = JSON.stringify([userId, classId, draft ?? examId]),
     local = draft ? inspectDraft(draft) : null,
     saved = snapshot?.key === key ? snapshot : null;
+  const request = useRef(0);
+  useEffect(
+    () => () => {
+      request.current++;
+    },
+    [key],
+  );
   async function check() {
-    setBusy(true);
+    const version = ++request.current;
+    setSnapshot(null);
+    setBusy({ key, version });
     setError("");
     try {
       let form = draft;
       if (!form) {
         const detail = await examService.teacherExam(classId, examId!);
+        if (version !== request.current) return;
         form = { ...detail.exam, questions: detail.questions };
       }
       const r = draft
         ? await api.post(`/classrooms/${classId}/exams/readiness`, draft)
         : await api.get(`/classrooms/${classId}/exams/${examId}/readiness`);
+      if (version !== request.current) return;
       let conflicts: NonNullable<typeof snapshot>["conflicts"] = [],
         conflictError = "";
       try {
@@ -71,11 +84,12 @@ export function ExamReadiness({
         conflictError =
           "Schedule conflicts could not be checked. Retry before publishing.";
       }
+      if (version !== request.current) return;
       setSnapshot({ key, report: r.data.data, conflicts, conflictError });
     } catch (e) {
-      setError(examError(e));
+      if (version === request.current) setError(examError(e));
     } finally {
-      setBusy(false);
+      setBusy((current) => (current?.version === version ? null : current));
     }
   }
   const report = saved?.report ?? local;
@@ -122,10 +136,10 @@ export function ExamReadiness({
         <button
           type="button"
           className={outline}
-          disabled={busy || disabled}
+          disabled={busy?.key === key || disabled}
           onClick={() => void check()}
         >
-          {busy ? "Checking…" : "Check saved data & schedule"}
+          {busy?.key === key ? "Checking…" : "Check saved data & schedule"}
         </button>
         {error && (
           <p role="alert" className="text-sm text-destructive">
@@ -155,7 +169,7 @@ export function ExamReadiness({
           <button
             type="button"
             className={primary}
-            disabled={busy || disabled}
+            disabled={busy?.key === key || disabled}
             onClick={() => {
               if (
                 !window.confirm(
@@ -163,18 +177,26 @@ export function ExamReadiness({
                 )
               )
                 return;
-              setBusy(true);
+              const version = ++request.current;
+              setBusy({ key, version });
               setError("");
               void examService
                 .publish(classId, examId)
                 .then(async () => {
+                  if (version !== request.current) return;
                   await client.invalidateQueries({
                     queryKey: ["classrooms", classId, "exams"],
                   });
                   onPublished?.();
                 })
-                .catch((e) => setError(examError(e)))
-                .finally(() => setBusy(false));
+                .catch((e) => {
+                  if (version === request.current) setError(examError(e));
+                })
+                .finally(() =>
+                  setBusy((current) =>
+                    current?.version === version ? null : current,
+                  ),
+                );
             }}
           >
             Publish checked exam

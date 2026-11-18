@@ -34,3 +34,154 @@ test('exam display preferences persist per account and do not change answers',()
  const {ExamReadingView}=loadComponent('components/classroom/exam-reading-view.tsx',{react:{...React,useSyncExternalStore:(_,get)=>get()},'@/store/auth-store':{useAuthStore:select=>select({user:{id:user}})},'@/providers/preferences-provider':{usePreferences:()=>({t:s=>s})},'@/lib/exam-display':display},'',globals);
  const props={questions:[],children:React.createElement('p',null,'Answers stay unchanged')};let tree=ExamReadingView(props);assert.equal(tree.props['data-exam-contrast'],false);nodes(tree,n=>n.type==='input'&&n.props.type==='checkbox')[0].props.onChange({target:{checked:true}});tree=ExamReadingView(props);assert.equal(tree.props['data-exam-contrast'],true);user='student-b';assert.equal(ExamReadingView(props).props['data-exam-contrast'],false);user='student-a';assert.equal(ExamReadingView(props).props['data-exam-contrast'],true);
 });
+
+test("failed readiness recheck clears a previously successful report", async () => {
+  const slots = [null, false, ""];
+  let cursor = 0,
+    fail = false,
+    user = "teacher",
+    resolveReadiness;
+  const refs = [];
+  let refCursor = 0;
+  const fake = {
+    ...React,
+    useEffect() {},
+    useRef(initial) {
+      const i = refCursor++;
+      return refs[i] ?? (refs[i] = { current: initial });
+    },
+    useState(initial) {
+      const i = cursor++;
+      if (!(i in slots)) slots[i] = initial;
+      return [
+        slots[i],
+        (v) => (slots[i] = typeof v === "function" ? v(slots[i]) : v),
+      ];
+    },
+  };
+  const { ExamReadiness } = loadComponent(
+    "components/classroom/exam-readiness.tsx",
+    {
+      react: fake,
+      "next/link": () => null,
+      "@tanstack/react-query": { useQueryClient: () => ({}) },
+      "@/store/auth-store": {
+        useAuthStore: (select) => select({ user: { id: user } }),
+      },
+      "@/lib/api": {
+        api: {
+          get: async () => {
+            if (fail) throw Error("network");
+            if (resolveReadiness === "pending")
+              return new Promise((resolve) => {
+                resolveReadiness = resolve;
+              });
+            return {
+              data: { data: { ready: true, total_points: 5, issues: [] } },
+            };
+          },
+          post: async () => ({ data: { data: { items: [] } } }),
+        },
+      },
+      "@/lib/exam-readiness": readiness,
+      "@/services/exams": {
+        examService: { teacherExam: async () => ({ exam: {}, questions: [] }) },
+        examError: (e) => e.message,
+      },
+      "./exam-presentation": {},
+    },
+  );
+  function render(classId = "class") {
+    cursor = 0;
+    refCursor = 0;
+    return ExamReadiness({ classId, examId: "exam" });
+  }
+  const button = (tree) =>
+    nodes(
+      tree,
+      (n) =>
+        n.type === "button" &&
+        ["Check saved data & schedule", "Checking…"].includes(n.props.children),
+    )[0];
+  button(render()).props.onClick();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(
+    nodes(render(), (n) => n.props.children === "Publish checked exam").length,
+    1,
+  );
+  assert.equal(
+    nodes(
+      render("other-class"),
+      (n) => n.props.children === "Publish checked exam",
+    ).length,
+    0,
+  );
+  user = "other-teacher";
+  assert.equal(
+    nodes(render(), (n) => n.props.children === "Publish checked exam").length,
+    0,
+  );
+  user = "teacher";
+  fail = true;
+  button(render()).props.onClick();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(
+    nodes(render(), (n) => n.props.children === "Publish checked exam").length,
+    0,
+  );
+  // An older successful check must not overwrite a more recent failure.
+  fail = false;
+  resolveReadiness = "pending";
+  button(render()).props.onClick();
+  await new Promise((r) => setImmediate(r));
+  const finishOlder = resolveReadiness;
+  fail = true;
+  button(render()).props.onClick();
+  await new Promise((r) => setImmediate(r));
+  finishOlder({ data: { data: { ready: true, total_points: 5, issues: [] } } });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(
+    nodes(render(), (n) => n.props.children === "Publish checked exam").length,
+    0,
+  );
+});
+
+test("local readiness catches server byte limits and invalid question identifiers", () => {
+  const draft = {
+    title: "Valid exam",
+    description: "",
+    starts_at: "2030-01-01T10:00:00Z",
+    ends_at: "2030-01-01T11:00:00Z",
+    duration_minutes: 30,
+    questions: [
+      {
+        id: "q",
+        kind: "mcq",
+        prompt: "Choose one",
+        points: 1,
+        options: ["A", "B"],
+        correct_option: 0,
+      },
+    ],
+  };
+  assert.equal(
+    readiness.inspectDraft({ ...draft, title: "ক".repeat(67) }, 0).ready,
+    false,
+  );
+  assert.equal(
+    readiness.inspectDraft({ ...draft, description: "ক".repeat(1667) }, 0)
+      .ready,
+    false,
+  );
+  assert.equal(
+    readiness.inspectDraft(
+      { ...draft, questions: [{ ...draft.questions[0], id: "" }] },
+      0,
+    ).ready,
+    false,
+  );
+  assert.equal(
+    readiness.inspectDraft({ ...draft, title: "পরীক্ষা" }, 0).ready,
+    true,
+  );
+});

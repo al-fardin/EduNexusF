@@ -55,3 +55,45 @@ test("lost save response comparison ignores JSON key ordering", () => {
   assert.equal(api.sameAnswers({ a: "1", b: "2" }, { b: "2", a: "1" }), true);
   assert.equal(api.sameAnswers({ a: "1" }, { a: "2" }), false);
 });
+
+function draft(answer = "saved") {
+  return {
+    answers: { q: answer },
+    serverRevision: 1,
+    at: Date.now(),
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+  };
+}
+test("blocked local storage still recovers account-scoped session drafts", () => {
+  const { api, window } = context();
+  Object.defineProperty(window, "localStorage", {
+    get() {
+      throw Error("denied");
+    },
+  });
+  assert.equal(api.saveExamDraft("a", "x", draft()), false);
+  assert.equal(api.readExamDraft("a", "x")?.answers.q, "saved");
+  assert.equal(api.readExamDraft("b", "x"), null);
+  assert.doesNotThrow(() => api.removeExamDraft("a", "x"));
+  assert.equal(api.readExamDraft("a", "x"), null);
+});
+test("a newer session fallback wins over an older durable draft", () => {
+  const { api, window } = context();
+  api.saveExamDraft("a", "x", { ...draft("old"), at: Date.now() - 1000 });
+  window.localStorage.setItem = () => {
+    throw Error("quota");
+  };
+  api.saveExamDraft("a", "x", draft("new"));
+  assert.equal(api.readExamDraft("a", "x")?.answers.q, "new");
+});
+test("unowned legacy session data cannot become another account's draft", () => {
+  const { api, window } = context();
+  window.sessionStorage.setItem("en-exam-v15:x", JSON.stringify(draft()));
+  assert.equal(api.readExamDraft("other", "x"), null);
+  Object.defineProperty(window, "sessionStorage", {
+    get() {
+      throw Error("denied");
+    },
+  });
+  assert.doesNotThrow(() => api.removeExamDraft("a", "x"));
+});

@@ -23,3 +23,40 @@ test('Aiken, TSV and EduNexus JSON retain keys and reject invalid formats',()=>{
  assert.throws(()=>previewItems(Array(101).fill({})),/100/);
  assert.throws(()=>parseQuestionText('a'.repeat(2*1024*1024+1),'text'),/2 MB/);
 });
+
+test("multibyte metadata and noncanonical image indices fail preview before submission", () => {
+  const base = {
+    kind: "mcq",
+    prompt: "Choose one",
+    points: 1,
+    options: ["A", "B"],
+    correct_option: 0,
+  };
+  for (const field of [
+    "topic",
+    "section",
+    "explanation",
+    "sample_answer",
+    "language",
+  ]) {
+    const limit = {
+      topic: 120,
+      section: 120,
+      explanation: 16000,
+      sample_answer: 15000,
+      language: 50,
+    }[field];
+    assert.ok(
+      previewItems([
+        { ...base, [field]: "ক".repeat(Math.floor(limit / 3) + 1) },
+      ])[0].errors.length,
+      field,
+    );
+  }
+  assert.match(
+    previewItems([
+      { ...base, option_images: { "01": { mime: "image/png", data: "bad" } } },
+    ])[0].errors.join(),
+    /missing option/,
+  );
+});

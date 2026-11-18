@@ -1,6 +1,7 @@
 package exam
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
@@ -95,6 +96,15 @@ func (h *Handler) UploadTester(c *fiber.Ctx) error {
 
 // Always load canonical metadata; a teacher cannot attach another classroom's binary.
 func (h *Handler) hydrateTesters(c *fiber.Ctx, questions []Question) error {
+	return hydrateTesters(c, h.db, questions)
+}
+
+type testerReader interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+// Use the transaction reader when the caller already holds a connection.
+func hydrateTesters(c *fiber.Ctx, db testerReader, questions []Question) error {
 	if len(questions) < 1 || len(questions) > 40 {
 		return fiber.NewError(400, "1-40 questions required")
 	}
@@ -110,7 +120,7 @@ func (h *Handler) hydrateTesters(c *fiber.Ctx, questions []Question) error {
 			return fiber.NewError(400, "invalid tester attachment")
 		}
 		var canonical TesterAttachment
-		err := h.db.QueryRow(c.UserContext(), `SELECT id::text,name,sha256,octet_length(executable) FROM classroom_question_testers WHERE id=$1::uuid AND classroom_id=$2::uuid`, q.Tester.ID, c.Params("id")).Scan(&canonical.ID, &canonical.Name, &canonical.SHA256, &canonical.Size)
+		err := db.QueryRow(c.UserContext(), `SELECT id::text,name,sha256,octet_length(executable) FROM classroom_question_testers WHERE id=$1::uuid AND classroom_id=$2::uuid`, q.Tester.ID, c.Params("id")).Scan(&canonical.ID, &canonical.Name, &canonical.SHA256, &canonical.Size)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fiber.NewError(400, "tester attachment not found in this classroom")
 		}

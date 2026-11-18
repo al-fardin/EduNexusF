@@ -2,10 +2,12 @@ package exam
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/edunexus/edunexus/internal/testsupport"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"io"
 	"net/http/httptest"
 	"strings"
@@ -197,4 +199,61 @@ func TestReadinessAndShufflingPreserveRequiredAnswerSemantics(t *testing.T) {
 			t.Fatal("shuffle changed rules")
 		}
 	}
+}
+
+// Approval must use its transaction connection, including tester hydration.
+func TestApproveCodingSetsWithSingleConnection(t *testing.T) {
+	t.Setenv("JWT_SECRET", "fixture-signing-key-for-exam-sets-123456789")
+	f := testsupport.Database(t)
+	cfg := f.DB.Config()
+	cfg.MaxConns = 1
+	pool, err := pgxpool.NewWithConfig(t.Context(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	tester := uuid.NewString()
+	_, err = f.DB.Exec(t.Context(), `INSERT INTO classroom_question_testers(id,classroom_id,uploaded_by,name,sha256,executable) VALUES($1::uuid,$2::uuid,$3::uuid,'tester.exe',$4,$5)`, tester, f.ClassID, f.Teacher, strings.Repeat("a", 64), make([]byte, 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := New(pool)
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		ctx, cancel := context.WithTimeout(c.UserContext(), 2*time.Second)
+		defer cancel()
+		c.SetUserContext(ctx)
+		c.Locals("user_id", f.Teacher)
+		return c.Next()
+	})
+	app.Post("/classrooms/:id/exams", h.Create)
+	app.Post("/classrooms/:id/exams/:examID/sets/preview", h.PreviewExamSets)
+	app.Post("/classrooms/:id/exams/:examID/sets/approve", h.ApproveExamSets)
+	call := func(path string, body any, status int) map[string]any {
+		t.Helper()
+		raw, _ := json.Marshal(body)
+		req := httptest.NewRequest("POST", "/classrooms/"+f.ClassID+"/exams"+path, bytes.NewReader(raw))
+		req.Header.Set("Content-Type", "application/json")
+		res, err := app.Test(req, 5000)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		data, _ := io.ReadAll(res.Body)
+		if res.StatusCode != status {
+			t.Fatalf("%s: expected %d got %d: %s", path, status, res.StatusCode, data)
+		}
+		var result struct {
+			Data map[string]any `json:"data"`
+		}
+		if err = json.Unmarshal(data, &result); err != nil {
+			t.Fatal(err)
+		}
+		return result.Data
+	}
+	q := Question{ID: "coding", Kind: "coding", Prompt: "Write a program", Points: 10, Tester: &TesterAttachment{ID: tester}}
+	exam := call("", CreateRequest{Title: "Coding exam", StartsAt: time.Now().Add(time.Hour), EndsAt: time.Now().Add(2 * time.Hour), DurationMinutes: 30, Questions: []Question{q}}, 201)
+	path := "/" + exam["id"].(string)
+	preview := call(path+"/sets/preview", fiber.Map{"count": 2, "mode": "shuffle"}, 200)
+	call(path+"/sets/approve", fiber.Map{"sets": preview["sets"], "receipt": preview["receipt"]}, 201)
 }

@@ -88,7 +88,15 @@ export function QuestionImport({
       current.map((row, i) => {
         if (i !== index) return row;
         const question = { ...row.question, ...patch },
-          next = previewItems([{ ...row, ...meta, question }])[0];
+          next = previewItems([
+            {
+              ...row,
+              topic: patch.topic ?? row.topic,
+              difficulty: patch.difficulty ?? row.difficulty,
+              ...meta,
+              question,
+            },
+          ])[0];
         return {
           ...next,
           line: row.line,
@@ -96,6 +104,8 @@ export function QuestionImport({
             ...next.question,
             id: question.id,
             tester: question.tester,
+            source_bank_id: row.question.source_bank_id,
+            source_bank_version: row.question.source_bank_version,
           },
         };
       }),
