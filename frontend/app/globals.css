@@ -489,4 +489,5 @@ main .animate-pulse[class*="bg-"]::after {
 
 .en-question-math {white-space:pre-wrap;overflow-wrap:anywhere;}
 .en-question-math .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding-block:.25rem;}
-.en-question-math .katex{font-size:1.1em;}
+.en-question-math .katex{font-size:1.1em;display:inline-block;max-width:100%;vertical-align:middle;overflow-x:auto;overflow-y:hidden;}
+.en-question-math .katex-display>.katex{display:block;}
