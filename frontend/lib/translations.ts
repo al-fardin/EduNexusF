@@ -1,5 +1,17 @@
 export type Language = "en" | "bn";
 export const bengali: Record<string, string> = {
+  "Exam display & navigation": "পরীক্ষার প্রদর্শন ও নেভিগেশন",
+  "Question text size": "প্রশ্নের লেখার আকার",
+  "Jump to question": "নির্দিষ্ট প্রশ্নে যান",
+  "Choose a question": "প্রশ্ন বেছে নিন",
+  "High contrast": "উচ্চ কনট্রাস্ট",
+  "Show image descriptions": "ছবির বর্ণনা দেখান",
+  "Reset exam display": "পরীক্ষার প্রদর্শন রিসেট করুন",
+  standard: "স্বাভাবিক",
+  large: "বড়",
+  larger: "আরও বড়",
+  "Use Tab to move between controls; arrow keys choose radio answers and Space selects checkboxes.":
+    "কন্ট্রোল বদলাতে Tab, একটি উত্তর বাছতে তীর চিহ্ন এবং চেকবক্স বাছতে Space ব্যবহার করুন।",
   Institutions: "প্রতিষ্ঠানসমূহ",
   "Create institution": "প্রতিষ্ঠান তৈরি",
   "Institution name": "প্রতিষ্ঠানের নাম",

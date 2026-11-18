@@ -42,13 +42,21 @@ export function QuestionText({ text }: { text: string }) {
 export function QuestionPicture({ image }: { image?: QuestionImage }) {
   if (!image || imageProblem(image)) return null;
   return (
-    <Image
-      src={image.data}
-      alt={image.alt}
-      width={image.width}
-      height={image.height}
-      unoptimized
-      className="my-2 h-auto max-h-80 max-w-full rounded-lg border border-border object-contain"
-    />
+    <>
+      <Image
+        src={image.data}
+        alt={image.alt}
+        width={image.width}
+        height={image.height}
+        unoptimized
+        className="my-2 h-auto max-h-80 max-w-full rounded-lg border border-border object-contain"
+      />
+      <span
+        aria-hidden="true"
+        className="en-question-image-description hidden text-sm"
+      >
+        {image.alt}
+      </span>
+    </>
   );
 }

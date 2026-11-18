@@ -491,3 +491,11 @@ main .animate-pulse[class*="bg-"]::after {
 .en-question-math .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding-block:.25rem;}
 .en-question-math .katex{font-size:1.1em;display:inline-block;max-width:100%;vertical-align:middle;overflow-x:auto;overflow-y:hidden;}
 .en-question-math .katex-display>.katex{display:block;}
+
+.en-exam-reading[data-exam-size="large"] .en-exam-question{font-size:1.125rem;line-height:1.7;}
+.en-exam-reading[data-exam-size="larger"] .en-exam-question{font-size:1.3rem;line-height:1.8;}
+.en-exam-reading:not([data-exam-size="standard"]) .en-exam-question :is(.text-sm,textarea,select){font-size:1em;}
+.en-exam-reading[data-exam-contrast="true"]{--background:#fff;--foreground:#000;--card:#fff;--border:#000;--muted-foreground:#242424;--primary:#000;--primary-foreground:#fff;--secondary:#eee;--destructive:#970000;background:var(--background);color:var(--foreground);}
+.dark .en-exam-reading[data-exam-contrast="true"]{--background:#050505;--foreground:#fff;--card:#050505;--border:#fff;--muted-foreground:#eee;--primary:#fff;--primary-foreground:#000;--secondary:#242424;--destructive:#ffb2b2;}
+.en-exam-reading[data-image-descriptions="true"] .en-question-image-description{display:block;}
+.en-exam-reading :focus-visible{outline:3px solid var(--ring);outline-offset:3px;}

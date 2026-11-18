@@ -6,7 +6,7 @@ const React = require("react");
 const { renderToStaticMarkup } = require("react-dom/server");
 const root = path.resolve(__dirname, "../..");
 
-function loadComponent(file, mocks, extra = "") {
+function loadComponent(file, mocks, extra = "", globals = {}) {
   const exports = {};
   const source = ts.transpileModule(
     fs.readFileSync(path.join(root, file), "utf8") + extra,
@@ -24,6 +24,7 @@ function loadComponent(file, mocks, extra = "") {
     URL,
     URLSearchParams,
     TextEncoder,
+    ...globals,
     require(name) {
       if (Object.hasOwn(mocks, name)) return mocks[name];
       if (name === "react" || name === "react/jsx-runtime") return require(name);

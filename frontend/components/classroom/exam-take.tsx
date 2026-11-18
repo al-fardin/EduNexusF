@@ -1,6 +1,7 @@
 "use client";
 
 import { QuestionText, QuestionPicture } from "./question-content";
+import { ExamReadingView } from "./exam-reading-view";
 import { MCQAnswer } from "./mcq-fields";
 import { useAuthStore } from "@/store/auth-store";
 import {
@@ -387,7 +388,7 @@ export function ExamTake({
   const left = Math.max(0, Math.floor((until - (now + clockOffset)) / 1000));
   const timedOut = Boolean(live) && left <= 0;
   return (
-    <section className={panel}>
+    <ExamReadingView className={panel} questions={live?.questions ?? []}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-xl font-bold">
           {live?.exam.title ?? "Exam session"}
@@ -509,7 +510,11 @@ export function ExamTake({
                 {live.questions.map((q, i) => (
                   <div
                     key={q.id}
-                    className="rounded-[22px_10px_18px_12px] border border-border bg-background p-4"
+                    id={`exam-answer-${q.id}`}
+                    tabIndex={-1}
+                    role="group"
+                    aria-label={`Question ${i + 1}`}
+                    className="en-exam-question scroll-mt-5 rounded-[22px_10px_18px_12px] border border-border bg-background p-4"
                   >
                     <div className="mb-3 flex items-start justify-between gap-4">
                       <p className="font-semibold">
@@ -601,7 +606,7 @@ export function ExamTake({
           )}
         </>
       )}
-    </section>
+    </ExamReadingView>
   );
 }
 function ExamSessionSkeleton() {
