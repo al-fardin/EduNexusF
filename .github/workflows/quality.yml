@@ -10,6 +10,8 @@ concurrency:
   group: quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  recovery:
+    uses: ./.github/workflows/recovery.yml
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -64,6 +66,8 @@ jobs:
           done
       - run: go vet ./internal/... ./apps/...
       - run: go test -race -p 1 -count=1 ./internal/... ./apps/...
+      - name: Bounded tester parser fuzzing
+        run: go test ./internal/exam -run '^$' -fuzz FuzzRedTeamTesterBytes -fuzztime 10s -parallel 2
   desktop:
     runs-on: windows-latest
     steps:

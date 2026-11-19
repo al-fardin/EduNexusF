@@ -51,6 +51,13 @@ fixes. These checks cover the reviewed paths, not every possible codebase bug.
 Existing user records are checked only through read-only database connections.
 Physical-phone QA remains pending because no device is available.
 
+## Red-team follow-up
+
+The [2026-11-19 red-team report](red-team-verification.md) records confirmed
+authorization/recovery failures, fixes, regression coverage and remaining limits.
+Paired database/uploads restore and restored application routes now run in quality
+CI, alongside bounded tester-parser fuzzing.
+
 ## Local checks
 
 Verification on 2026-11-12 adds migration 42, 32 frontend tests, isolated academic
