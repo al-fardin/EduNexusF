@@ -57,7 +57,12 @@ function Stop-LocalProcess($Record) {
     # so a development supervisor cannot spawn a replacement during cleanup.
     $family = @(Get-LocalProcessFamily $process)
     foreach ($entry in $family) {
-        if (-not $entry.HasExited) { $entry.Kill(); [void]$entry.WaitForExit(5000) }
+        try {
+            if (-not $entry.HasExited) {
+                $entry.Kill()
+                if (-not $entry.WaitForExit(5000)) { throw "Managed process $($entry.Id) did not stop." }
+            }
+        } finally { $entry.Dispose() }
     }
 }
 

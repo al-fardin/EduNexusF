@@ -53,6 +53,7 @@ try {
     [IO.File]::WriteAllText($treeFile, 'const {spawn}=require("node:child_process");const c=spawn(process.execPath,["-e","setInterval(()=>{},1000)"],{stdio:"ignore"});console.log(c.pid);setInterval(()=>{},1000);')
     $tree = Start-LocalProcess $node @($treeFile) $temporary (Join-Path $temporary 'tree')
     $treeRecord = Get-LocalProcessRecord $tree
+    $observedChild = $null
     try {
         $childId = 0
         for ($i=0; $i -lt 30; $i++) {
@@ -63,14 +64,21 @@ try {
             Start-Sleep -Milliseconds 100
         }
         Check ($childId -gt 0) 'Test child never started.'
+        $observedChild = Get-Process -Id $childId
+        [void]$observedChild.Handle
         Check ($childId -in @(Get-LocalProcessFamily $tree | ForEach-Object { $_.Id })) 'Owned child was not discovered.'
         Stop-LocalProcess $treeRecord
-        Check (-not (Get-Process -Id $tree.Id -ErrorAction SilentlyContinue)) 'Managed parent remained running.'
-        Check (-not (Get-Process -Id $childId -ErrorAction SilentlyContinue)) 'Managed child remained running.'
+        # Observe the original kernel handles, not a possibly cached/reused PID.
+        Check $tree.HasExited 'Managed parent remained running.'
+        Check $observedChild.HasExited 'Managed child remained running.'
         Check ([bool](Get-Process -Id $PID)) 'Unrelated process was affected.'
     } finally {
         try { Stop-LocalProcess $treeRecord } finally {
             if (-not $tree.HasExited) { $tree.Kill(); [void]$tree.WaitForExit(5000) }
+            if ($observedChild) {
+                if (-not $observedChild.HasExited) { $observedChild.Kill(); [void]$observedChild.WaitForExit(5000) }
+                $observedChild.Dispose()
+            }
             $tree.Dispose()
         }
     }
