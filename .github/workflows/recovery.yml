@@ -31,7 +31,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Create isolated schema and sentinel records
         run: |
-          for migration in database/migrations/*.up.sql; do psql -X -v ON_ERROR_STOP=1 -f "$migration"; done
+          docker run --rm --network host \
+            -e PGHOST -e PGPORT -e PGPASSWORD \
+            -e POSTGRES_USER=postgres -e POSTGRES_DB=edunexus_features \
+            -v "$GITHUB_WORKSPACE/database:/edunexus-database:ro" \
+            -v "$GITHUB_WORKSPACE/scripts/database/initialize-local.sh:/initialize-local.sh:ro" \
+            postgres:17 sh /initialize-local.sh
+          expected=$(( $(find database/migrations -name '*.up.sql' | wc -l) - 20 ))
+          test "$(psql -X -At -c 'SELECT count(*) FROM edunexus_feature_migrations')" -eq "$expected"
           psql -X -v ON_ERROR_STOP=1 -f scripts/qa/recovery-fixtures.sql
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:

@@ -24,13 +24,29 @@ uploads/         Private uploaded files (ignored)
 Run from the repository root in PowerShell:
 
 ```powershell
-docker compose up -d
 .\scripts\dev\start-local.ps1
 ```
 
-The launcher checks frontend assets and API health, then prints the phone URL and
-APK download link. Its existing `-WebPort`, `-ApiPort` and `-Production` options
-remain available. See [scripts](scripts/README.md) for database commands.
+The launcher starts Docker services, builds the API, starts Next.js and verifies
+database readiness, the login page, frontend assets and the API proxy. Defaults:
+web `3000`, API `8080`. Docker Desktop must be running; Go and Node.js must be
+installed. Missing frontend dependencies are installed from the lockfile.
+
+```powershell
+.\scripts\dev\start-local.ps1 -Action Status
+.\scripts\dev\start-local.ps1 -Restart
+.\scripts\dev\start-local.ps1 -Action Stop
+```
+
+Logs and process state live under `release-builds/local-server/`. Re-running the
+command reuses its verified running processes. A conflicting port shows the
+owner when Windows exposes it. Stop/restart controls only launcher-managed app
+processes and their children; Docker data services keep running.
+
+A new empty PostgreSQL volume initializes the complete schema automatically.
+Existing databases and `.env` settings are preserved; existing-database upgrades
+still use the explicit backup/migration tools. `-Production`, `-WebPort`,
+`-ApiPort` and `-SkipInfrastructure` are available. See [scripts](scripts/README.md).
 
 To run each service manually, use two terminals:
 
