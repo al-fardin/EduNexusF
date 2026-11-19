@@ -66,6 +66,31 @@ class TestRunnerTests(unittest.TestCase):
             self.assertEqual(manager.jobs["test"]["state"], "error")
             self.assertNotIn("binary", manager.jobs["test"])
 
+    def test_download_rejects_corruption_and_fake_pe_without_execution(self):
+        binary = bytearray(132)
+        binary[:2] = b"MZ"
+        binary[60:64] = (128).to_bytes(4, "little")
+        binary[128:] = b"PE\x00\x00"
+        for scenario in ("valid", "digest", "truncated", "fake_pe", "cancelled"):
+            with self.subTest(scenario=scenario):
+                exe = bytes(binary) if scenario != "truncated" else b"MZ"
+                if scenario == "fake_pe": exe = b"MZ" + bytes(130)
+                digest = hashlib.sha256(exe).hexdigest() if scenario != "digest" else "0" * 64
+                bundle = {"data": {"protocol": "edunexus.tester.v1", "tester": {"name": "fixture.exe", "size": len(exe), "sha256": digest}, "executable": base64.b64encode(exe).decode()}}
+                response = unittest.mock.MagicMock()
+                response.__enter__.return_value.read.return_value = json.dumps(bundle).encode()
+                opener = unittest.mock.Mock()
+                opener.open.return_value = response
+                manager = TestRunManager(queue.Queue(), lambda _: True)
+                cancel = threading.Event()
+                if scenario == "cancelled": cancel.set()
+                manager.jobs["job"] = {"server": "https://school.test", "state": "preparing", "cancel": cancel}
+                with patch("test_runner.urlrequest.build_opener", return_value=opener), patch("test_runner.execute_tester") as execute:
+                    manager.prepare("job", "a" * 64)
+                    execute.assert_not_called()
+                self.assertEqual(manager.jobs["job"]["state"], "awaiting_approval" if scenario == "valid" else "error")
+                if scenario != "valid": self.assertNotIn("binary", manager.jobs["job"])
+
 
 @unittest.skipUnless(os.environ.get("EDUNEXUS_TESTER_EXE"), "Set EDUNEXUS_TESTER_EXE to the built example tester")
 class WindowsExecutionTests(unittest.TestCase):

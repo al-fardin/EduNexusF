@@ -1,17 +1,19 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"time"
 
 	"github.com/edunexus/edunexus/internal/auth/handler"
 	authMiddleware "github.com/edunexus/edunexus/internal/auth/middleware"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
 func Register(app *fiber.App, h *handler.UserHandler) {
 
 	auth := app.Group("/auth")
 
-	auth.Post("/register", h.Register)
+	auth.Post("/register", authLimit(20), h.Register)
 
 	auth.Post("/login", h.Login)
 	auth.Post("/refresh", h.Refresh)
@@ -48,20 +50,29 @@ func Register(app *fiber.App, h *handler.UserHandler) {
 		authMiddleware.JWTProtected(),
 		h.LogoutAll,
 	)
-	auth.Post("/verify-email", h.VerifyEmail)
-	auth.Post("/resend-verification", h.ResendVerification)
+	auth.Post("/verify-email", authLimit(20), h.VerifyEmail)
+	auth.Post("/resend-verification", authLimit(5), h.ResendVerification)
 	auth.Get(
 		"/verify-email",
 		h.VerifyEmail,
 	)
 	auth.Post(
 		"/forgot-password",
+		authLimit(5),
 		h.ForgotPassword,
 	)
 
 	auth.Post(
 		"/reset-password",
+		authLimit(20),
 		h.ResetPassword,
 	)
 
+}
+
+// Each endpoint has its own budget. Proxy headers do not select a new identity.
+func authLimit(max int) fiber.Handler {
+	return limiter.New(limiter.Config{Max: max, Expiration: time.Minute, LimitReached: func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"success": false, "message": "Too many requests. Try again in a minute."})
+	}})
 }

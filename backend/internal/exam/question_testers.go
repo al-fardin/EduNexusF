@@ -192,9 +192,15 @@ func (h *Handler) DownloadTesterBundle(c *fiber.Ctx) error {
 	var data []byte
 	// Atomically consume a one-use ticket and recheck exam/attempt state.
 	err := h.db.QueryRow(c.UserContext(), `WITH consumed AS (
-        DELETE FROM classroom_tester_tickets t USING classroom_exam_attempts a,classroom_exams e
+        DELETE FROM classroom_tester_tickets t USING classroom_exam_attempts a,classroom_exams e,
+        classrooms cl,classroom_memberships m,users u,classroom_question_testers tester
         WHERE t.token_hash=$1 AND t.expires_at>now() AND a.id=t.attempt_id AND a.status='in_progress'
         AND a.expires_at>now() AND e.id=a.exam_id AND e.status='published' AND e.closed_at IS NULL AND e.ends_at>now()
+        AND cl.id=e.classroom_id AND cl.status='active' AND cl.deleted_at IS NULL
+        AND m.classroom_id=cl.id AND m.user_id=a.student_id AND m.status='active' AND m.member_role='student'
+        AND u.id=a.student_id AND u.status='active' AND u.deleted_at IS NULL
+        AND tester.id=t.tester_id AND tester.classroom_id=cl.id
+        AND edunexus_resource_visible(cl.id,'exam',e.id,a.student_id)
         RETURNING t.tester_id
     ) SELECT q.id::text,q.name,q.sha256,octet_length(q.executable),q.executable FROM consumed c JOIN classroom_question_testers q ON q.id=c.tester_id`, hex.EncodeToString(digest[:])).Scan(&attachment.ID, &attachment.Name, &attachment.SHA256, &attachment.Size, &data)
 	if errors.Is(err, pgx.ErrNoRows) {

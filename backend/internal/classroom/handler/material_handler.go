@@ -5,9 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/edunexus/edunexus/internal/activity"
-	"github.com/edunexus/edunexus/internal/platform/audience"
-	"github.com/edunexus/edunexus/internal/platform/contentrelease"
 	"io"
 	"net/http"
 	"os"
@@ -15,7 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/edunexus/edunexus/internal/activity"
 	"github.com/edunexus/edunexus/internal/classroom/service"
+	"github.com/edunexus/edunexus/internal/platform/audience"
+	"github.com/edunexus/edunexus/internal/platform/contentrelease"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -66,7 +66,7 @@ func (h *MaterialHandler) authorize(c *fiber.Ctx, teacherOnly bool) error {
 		return err
 	}
 	if err := h.stream.AuthorizeMaterialAccess(c.UserContext(), userID, role, c.Params("id"), teacherOnly); err != nil {
-		return handleStreamError(c, err)
+		return streamHTTPError(err)
 	}
 	if c.Params("materialID") != "" && !teacherOnly {
 		user, _, e := currentIdentity(c)

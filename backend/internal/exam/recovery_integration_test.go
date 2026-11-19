@@ -3,17 +3,17 @@ package exam
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/edunexus/edunexus/internal/testsupport"
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"io"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/edunexus/edunexus/internal/testsupport"
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 func TestRecoveryRevisionAndSubmissionReceipt(t *testing.T) {
 	f := testsupport.Database(t)
-	h := New(f.DB)
 	exam, attempt := uuid.NewString(), uuid.NewString()
 	_, err := f.DB.Exec(t.Context(), `INSERT INTO classroom_exams(id,classroom_id,created_by,title,starts_at,ends_at,duration_minutes,status,questions) VALUES($1::uuid,$2::uuid,$3::uuid,'Recovery exam',now()-interval '1 hour',now()+interval '1 hour',120,'published','[{"id":"q","kind":"theory","prompt":"Explain","points":10}]')`, exam, f.ClassID, f.Teacher)
 	if err != nil {
@@ -23,19 +23,21 @@ func TestRecoveryRevisionAndSubmissionReceipt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	app := fiber.New()
-	app.Use(func(c *fiber.Ctx) error { c.Locals("user_id", f.Student); return c.Next() })
-	g := app.Group("/classrooms/:id/exams")
-	g.Get("/active", h.ActiveAttempts)
-	g.Get("/:examID/attempt", h.Attempt)
-	g.Put("/:examID/attempt", h.Save)
-	g.Post("/:examID/submit", h.Submit)
 	call := func(method, path string, payload any, status int) map[string]any {
 		t.Helper()
 		raw, _ := json.Marshal(payload)
 		req := httptest.NewRequest(method, path, bytes.NewReader(raw))
 		req.Header.Set("Content-Type", "application/json")
-		res, e := app.Test(req)
+		// Rebuild handlers for each request: committed recovery must not depend on
+		// process-local attempt state, including after a lost response.
+		fresh := fiber.New()
+		fresh.Use(func(c *fiber.Ctx) error { c.Locals("user_id", f.Student); return c.Next() })
+		next := New(f.DB)
+		fresh.Get("/classrooms/:id/exams/active", next.ActiveAttempts)
+		fresh.Get("/classrooms/:id/exams/:examID/attempt", next.Attempt)
+		fresh.Put("/classrooms/:id/exams/:examID/attempt", next.Save)
+		fresh.Post("/classrooms/:id/exams/:examID/submit", next.Submit)
+		res, e := fresh.Test(req)
 		if e != nil {
 			t.Fatal(e)
 		}

@@ -3,13 +3,14 @@ package service
 import (
 	"context"
 	"errors"
+	"html"
 	"time"
 
+	"github.com/edunexus/edunexus/internal/auth/dto"
 	db "github.com/edunexus/edunexus/internal/platform/database/sqlc"
 	"github.com/edunexus/edunexus/internal/platform/security"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-
-	"github.com/edunexus/edunexus/internal/auth/dto"
 )
 
 func (s *UserService) ForgotPassword(
@@ -19,12 +20,22 @@ func (s *UserService) ForgotPassword(
 
 	user, err := s.repo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		return errors.New("user not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return err
 	}
 
 	uid := user.ID
 
-	_ = s.resetRepo.DeleteUserTokens(ctx, uid)
+	page, err := verificationPage()
+	if err != nil {
+		return err
+	}
+	page.Path = "/reset-password"
+	if err = s.resetRepo.DeleteUserTokens(ctx, uid); err != nil {
+		return err
+	}
 
 	token, err := security.GenerateRefreshToken()
 	if err != nil {
@@ -40,7 +51,7 @@ func (s *UserService) ForgotPassword(
 		ctx,
 		db.CreatePasswordResetTokenParams{
 			UserID:    uid,
-			Token:     token,
+			Token:     tokenHash(token),
 			ExpiresAt: expires,
 		},
 	)
@@ -48,7 +59,10 @@ func (s *UserService) ForgotPassword(
 		return err
 	}
 
-	link := "http://localhost:3000/reset-password?token=" + token
+	query := page.Query()
+	query.Set("token", token)
+	page.RawQuery = query.Encode()
+	link := html.EscapeString(page.String())
 
 	body := `
 <h2>Reset your password</h2>

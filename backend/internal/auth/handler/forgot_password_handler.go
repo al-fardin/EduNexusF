@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"log"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
 	"github.com/edunexus/edunexus/internal/platform/response"
 	validatorpkg "github.com/edunexus/edunexus/internal/platform/validator"
+	"github.com/gofiber/fiber/v2"
 )
 
 // ForgotPassword godoc
@@ -40,16 +41,14 @@ func (h *UserHandler) ForgotPassword(c *fiber.Ctx) error {
 		c.Context(),
 		req,
 	); err != nil {
-		return fiber.NewError(
-			fiber.StatusBadRequest,
-			err.Error(),
-		)
+		// Keep account existence and mail-provider failures out of the public response.
+		log.Print("password recovery request could not be completed")
 	}
 
 	return response.Success(
 		c,
 		fiber.StatusOK,
-		"Password reset email sent",
+		"If the account exists, password reset instructions will be sent",
 		nil,
 	)
 }

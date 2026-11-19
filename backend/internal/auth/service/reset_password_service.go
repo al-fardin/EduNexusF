@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/google/uuid"
+	"strings"
 	"time"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
 	db "github.com/edunexus/edunexus/internal/platform/database/sqlc"
 	"github.com/edunexus/edunexus/internal/platform/security"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 func (s *UserService) ResetPassword(
@@ -16,15 +18,19 @@ func (s *UserService) ResetPassword(
 	req dto.ResetPasswordRequest,
 ) error {
 
-	tokenData, err := s.resetRepo.GetByToken(
-		ctx,
-		req.Token,
-	)
+	if strings.HasPrefix(req.Token, "sha256:") {
+		return errors.New("invalid reset token")
+	}
+	tokenData, err := s.resetRepo.GetByToken(ctx, tokenHash(req.Token))
+	// Existing emailed links remain usable until their original expiry.
+	if errors.Is(err, pgx.ErrNoRows) {
+		tokenData, err = s.resetRepo.GetByToken(ctx, req.Token)
+	}
 	if err != nil {
 		return errors.New("invalid reset token")
 	}
 
-	if !tokenData.ExpiresAt.Valid ||
+	if tokenData.Used || !tokenData.ExpiresAt.Valid ||
 		tokenData.ExpiresAt.Time.Before(time.Now()) {
 		return errors.New("reset token expired")
 	}
@@ -35,7 +41,7 @@ func (s *UserService) ResetPassword(
 	}
 
 	if s.pool != nil {
-		return s.securePassword(ctx, uuid.UUID(tokenData.UserID.Bytes).String(), hash, req.Token, "")
+		return s.securePassword(ctx, uuid.UUID(tokenData.UserID.Bytes).String(), hash, tokenData.Token, "")
 	}
 	err = s.repo.UpdatePassword(
 		ctx,

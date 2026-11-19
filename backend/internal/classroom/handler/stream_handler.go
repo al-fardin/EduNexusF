@@ -3,10 +3,9 @@ package handler
 import (
 	"errors"
 
-	"github.com/gofiber/fiber/v2"
-
 	"github.com/edunexus/edunexus/internal/classroom/dto"
 	"github.com/edunexus/edunexus/internal/classroom/service"
+	"github.com/gofiber/fiber/v2"
 )
 
 type StreamHandler struct {
@@ -252,56 +251,23 @@ func (h *StreamHandler) Delete(
 	})
 }
 
-func handleStreamError(
-	c *fiber.Ctx,
-	err error,
-) error {
+// Keep authorization errors as errors until the HTTP handler returns. Writing a
+// JSON response can return nil and must never signal that authorization passed.
+func streamHTTPError(err error) *fiber.Error {
 	switch {
-	case errors.Is(
-		err,
-		service.ErrInvalidInput,
-	):
-		return errorResponse(
-			c,
-			fiber.StatusBadRequest,
-			err.Error(),
-		)
-
-	case errors.Is(
-		err,
-		service.ErrClassroomNotFound,
-	):
-		return errorResponse(
-			c,
-			fiber.StatusNotFound,
-			"classroom not found",
-		)
-
-	case errors.Is(
-		err,
-		service.ErrStreamPostNotFound,
-	):
-		return errorResponse(
-			c,
-			fiber.StatusNotFound,
-			"classroom stream post not found",
-		)
-
-	case errors.Is(
-		err,
-		service.ErrForbidden,
-	):
-		return errorResponse(
-			c,
-			fiber.StatusForbidden,
-			"insufficient permissions",
-		)
-
+	case errors.Is(err, service.ErrInvalidInput):
+		return fiber.NewError(400, err.Error())
+	case errors.Is(err, service.ErrClassroomNotFound):
+		return fiber.NewError(404, "classroom not found")
+	case errors.Is(err, service.ErrStreamPostNotFound):
+		return fiber.NewError(404, "classroom stream post not found")
+	case errors.Is(err, service.ErrForbidden):
+		return fiber.NewError(403, "insufficient permissions")
 	default:
-		return errorResponse(
-			c,
-			fiber.StatusInternalServerError,
-			"internal server error",
-		)
+		return fiber.NewError(500, "internal server error")
 	}
+}
+func handleStreamError(c *fiber.Ctx, err error) error {
+	mapped := streamHTTPError(err)
+	return errorResponse(c, mapped.Code, mapped.Message)
 }

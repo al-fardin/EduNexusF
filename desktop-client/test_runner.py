@@ -234,6 +234,9 @@ class TestRunManager:
             if (not 64 <= len(binary) <= MAX_EXE or binary[:2] != b"MZ" or
                     hashlib.sha256(binary).hexdigest() != info["sha256"] or info["size"] != len(binary)):
                 raise ValueError("Tester integrity verification failed")
+            pe_offset = int.from_bytes(binary[60:64], "little")
+            if pe_offset < 64 or pe_offset + 4 > len(binary) or binary[pe_offset:pe_offset + 4] != b"PE\x00\x00":
+                raise ValueError("Tester is not a valid Windows executable")
             if job["cancel"].is_set() or not self.authorize(job["server"]):
                 raise ValueError("Exam session disconnected")
             with self.lock:

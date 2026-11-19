@@ -7,16 +7,15 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/edunexus/edunexus/internal/auth/dto"
 	"github.com/edunexus/edunexus/internal/auth/repository"
 	db "github.com/edunexus/edunexus/internal/platform/database/sqlc"
 	"github.com/edunexus/edunexus/internal/platform/mail"
 	"github.com/edunexus/edunexus/internal/platform/security"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserService struct {
@@ -26,7 +25,7 @@ type UserService struct {
 	verifyRepo  *repository.EmailVerificationRepository
 	resetRepo   *repository.PasswordResetRepository
 	jwt         *security.JWTService
-	mailer      *mail.SMTPMailer
+	mailer      mail.Mailer
 }
 
 func New(

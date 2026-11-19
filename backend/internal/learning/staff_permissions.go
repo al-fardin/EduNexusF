@@ -2,9 +2,10 @@ package learning
 
 import (
 	"context"
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"strings"
 )
 
 var staffCapabilities = []string{"coursework", "grading", "attendance", "people", "messaging", "moderation", "reports"}
@@ -13,7 +14,8 @@ var staffCapabilities = []string{"coursework", "grading", "attendance", "people"
 // handlers. Missing settings preserve an existing co-teacher's permissions.
 func StaffPolicy(pool *pgxpool.Pool) func(context.Context, string, string, string) error {
 	return func(ctx context.Context, user, path, method string) error {
-		parts := strings.Split(strings.Trim(path, "/"), "/")
+		// Fiber matches routes case-insensitively. Authorize the same canonical path.
+		parts := strings.Split(strings.ToLower(strings.Trim(path, "/")), "/")
 		if len(parts) < 2 || parts[0] != "classrooms" || validID(parts[1]) != nil {
 			return nil
 		}
