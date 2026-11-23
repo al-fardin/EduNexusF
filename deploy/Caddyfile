@@ -4,6 +4,21 @@
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
 		Strict-Transport-Security "max-age=31536000"
+		Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+		X-Frame-Options DENY
+		Permissions-Policy "camera=(self), microphone=(self), geolocation=(), payment=(), usb=()"
+		-Server
+	}
+	# Browser and APK requests go directly to the API. Overwrite client-supplied
+	# metadata; do not trust arbitrary X-Forwarded-For values from the internet.
+	handle_path /api/* {
+		request_body {
+			max_size 18MiB
+		}
+		reverse_proxy api:8080 {
+			header_up X-EduNexus-Client-IP {remote_host}
+			header_up X-EduNexus-Proxy-Key {$TRUSTED_PROXY_SECRET}
+		}
 	}
 	@socket path /messaging/socket
 	reverse_proxy @socket api:8080

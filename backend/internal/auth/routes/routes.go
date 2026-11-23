@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"github.com/edunexus/edunexus/internal/platform/requestidentity"
+	"os"
 	"time"
 
 	"github.com/edunexus/edunexus/internal/auth/handler"
@@ -72,7 +74,10 @@ func Register(app *fiber.App, h *handler.UserHandler) {
 
 // Each endpoint has its own budget. Proxy headers do not select a new identity.
 func authLimit(max int) fiber.Handler {
-	return limiter.New(limiter.Config{Max: max, Expiration: time.Minute, LimitReached: func(c *fiber.Ctx) error {
+	if os.Getenv("APP_ENV") == "production" {
+		max *= 4
+	}
+	return limiter.New(limiter.Config{Max: max, Expiration: time.Minute, KeyGenerator: requestidentity.ClientIP, LimitReached: func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"success": false, "message": "Too many requests. Try again in a minute."})
 	}})
 }

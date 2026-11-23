@@ -80,6 +80,8 @@ async function proxyRequest(
     requestHeaders.delete("host");
     requestHeaders.delete("origin");
     requestHeaders.delete("referer");
+    requestHeaders.delete("x-edunexus-client-ip");
+    requestHeaders.delete("x-edunexus-proxy-key");
     requestHeaders.delete(
       "content-length"
     );

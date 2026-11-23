@@ -18,6 +18,7 @@ import (
 	"github.com/edunexus/edunexus/internal/auth/dto"
 	authMiddleware "github.com/edunexus/edunexus/internal/auth/middleware"
 	db "github.com/edunexus/edunexus/internal/platform/database/sqlc"
+	"github.com/edunexus/edunexus/internal/platform/requestidentity"
 	"github.com/edunexus/edunexus/internal/platform/security"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -312,12 +313,16 @@ func revokeAccount(ctx context.Context, tx pgx.Tx, user, except string) error {
 }
 
 func (s *UserService) RegisterSecurity(app *fiber.App) {
-	app.Use("/auth/login", limiter.New(limiter.Config{Max: 20, Expiration: time.Minute}))
+	loginLimit := 20
+	if os.Getenv("APP_ENV") == "production" {
+		loginLimit = 120
+	}
+	app.Use("/auth/login", limiter.New(limiter.Config{Max: loginLimit, Expiration: time.Minute, KeyGenerator: requestidentity.ClientIP}))
 	g := app.Group("/auth/security", authMiddleware.JWTProtected())
 	g.Get("/", s.securityStatus)
 	g.Get("/sessions", s.sessions)
 	g.Delete("/sessions/:sessionID", s.revokeSession)
-	g.Post("/two-step/:action", limiter.New(limiter.Config{Max: 8, Expiration: time.Minute}), s.twoStep)
+	g.Post("/two-step/:action", limiter.New(limiter.Config{Max: 8, Expiration: time.Minute, KeyGenerator: func(c *fiber.Ctx) string { user, _ := c.Locals("user_id").(string); return user }}), s.twoStep)
 }
 func (s *UserService) securityStatus(c *fiber.Ctx) error {
 	user, _ := c.Locals("user_id").(string)

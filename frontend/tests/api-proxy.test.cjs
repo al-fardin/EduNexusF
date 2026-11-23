@@ -53,6 +53,14 @@ test("API proxy preserves valid requests and prevents caching authenticated resp
   assert.match(response.headers.get("cache-control"), /no-store/);
 });
 
+test("the web proxy cannot forward client-supplied trusted-proxy credentials",async()=>{
+ const {exports,request,calls}=setup();const req=request("/api/auth/login","POST");
+ req.headers.set("X-EduNexus-Client-IP","192.0.2.1");req.headers.set("X-EduNexus-Proxy-Key","untrusted-browser-value");
+ await exports.POST(req);
+ assert.equal(calls[0].options.headers.has("x-edunexus-client-ip"),false);
+ assert.equal(calls[0].options.headers.has("x-edunexus-proxy-key"),false);
+});
+
 test("API proxy limits declared and chunked uploads before contacting upstream", async () => {
   for (const declared of [false, true]) {
     const { calls, exports, request } = setup();

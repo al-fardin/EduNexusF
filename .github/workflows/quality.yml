@@ -10,6 +10,18 @@ concurrency:
   group: quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Verify release isolation
+        run: python3 scripts/qa/check-deployment.py
+      - name: Validate HTTPS gateway configuration
+        run: >-
+          docker run --rm -e DOMAIN=school.example.invalid
+          -e TRUSTED_PROXY_SECRET=fixture-proof-only-not-for-deployment-2026
+          -v "$GITHUB_WORKSPACE/deploy/Caddyfile:/etc/caddy/Caddyfile:ro"
+          caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
   recovery:
     uses: ./.github/workflows/recovery.yml
   frontend:

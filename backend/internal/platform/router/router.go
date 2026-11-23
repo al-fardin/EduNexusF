@@ -56,20 +56,22 @@ func Register(
 		},
 	)
 
-	app.Get(
-		"/panic",
-		func(c *fiber.Ctx) error {
-			return fiber.NewError(
-				fiber.StatusBadRequest,
-				"This is a test error",
-			)
-		},
-	)
+	if cfg.AppEnv != "production" {
+		app.Get(
+			"/panic",
+			func(c *fiber.Ctx) error {
+				return fiber.NewError(
+					fiber.StatusBadRequest,
+					"This is a test error",
+				)
+			},
+		)
 
-	app.Get(
-		"/swagger/*",
-		swagger.HandlerDefault,
-	)
+		app.Get(
+			"/swagger/*",
+			swagger.HandlerDefault,
+		)
+	}
 
 	authMiddleware.SetJWTService(
 		jwtService,

@@ -12,11 +12,13 @@
 package main
 
 import (
+	"context"
 	"github.com/edunexus/edunexus/internal/platform/config"
 	"github.com/edunexus/edunexus/internal/platform/database"
 	"github.com/edunexus/edunexus/internal/platform/logger"
 	"github.com/edunexus/edunexus/internal/platform/security"
 	"github.com/edunexus/edunexus/internal/platform/server"
+	"time"
 )
 
 func main() {
@@ -35,6 +37,15 @@ func main() {
 			Msg("Failed to connect to PostgreSQL")
 	}
 	defer db.Close()
+	if cfg.AppEnv == "production" {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		var migrated bool
+		err = db.QueryRow(ctx, `SELECT to_regclass('public.auth_request_budgets') IS NOT NULL`).Scan(&migrated)
+		cancel()
+		if err != nil || !migrated {
+			log.Fatal().Msg("Production security migration 58 must be applied before starting the API")
+		}
+	}
 
 	log.Info().
 		Msg("PostgreSQL connected successfully")

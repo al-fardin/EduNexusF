@@ -3,6 +3,7 @@ services:
   recovery:
     image: postgres:17
     restart: unless-stopped
+    networks: [database_private]
     environment:
       PGHOST: postgres
       PGUSER: edunexus

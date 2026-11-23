@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -27,10 +28,17 @@ type TesterAttachment struct {
 }
 
 func registerQuestionTesters(app *fiber.App, h *Handler) {
-	app.Post("/classrooms/:id/exams/testers", authMiddleware.JWTProtected(), h.UploadTester)
-	app.Post("/classrooms/:id/exams/:examID/tester-ticket", authMiddleware.JWTProtected(), h.TesterTicket)
+	app.Post("/classrooms/:id/exams/testers", authMiddleware.JWTProtected(), nativeTesterPolicy, h.UploadTester)
+	app.Post("/classrooms/:id/exams/:examID/tester-ticket", authMiddleware.JWTProtected(), nativeTesterPolicy, h.TesterTicket)
 	// Short-lived bearer capability; never accepts paths or arbitrary download URLs.
-	app.Get("/local-testers/download", h.DownloadTesterBundle)
+	app.Get("/local-testers/download", nativeTesterPolicy, h.DownloadTesterBundle)
+}
+
+func nativeTesterPolicy(c *fiber.Ctx) error {
+	if os.Getenv("APP_ENV") == "production" && os.Getenv("ALLOW_TRUSTED_NATIVE_TESTERS") != "true" {
+		return fiber.NewError(503, "Native testers are disabled on this deployment. Use server-side test cases.")
+	}
+	return c.Next()
 }
 
 func validWindowsTester(name string, data []byte) bool {

@@ -3,6 +3,7 @@ services:
   postgres:
     image: postgres:17
     restart: unless-stopped
+    networks: [database_private]
     environment:
       POSTGRES_DB: edunexus
       POSTGRES_USER: edunexus
@@ -15,6 +16,7 @@ services:
       retries: 10
   migrate:
     image: postgres:17
+    networks: [database_private]
     environment:
       PGHOST: postgres
       PGUSER: edunexus
@@ -29,6 +31,11 @@ services:
   api:
     build: {context: .., dockerfile: deploy/api.Dockerfile}
     restart: unless-stopped
+    networks: [default, database_private]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,size=256m,mode=1777"]
     env_file: .env
     environment:
       APP_ENV: production
@@ -38,6 +45,8 @@ services:
       DB_USER: edunexus
       DB_NAME: edunexus
       DB_SSLMODE: disable
+      ALLOW_PRIVATE_DATABASE: 'true'
+      TRUSTED_PROXY_SECRET: ${TRUSTED_PROXY_SECRET:?Set TRUSTED_PROXY_SECRET}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       FRONTEND_URL: https://${DOMAIN:?Set DOMAIN}
       REALTIME_PUBLIC_URL: wss://${DOMAIN}/messaging/socket
@@ -50,6 +59,12 @@ services:
   frontend:
     build: {context: .., dockerfile: deploy/frontend.Dockerfile}
     restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777
+      - /app/.next/cache:rw,noexec,nosuid,nodev,size=128m,uid=1000,gid=1000,mode=0700
     environment:
       BACKEND_API_URL: http://api:8080
     volumes:
@@ -60,6 +75,7 @@ services:
     restart: unless-stopped
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN}
+      TRUSTED_PROXY_SECRET: ${TRUSTED_PROXY_SECRET:?Set TRUSTED_PROXY_SECRET}
     ports: ["80:80", "443:443", "443:443/udp"]
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
@@ -69,6 +85,7 @@ services:
   backup:
     image: postgres:17
     profiles: [tools]
+    networks: [database_private]
     environment:
       PGHOST: postgres
       PGUSER: edunexus
@@ -81,6 +98,9 @@ services:
     entrypoint: [sh, /backup.sh]
     depends_on:
       postgres: {condition: service_healthy}
+networks:
+  database_private:
+    internal: true
 volumes:
   database:
   uploads:

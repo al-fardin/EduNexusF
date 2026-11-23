@@ -1,10 +1,14 @@
 package middleware
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/edunexus/edunexus/internal/platform/config"
+	"github.com/gofiber/fiber/v2"
+)
 
-func Register(app *fiber.App) {
+func Register(app *fiber.App, cfg *config.Config) {
 	Recover(app)
 	RequestID(app)
-	CORS(app)
+	app.Use(IdentityRequestBody)
+	CORS(app, cfg)
 	Logger(app)
 }

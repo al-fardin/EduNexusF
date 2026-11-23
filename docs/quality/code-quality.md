@@ -53,6 +53,10 @@ Physical-phone QA remains pending because no device is available.
 
 ## Red-team follow-up
 
+The [production security baseline](production-security.md) adds migration 58,
+cross-replica auth budgets, authenticated proxy identity, production config/TLS
+guards, restricted CORS and native-tester defaults, and deployment-isolation CI.
+
 The [2026-11-23 security review](security-review-2026-11-23.md) adds refresh
 digest rejection, atomic hashed email verification, private resend responses,
 concurrency-safe realtime ticket budgets and an origin-bound API proxy. Quality
