@@ -60,7 +60,7 @@ export async function academicReportPDF(id: string, s: AcademicReportSnapshot) {
   function start() {
     ctx!.fillStyle = "#ffffff";
     ctx!.fillRect(0, 0, 1240, 1754);
-    ctx!.fillStyle = "#6d28d9";
+    ctx!.fillStyle = "#876348";
     ctx!.font = `600 34px ${font}`;
     ctx!.fillText("EduNexus", 80, 90);
     ctx!.fillStyle = "#171222";

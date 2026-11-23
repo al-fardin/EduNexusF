@@ -22,7 +22,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#7c3aed",
+  themeColor: "#876348",
 };
 export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
