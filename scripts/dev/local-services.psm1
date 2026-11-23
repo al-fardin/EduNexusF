@@ -9,14 +9,27 @@ function ConvertTo-LocalArgument([string]$Value) {
 function Get-LocalProcessRecord($Process, [string]$Log = '') {
     # Start-Process can expose a null Path on Windows PowerShell 5.1. Query a
     # fresh process snapshot instead of persisting an unverifiable identity.
-    $snapshot = Get-Process -Id $Process.Id -ErrorAction Stop
-    if (-not $snapshot.Path) { throw 'Cannot determine managed executable path.' }
-    return [pscustomobject]@{
-        Id = $snapshot.Id
-        Executable = $snapshot.Path
-        StartedUtc = $snapshot.StartTime.ToUniversalTime().Ticks.ToString()
-        Log = $Log
-    }
+    $started = $Process.StartTime.ToUniversalTime().Ticks.ToString()
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    do {
+        if ($Process.HasExited) { throw 'Managed process exited before its identity was recorded. Check its logs.' }
+        $snapshot = Get-Process -Id $Process.Id -ErrorAction Stop
+        try {
+            if ($snapshot.StartTime.ToUniversalTime().Ticks.ToString() -ne $started) { throw 'Managed process identity changed.' }
+            # The image may not be available in the first process snapshot even
+            # though CreateProcess succeeded. Never persist an assumed path.
+            if ($snapshot.Path) {
+                return [pscustomobject]@{
+                    Id = $snapshot.Id
+                    Executable = $snapshot.Path
+                    StartedUtc = $started
+                    Log = $Log
+                }
+            }
+        } finally { $snapshot.Dispose() }
+        Start-Sleep -Milliseconds 50
+    } while ($clock.Elapsed.TotalSeconds -lt 3)
+    throw 'Cannot determine managed executable path.'
 }
 
 function Get-VerifiedLocalProcess($Record) {
@@ -53,9 +66,14 @@ function Get-LocalProcessFamily($Process) {
 function Stop-LocalProcess($Record) {
     $process = Get-VerifiedLocalProcess $Record
     if (-not $process) { return }
+    Stop-LocalOwnedProcess $process
+}
+
+# Accept only a handle from our own Start-Process or verified state lookup.
+function Stop-LocalOwnedProcess($Process) {
     # Snapshot children while the verified parent is alive, then stop it first
     # so a development supervisor cannot spawn a replacement during cleanup.
-    $family = @(Get-LocalProcessFamily $process)
+    $family = @(Get-LocalProcessFamily $Process)
     foreach ($entry in $family) {
         try {
             if (-not $entry.HasExited) {
@@ -64,6 +82,18 @@ function Stop-LocalProcess($Record) {
             }
         } finally { $entry.Dispose() }
     }
+}
+
+function Start-LocalRecordedProcess([string]$Executable, [string[]]$Arguments, [string]$Directory,
+                                    [string]$Log, [hashtable]$Variables = @{}) {
+    $process = Start-LocalProcess $Executable $Arguments $Directory $Log $Variables
+    try { return Get-LocalProcessRecord $process $Log }
+    catch {
+        # No state record exists yet; cleanup must use our original process
+        # handle rather than leave an untracked server occupying its port.
+        if (-not $process.HasExited) { Stop-LocalOwnedProcess $process }
+        throw
+    } finally { $process.Dispose() }
 }
 
 function Start-LocalProcess([string]$Executable, [string[]]$Arguments, [string]$Directory,

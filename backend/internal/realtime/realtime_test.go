@@ -12,9 +12,83 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 )
+
+func TestConcurrentTicketRequestsRespectAccountBudget(t *testing.T) {
+	f := testsupport.Database(t)
+	h := &Hub{db: f.DB}
+	app := fiber.New()
+	app.Post("/ticket", func(c *fiber.Ctx) error { c.Locals("user_id", f.Student); return h.ticket(c) })
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	accepted, limited := 0, 0
+	for range 32 {
+		wg.Go(func() {
+			<-start
+			res, err := app.Test(httptest.NewRequest("POST", "/ticket", nil), 10000)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			defer res.Body.Close()
+			mu.Lock()
+			defer mu.Unlock()
+			switch res.StatusCode {
+			case 200:
+				accepted++
+			case 429:
+				limited++
+			default:
+				t.Errorf("unexpected status %d", res.StatusCode)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if accepted != 8 || limited != 24 {
+		t.Fatalf("ticket budget bypassed: accepted=%d limited=%d", accepted, limited)
+	}
+}
+
+func TestTicketIssuanceReclaimsExpiredBudgetAndRejectsInactiveAccount(t *testing.T) {
+	f := testsupport.Database(t)
+	h := &Hub{db: f.DB}
+	app := fiber.New()
+	app.Post("/ticket", func(c *fiber.Ctx) error { c.Locals("user_id", f.Student); return h.ticket(c) })
+	if _, err := f.DB.Exec(t.Context(), `INSERT INTO realtime_tickets(ticket_hash,user_id,expires_at,session_expires_at) SELECT md5($1||n::text),$1::uuid,now()-interval '1 second',now()+interval '1 minute' FROM generate_series(1,8) n`, f.Student); err != nil {
+		t.Fatal(err)
+	}
+	res, err := app.Test(httptest.NewRequest("POST", "/ticket", nil), 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != 200 {
+		t.Fatal("expired tickets blocked reconnect", res.StatusCode)
+	}
+	if _, err = f.DB.Exec(t.Context(), `DELETE FROM realtime_tickets WHERE user_id=$1::uuid`, f.Student); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = f.DB.Exec(t.Context(), `UPDATE users SET status='suspended' WHERE id=$1::uuid`, f.Student); err != nil {
+		t.Fatal(err)
+	}
+	res, err = app.Test(httptest.NewRequest("POST", "/ticket", nil), 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != 401 {
+		t.Fatal("inactive account received a success response", res.StatusCode)
+	}
+	var count int
+	if err = f.DB.QueryRow(t.Context(), `SELECT count(*) FROM realtime_tickets WHERE user_id=$1::uuid`, f.Student).Scan(&count); err != nil || count != 0 {
+		t.Fatal("inactive account retained a ticket", count, err)
+	}
+}
 
 func TestOrigins(t *testing.T) {
 	t.Setenv("APP_ENV", "production")

@@ -29,6 +29,56 @@ try {
     Rejects { Wait-LocalHttp 'http://127.0.0.1:1' ([pscustomobject]@{ Id=2147483647; Executable='missing'; StartedUtc='0' }) 1 } 'exited during startup'
 
     $self = Get-Process -Id $PID
+    $module = Get-Module local-services
+    # Simulate Windows returning incomplete image metadata immediately after
+    # process creation. The original start time still binds the identity.
+    & $module {
+        $script:qaSnapshotReads = 0
+        function script:Get-Process {
+            param([int]$Id)
+            $script:qaSnapshotReads++
+            $live = Microsoft.PowerShell.Management\Get-Process -Id $Id
+            if ($script:qaSnapshotReads -le 2) {
+                $snapshot = [pscustomobject]@{ StartTime=$live.StartTime; Path=$null }
+                $snapshot | Add-Member -MemberType ScriptMethod -Name Dispose -Value {}
+                $live.Dispose()
+                return $snapshot
+            }
+            return $live
+        }
+    }
+    try {
+        $delayed = Get-LocalProcessRecord $self
+        Check ($delayed.Id -eq $PID -and (& $module { $script:qaSnapshotReads }) -eq 3) 'Delayed image metadata was not retried.'
+    } finally {
+        Remove-Module $module -Force
+        Import-Module (Join-Path $project 'scripts\dev\local-services.psm1') -Force
+    }
+
+    $module = Get-Module local-services
+    & $module {
+        $script:qaObserved = $null
+        function script:Get-LocalProcessRecord {
+            param($Process, [string]$Log)
+            $script:qaObserved = Microsoft.PowerShell.Management\Get-Process -Id $Process.Id
+            [void]$script:qaObserved.Handle
+            throw 'Injected process identity failure'
+        }
+    }
+    $observed = $null
+    try {
+        Rejects { Start-LocalRecordedProcess $node @('-e','setInterval(()=>{},1000)') $temporary (Join-Path $temporary 'unrecorded') } 'Injected process identity failure'
+        $observed = & $module { $script:qaObserved }
+        Check $observed.HasExited 'Unrecorded server remained running after startup failure.'
+    } finally {
+        if (-not $observed) { $observed = & $module { $script:qaObserved } }
+        if ($observed) {
+            if (-not $observed.HasExited) { $observed.Kill(); [void]$observed.WaitForExit(5000) }
+            $observed.Dispose()
+        }
+        Remove-Module $module -Force
+        Import-Module (Join-Path $project 'scripts\dev\local-services.psm1') -Force
+    }
     $record = Get-LocalProcessRecord $self
     Check ((Get-VerifiedLocalProcess $record).Id -eq $PID) 'Owned process identity failed.'
     $record.StartedUtc = '0'

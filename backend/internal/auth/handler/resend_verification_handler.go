@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"log"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
 	"github.com/edunexus/edunexus/internal/platform/response"
@@ -40,16 +41,13 @@ func (h *UserHandler) ResendVerification(c *fiber.Ctx) error {
 		c.Context(),
 		req,
 	); err != nil {
-		return fiber.NewError(
-			fiber.StatusBadRequest,
-			err.Error(),
-		)
+		log.Print("email verification request could not be completed")
 	}
 
 	return response.Success(
 		c,
 		fiber.StatusOK,
-		"Verification email resent",
+		"If the account needs verification, instructions will be sent",
 		nil,
 	)
 }

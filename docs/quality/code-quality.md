@@ -53,6 +53,11 @@ Physical-phone QA remains pending because no device is available.
 
 ## Red-team follow-up
 
+The [2026-11-23 security review](security-review-2026-11-23.md) adds refresh
+digest rejection, atomic hashed email verification, private resend responses,
+concurrency-safe realtime ticket budgets and an origin-bound API proxy. Quality
+CI also checks npm advisories and reachable Go vulnerabilities.
+
 The [2026-11-19 red-team report](red-team-verification.md) records confirmed
 authorization/recovery failures, fixes, regression coverage and remaining limits.
 Paired database/uploads restore and restored application routes now run in quality

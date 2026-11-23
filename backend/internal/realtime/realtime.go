@@ -72,9 +72,21 @@ func (h *Hub) ticket(c *fiber.Ctx) error {
 		return fiber.NewError(401, "authentication required")
 	}
 	ctx := c.UserContext()
-	_, _ = h.db.Exec(ctx, `DELETE FROM realtime_tickets WHERE expires_at<now()`)
+	tx, err := h.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	// The outstanding-ticket budget must include concurrent requests on every
+	// API replica, not just tickets observed before a competing insert commits.
+	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, "realtime-tickets:"+user); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM realtime_tickets WHERE user_id=$1::uuid AND expires_at<now()`, user); err != nil {
+		return err
+	}
 	var count int
-	if err := h.db.QueryRow(ctx, `SELECT count(*) FROM realtime_tickets WHERE user_id=$1::uuid`, user).Scan(&count); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM realtime_tickets WHERE user_id=$1::uuid`, user).Scan(&count); err != nil {
 		return err
 	}
 	if count >= 8 {
@@ -90,8 +102,14 @@ func (h *Hub) ticket(c *fiber.Ctx) error {
 		session = time.Unix(expires, 0)
 	}
 	sid, _ := c.Locals("session_id").(string)
-	_, err := h.db.Exec(ctx, `INSERT INTO realtime_tickets(ticket_hash,user_id,expires_at,session_expires_at,auth_session_id) SELECT $1,$2::uuid,now()+interval '30 seconds',$3,NULLIF($4,'')::uuid WHERE EXISTS(SELECT 1 FROM users WHERE id=$2::uuid AND status='active' AND deleted_at IS NULL)`, hash(ticket), user, session, sid)
+	tag, err := tx.Exec(ctx, `INSERT INTO realtime_tickets(ticket_hash,user_id,expires_at,session_expires_at,auth_session_id) SELECT $1,$2::uuid,now()+interval '30 seconds',$3,NULLIF($4,'')::uuid WHERE EXISTS(SELECT 1 FROM users WHERE id=$2::uuid AND status='active' AND deleted_at IS NULL)`, hash(ticket), user, session, sid)
 	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return fiber.NewError(401, "account unavailable")
+	}
+	if err = tx.Commit(ctx); err != nil {
 		return err
 	}
 	c.Set("Cache-Control", "no-store")

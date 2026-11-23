@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
@@ -115,7 +116,7 @@ func (s *UserService) Register(
 		ctx,
 		db.CreateEmailVerificationTokenParams{
 			UserID:    uid,
-			Token:     token,
+			Token:     tokenHash(token),
 			ExpiresAt: expires,
 		},
 	)
@@ -378,6 +379,11 @@ func (s *UserService) Refresh(
 	ctx context.Context,
 	req dto.RefreshTokenRequest,
 ) (dto.RefreshTokenResponse, error) {
+	// Legacy plaintext credentials remain supported, but a stored digest must
+	// never itself become a bearer credential through the legacy lookup.
+	if strings.HasPrefix(req.RefreshToken, "sha256:") {
+		return dto.RefreshTokenResponse{}, errors.New("invalid refresh token")
+	}
 	if s.pool != nil {
 		return s.secureRefresh(ctx, req)
 	}
@@ -458,6 +464,9 @@ func (s *UserService) Logout(
 	ctx context.Context,
 	req dto.LogoutRequest,
 ) error {
+	if strings.HasPrefix(req.RefreshToken, "sha256:") {
+		return errors.New("invalid refresh token")
+	}
 	if s.pool != nil {
 		return s.secureLogout(ctx, req.RefreshToken)
 	}

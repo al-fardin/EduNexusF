@@ -5,9 +5,11 @@ import (
 	"errors"
 	"html"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/edunexus/edunexus/internal/auth/dto"
@@ -20,11 +22,17 @@ func (s *UserService) VerifyEmail(
 	ctx context.Context,
 	req dto.VerifyEmailRequest,
 ) error {
+	if strings.HasPrefix(req.Token, "sha256:") {
+		return errors.New("invalid verification token")
+	}
+	if s.pool != nil {
+		return s.consumeVerification(ctx, req.Token)
+	}
 
-	tokenData, err := s.verifyRepo.GetByToken(
-		ctx,
-		req.Token,
-	)
+	tokenData, err := s.verifyRepo.GetByToken(ctx, tokenHash(req.Token))
+	if errors.Is(err, pgx.ErrNoRows) {
+		tokenData, err = s.verifyRepo.GetByToken(ctx, req.Token)
+	}
 	if err != nil {
 		return errors.New("invalid verification token")
 	}
@@ -40,7 +48,7 @@ func (s *UserService) VerifyEmail(
 
 	if err := s.verifyRepo.VerifyToken(
 		ctx,
-		req.Token,
+		tokenData.Token,
 	); err != nil {
 		return err
 	}
@@ -62,6 +70,46 @@ func (s *UserService) VerifyEmail(
 	return nil
 }
 
+// Lock the account before consuming its capability so concurrent verification,
+// expiry and account changes cannot produce a successful partial verification.
+func (s *UserService) consumeVerification(ctx context.Context, token string) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	var user string
+	err = tx.QueryRow(ctx, `SELECT user_id::text FROM email_verification_tokens WHERE token=$1 OR token=$2`, tokenHash(token), token).Scan(&user)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errors.New("invalid verification token")
+	}
+	if err != nil {
+		return err
+	}
+	var verified bool
+	err = tx.QueryRow(ctx, `SELECT email_verified FROM users WHERE id=$1::uuid AND status='active' AND deleted_at IS NULL FOR UPDATE`, user).Scan(&verified)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && verified) {
+		return errors.New("invalid verification token")
+	}
+	if err != nil {
+		return err
+	}
+	tag, err := tx.Exec(ctx, `DELETE FROM email_verification_tokens WHERE user_id=$1::uuid AND (token=$2 OR token=$3) AND NOT verified AND expires_at>now()`, user, tokenHash(token), token)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return errors.New("invalid or expired verification token")
+	}
+	if _, err = tx.Exec(ctx, `UPDATE users SET email_verified=true,updated_at=now() WHERE id=$1::uuid`, user); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM email_verification_tokens WHERE user_id=$1::uuid`, user); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
 func (s *UserService) ResendVerification(
 	ctx context.Context,
 	req dto.ResendVerificationRequest,
@@ -76,11 +124,14 @@ func (s *UserService) ResendVerification(
 		req.Email,
 	)
 	if err != nil {
-		return errors.New("user not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return err
 	}
 
-	if user.EmailVerified {
-		return errors.New("email already verified")
+	if user.EmailVerified || user.Status != "active" || user.DeletedAt.Valid {
+		return nil
 	}
 
 	id, err := uuid.FromBytes(user.ID.Bytes[:])
@@ -113,7 +164,7 @@ func (s *UserService) ResendVerification(
 		ctx,
 		db.CreateEmailVerificationTokenParams{
 			UserID:    uid,
-			Token:     token,
+			Token:     tokenHash(token),
 			ExpiresAt: expires,
 		},
 	)
@@ -130,11 +181,9 @@ func (s *UserService) ResendVerification(
 <p><a href="` + link + `">Verify Email</a></p>
 `
 
-	_ = s.mailer.Send(
+	return s.mailer.Send(
 		user.Email,
 		"Verify your email",
 		body,
 	)
-
-	return nil
 }

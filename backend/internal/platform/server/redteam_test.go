@@ -94,30 +94,33 @@ func TestRedTeamRegisteredRoutePermissionMatrix(t *testing.T) {
 		call(f.Student, "GET", path, 403)
 	}
 	// Compare recovery responses without delivering mail externally.
-	var previous []byte
-	for _, email := range []string{f.Teacher + "@example.invalid", "missing@example.invalid"} {
-		raw, _ := json.Marshal(map[string]string{"email": email})
-		req := httptest.NewRequest("POST", "/auth/forgot-password", bytes.NewReader(raw))
-		req.Header.Set("Content-Type", "application/json")
-		res, err := app.Test(req, 20000)
-		if err != nil {
-			t.Fatal(err)
+	exec(`UPDATE users SET email_verified=false WHERE id=$1::uuid`, f.Student)
+	for _, endpoint := range []string{"/auth/forgot-password", "/auth/resend-verification"} {
+		var previous []byte
+		for _, email := range []string{f.Teacher + "@example.invalid", f.Student + "@example.invalid", "missing@example.invalid"} {
+			raw, _ := json.Marshal(map[string]string{"email": email})
+			req := httptest.NewRequest("POST", endpoint, bytes.NewReader(raw))
+			req.Header.Set("Content-Type", "application/json")
+			res, err := app.Test(req, 20000)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, _ := io.ReadAll(res.Body)
+			res.Body.Close()
+			if res.StatusCode != 200 {
+				t.Fatalf("recovery returned %d", res.StatusCode)
+			}
+			// Ignore request IDs; the public response envelope must be identical.
+			var response map[string]any
+			if err = json.Unmarshal(body, &response); err != nil {
+				t.Fatal(err)
+			}
+			delete(response, "request_id")
+			normalized, _ := json.Marshal(response)
+			if previous != nil && !bytes.Equal(previous, normalized) {
+				t.Fatal("recovery response reveals account existence")
+			}
+			previous = normalized
 		}
-		body, _ := io.ReadAll(res.Body)
-		res.Body.Close()
-		if res.StatusCode != 200 {
-			t.Fatalf("recovery returned %d", res.StatusCode)
-		}
-		// Ignore request IDs; the public response envelope must be identical.
-		var response map[string]any
-		if err = json.Unmarshal(body, &response); err != nil {
-			t.Fatal(err)
-		}
-		delete(response, "request_id")
-		normalized, _ := json.Marshal(response)
-		if previous != nil && !bytes.Equal(previous, normalized) {
-			t.Fatal("recovery response reveals account existence")
-		}
-		previous = normalized
 	}
 }

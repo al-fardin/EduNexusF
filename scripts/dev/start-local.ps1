@@ -100,8 +100,7 @@ try {
     if (-not (Get-VerifiedLocalProcess $state.Api)) {
         $apiExe = Join-Path $runLogs 'edunexus-api.exe'
         Invoke-LocalCommand $go @('build','-o',$apiExe,'./backend/apps/api') $project (Join-Path $runLogs 'api-build') @{} 300
-        $process = Start-LocalProcess $apiExe @() $project (Join-Path $runLogs 'api') @{ APP_PORT=[string]$ApiPort }
-        $state.Api = Get-LocalProcessRecord $process (Join-Path $runLogs 'api')
+        $state.Api = Start-LocalRecordedProcess $apiExe @() $project (Join-Path $runLogs 'api') @{ APP_PORT=[string]$ApiPort }
         $newProcesses += $state.Api
         Save-LocalState $statePath $state
     }
@@ -112,8 +111,7 @@ try {
     $webEnvironment = @{ BACKEND_API_URL="http://127.0.0.1:$ApiPort"; NEXT_PUBLIC_API_URL='/api'; EDUNEXUS_NEXT_DIST_DIR=".next-local-$WebPort" }
     if (-not (Get-VerifiedLocalProcess $state.Web)) {
         if ($Production) { Invoke-LocalCommand $node @($nextEntry,'build') $frontend (Join-Path $runLogs 'web-build') $webEnvironment 600 }
-        $process = Start-LocalProcess $node @($nextEntry,$mode,'--hostname','0.0.0.0','--port',[string]$WebPort) $frontend (Join-Path $runLogs 'web') $webEnvironment
-        $state.Web = Get-LocalProcessRecord $process (Join-Path $runLogs 'web')
+        $state.Web = Start-LocalRecordedProcess $node @($nextEntry,$mode,'--hostname','0.0.0.0','--port',[string]$WebPort) $frontend (Join-Path $runLogs 'web') $webEnvironment
         $newProcesses += $state.Web
         Save-LocalState $statePath $state
     }
