@@ -1,5 +1,6 @@
 "use client";
 
+import { AuthBrand } from "@/components/auth/auth-brand";
 import axios from "axios";
 import {
   CheckCircle2,
@@ -167,11 +168,7 @@ function ResetPasswordContent() {
   return (
     <main className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="en-auth-grid">
-      <aside className="en-ticket-card en-ticket-dark en-auth-art en-grid-paper" aria-label="EduNexus welcome">
-        <div className="en-auth-art-mark"><span style={{display:"inline-flex",border:"1px solid #d6dfcf",borderRadius:"15px",padding:"8px 10px"}}>EN.</span> EduNexus</div>
-        <div><p className="en-label" style={{color:"#f1dbac"}}>YOUR CLASSROOM COMPANION</p><h2>A FRESH <br /> START.</h2><p>Keep your classroom workspace secure with a strong password.</p></div>
-        <div className="en-auth-art-ticket">✦ &nbsp; Learn together. Build better. &nbsp; ✦</div>
-      </aside>
+      <AuthBrand />
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-xl en-auth-form">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-foreground/15">
           <KeyRound className="h-7 w-7" />

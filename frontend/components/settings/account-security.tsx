@@ -167,7 +167,7 @@ export function AccountSecurity() {
                     </p>
                   ) : !status.data.setup_available && !status.data.enabled ? (
                     <p className="text-sm text-muted-foreground">
-                      {t("Authenticator setup awaits server configuration")}
+                      {t("Two-step verification is currently unavailable")}
                     </p>
                   ) : codes.length ? (
                     <div className="space-y-3 rounded-xl bg-secondary p-4">

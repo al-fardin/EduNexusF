@@ -1,5 +1,6 @@
 "use client";
 
+import { AuthBrand } from "@/components/auth/auth-brand";
 import axios from "axios";
 import Link from "next/link";
 import {
@@ -45,15 +46,15 @@ function VerifyEmailContent() {
   const [message, setMessage] =
     useState(
       token
-        ? "Click the button below to verify your email address."
-        : "Verification token is missing."
+        ? "Confirm this email address to continue."
+        : "This verification link is incomplete."
     );
 
   const verifyEmail = async () => {
     if (!token) {
       setStatus("error");
       setMessage(
-        "Verification token is missing."
+        "This verification link is incomplete."
       );
 
       return;
@@ -61,7 +62,7 @@ function VerifyEmailContent() {
 
     setStatus("loading");
     setMessage(
-      "Please wait while we verify your email."
+      "Verifying your email…"
     );
 
     try {
@@ -98,11 +99,7 @@ function VerifyEmailContent() {
   return (
     <main className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4">
       <div className="en-auth-grid">
-      <aside className="en-ticket-card en-ticket-dark en-auth-art en-grid-paper" aria-label="EduNexus welcome">
-        <div className="en-auth-art-mark"><span style={{display:"inline-flex",border:"1px solid #d6dfcf",borderRadius:"15px",padding:"8px 10px"}}>EN.</span> EduNexus</div>
-        <div><p className="en-label" style={{color:"#f1dbac"}}>YOUR CLASSROOM COMPANION</p><h2>ALMOST <br /> THERE.</h2><p>Verify your email to make the most of EduNexus.</p></div>
-        <div className="en-auth-art-ticket">✦ &nbsp; Learn together. Build better. &nbsp; ✦</div>
-      </aside>
+      <AuthBrand />
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-xl en-auth-form">
         <StatusIcon status={status} />
 
@@ -118,7 +115,7 @@ function VerifyEmailContent() {
           {message}
         </p>
 
-        {status === "ready" && (
+        {(status === "ready" || status === "error" && token) && (
           <button
             type="button"
             onClick={() =>
@@ -126,7 +123,7 @@ function VerifyEmailContent() {
             }
             className="mt-7 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground"
           >
-            Verify email
+            {status === "error" ? "Try again" : "Verify email"}
           </button>
         )}
 

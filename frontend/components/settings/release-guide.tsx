@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/auth-store";
@@ -13,33 +13,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-function subscribe(callback: () => void) {
-  window.addEventListener("edunexus:guide-changed", callback);
-  window.addEventListener("storage", callback);
-  return () => {
-    window.removeEventListener("edunexus:guide-changed", callback);
-    window.removeEventListener("storage", callback);
-  };
-}
 export function ReleaseGuide() {
   const account = useAuthStore((s) => s.user),
     user = account?.id,
     { t } = usePreferences(),
     path = usePathname(),
     [manual, setManual] = useState(false);
-  const key = user ? `edunexus:guide:v1:${user}` : "";
-  const seen = useSyncExternalStore(
-    subscribe,
-    () => {
-      if (!key) return true;
-      try {
-        return localStorage.getItem(key) === "seen";
-      } catch {
-        return true;
-      }
-    },
-    () => true,
-  );
   useEffect(() => {
     const open = () => setManual(true);
     window.addEventListener("edunexus:open-guide", open);
@@ -47,19 +26,13 @@ export function ReleaseGuide() {
   }, []);
   function close() {
     setManual(false);
-    if (key) {
-      try {
-        localStorage.setItem(key, "seen");
-      } catch {}
-      window.dispatchEvent(new Event("edunexus:guide-changed"));
-    }
   }
   return (
     <Dialog
       open={
         !!user &&
         path !== "/login" &&
-        (manual || (account?.email_verified && !seen))
+        manual
       }
       onOpenChange={(v) => {
         if (!v) close();
@@ -67,9 +40,9 @@ export function ReleaseGuide() {
     >
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("Your workspace, at a glance")}</DialogTitle>
+          <DialogTitle>{t("Quick guide")}</DialogTitle>
           <DialogDescription>
-            {t("A few shortcuts to get started.")}
+            {t("Workspace shortcuts")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -97,7 +70,7 @@ export function ReleaseGuide() {
             </Link>
           ))}
         </div>
-        <Button onClick={close}>{t("Get started")}</Button>
+        <Button onClick={close}>{t("Close")}</Button>
       </DialogContent>
     </Dialog>
   );

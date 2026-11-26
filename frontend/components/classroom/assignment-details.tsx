@@ -31,16 +31,14 @@ export function AssignmentDetails({
   return (
     <div className="mt-4 space-y-4 border-t border-border pt-4">
  <PersonalNoteLink classId={classroomId} kind="assignment" id={a.id} title={a.title}/>
-      <p className="whitespace-pre-wrap text-sm">
-        {a.instructions || "No additional instructions."}
-      </p>
+      {a.instructions && <p className="whitespace-pre-wrap text-sm">{a.instructions}</p>}
       {!!a.rubric?.length && (
         <section className="space-y-2 rounded-xl bg-secondary p-3">
           <h4 className="text-sm font-semibold">Grading criteria</h4>
           {a.rubric.map((r) => (
             <div key={r.id} className="text-sm">
               <p className="font-medium">
-                {r.title} � {r.maximum} points
+                {r.title} · {r.maximum} points
               </p>
               {r.description && (
                 <p className="whitespace-pre-wrap text-muted-foreground">

@@ -96,17 +96,10 @@ export function SettingsContent() {
           </Link>
 
           <div className="mt-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {t("Preferences")}
-            </p>
-
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               {t("Account settings")}
             </h1>
 
-            <p className="mt-3 max-w-2xl text-muted-foreground">
-              Choose which part of your account you want to manage.
-            </p>
           </div>
         </motion.header>
 
@@ -146,9 +139,6 @@ export function SettingsContent() {
                   </p>
                 </div>
 
-                <div className="ml-auto hidden rounded-full border border-[#b8d3b6] bg-secondary px-3 py-1 text-xs font-medium text-primary sm:block">
-                  Account active
-                </div>
               </div>
             </motion.section>
 
@@ -174,7 +164,6 @@ export function SettingsContent() {
                 icon={<UserRound className="h-6 w-6" />}
                 title="Profile information"
                 description="Update your name, phone number and profile image."
-                badge="Personal details"
                 onClick={() => openPanel("profile")}
               />
 
@@ -182,7 +171,6 @@ export function SettingsContent() {
                 icon={<ShieldCheck className="h-6 w-6" />}
                 title="Password & security"
                 description="Change your password and protect your account."
-                badge="Account security"
                 onClick={() => openPanel("password")}
               />
             </motion.div>

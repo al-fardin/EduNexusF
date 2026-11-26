@@ -23,7 +23,7 @@ export function CourseCodeSettings({ classroomId }: { classroomId: string }) {
   function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();mutation.mutate();}
   return <section className="mb-6 rounded-3xl border border-border bg-card p-5 shadow-sm">
     <div className="mb-3 flex items-center gap-2"><BookOpen size={19}/><h3 className="font-bold">Course code for result PDF</h3></div>
-    <p className="mb-3 text-sm text-muted-foreground">Course name comes from the classroom name, and teacher name from the owner profile. Saving here also refreshes previously published marksheet PDFs.</p>
+    <p className="mb-3 text-sm text-muted-foreground">Changes also update published marksheets.</p>
     <form onSubmit={submit} className="flex flex-wrap items-center gap-3"><input aria-label="Course code" maxLength={40} minLength={2} required value={value??lookup.data??""} onChange={e=>setValue(e.target.value)} placeholder="CSE 225" className="min-w-40 flex-1 rounded-xl border border-border bg-background p-3 text-sm"/>
       <button disabled={mutation.isPending} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">{mutation.isPending&&<LoaderCircle size={16} className="animate-spin"/>} Save course code</button>
     </form>

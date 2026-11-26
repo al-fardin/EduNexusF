@@ -84,8 +84,8 @@ export function WorkspaceHome({
           </div>
         ) : (
           <div className="en-workspace-empty">
-            <h2>No classes yet</h2>
-            <p>Create a class or join with your teacher’s code.</p>
+            <h2>{filter === "all" ? "No classes yet" : filter === "teacher" ? "No teaching classes" : "No joined classes"}</h2>
+            <p>{filter === "teacher" ? "Create a class to begin." : filter === "student" ? "Join with your teacher’s class code." : "Create a class or join with your teacher’s code."}</p>
           </div>
         )}
         {!classesOnly && query.data && (

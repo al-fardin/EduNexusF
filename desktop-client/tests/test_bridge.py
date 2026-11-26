@@ -59,6 +59,16 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("Connect", json.loads(body)["error"])
 
+    def test_malformed_server_addresses_return_bad_request(self):
+        for address in ("https://[", "https://[broken]", "https://school.test:invalid"):
+            with self.subTest(address=address):
+                status, _, body = self.request("POST", "/pair", {
+                    "pair_code": "a" * 64, "server": address,
+                })
+                self.assertEqual(status, 400)
+                self.assertEqual(json.loads(body)["error"], "invalid_pair")
+        self.assertEqual(self.requests, [])
+
     def test_preflight_and_job_capability(self):
         job_id = "a" * 64
         self.manager.jobs[job_id] = {"origin": "http://localhost:3000", "server": "https://school.test",

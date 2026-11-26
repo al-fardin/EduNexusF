@@ -90,7 +90,7 @@ export function TeacherSubmissionExplorer({ classroomId, examId, onClose }: { cl
 
   return <section className={`overflow-hidden rounded-[27px_14px_24px_16px] border ${border} bg-card text-foreground shadow-[0_12px_32px_rgba(20,26,21,0.06)]`}>
     <header className={`flex flex-wrap items-center justify-between gap-3 border-b ${border} bg-card p-4 sm:p-5`}>
-      <div><h3 className="flex items-center gap-2 text-lg font-bold"><Users size={20}/> Student submissions · Roll-wise</h3><p className={`mt-1 text-xs ${muted}`}>Teacher-only exam workspace review. Each student’s folders and files are preserved.</p></div>
+      <div><h3 className="flex items-center gap-2 text-lg font-bold"><Users size={20}/> Student submissions</h3><p className={`mt-1 text-xs ${muted}`}>Review submitted folders and files by student.</p></div>
       <button type="button" className={`inline-flex items-center gap-1 rounded-lg border ${border} bg-card px-3 py-2 text-sm hover:bg-secondary`} onClick={onClose}><X size={15}/> Close review</button>
     </header>
     {(attempts.isPending || exam.isPending) && <div role="status" className="space-y-3 p-5"><div className="h-9 animate-pulse rounded bg-secondary"/><div className="h-52 animate-pulse rounded bg-secondary"/></div>}

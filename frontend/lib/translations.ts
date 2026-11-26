@@ -1,5 +1,9 @@
 export type Language = "en" | "bn";
 export const bengali: Record<string, string> = {
+  "Workspace shortcuts": "ওয়ার্কস্পেসের শর্টকাট",
+  "Two-step verification is currently unavailable": "দুই ধাপে যাচাই এখন চালু নেই",
+  "Invitations appear in the app. Email delivery is currently unavailable.":
+    "আমন্ত্রণ অ্যাপে দেখা যাবে। ইমেইল পাঠানো এখন চালু নেই।",
   "Exam display & navigation": "পরীক্ষার প্রদর্শন ও নেভিগেশন",
   "Question text size": "প্রশ্নের লেখার আকার",
   "Jump to question": "নির্দিষ্ট প্রশ্নে যান",

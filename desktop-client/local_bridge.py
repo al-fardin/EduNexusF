@@ -63,8 +63,8 @@ def valid_request(data: object) -> bool:
         return False
     if not isinstance(raw_server, str) or len(raw_server) > 250:
         return False
-    url = urlsplit(raw_server)
     try:
+        url = urlsplit(raw_server)
         _ = url.port
     except ValueError:
         return False

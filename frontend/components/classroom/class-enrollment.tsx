@@ -352,7 +352,7 @@ function TeacherInvitations({ classId }: { classId: string }) {
       {query.data && !query.data.pages[0].email_configured && (
         <p role="status" className="text-xs text-muted-foreground">
           {t(
-            "In-app invitations are available. Email delivery awaits SMTP and a valid frontend URL.",
+            "Invitations appear in the app. Email delivery is currently unavailable.",
           )}
         </p>
       )}

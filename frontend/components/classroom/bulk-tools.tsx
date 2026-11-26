@@ -294,7 +294,7 @@ function AssignmentBulk({
           open={confirmReminder}
           onOpenChange={setConfirmReminder}
           title={t("Send reminder")}
-          description={`${selected.length} selected students. Repeated reminders are deduplicated per UTC day.`}
+          description={`${selected.length} selected students. Each student receives at most one reminder per day.`}
           busy={busy}
           onConfirm={() =>
             void run(async () => {

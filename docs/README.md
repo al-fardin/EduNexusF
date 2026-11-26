@@ -23,6 +23,7 @@
 ## Verification
 
 - [Code quality and checks](quality/code-quality.md)
+- [Project bug review and interface cleanup — 2026-11-27](quality/project-review-2026-11-27.md)
 - [Release verification](quality/release-verification.md)
 - [Backup recovery, diagnostics and academic release checks](quality/academic-release-operations.md)
 - [Semester checks and signed Android update procedure](quality/semester-release-verification.md)

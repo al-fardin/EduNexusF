@@ -10,13 +10,11 @@ export function SettingsActionCard({
   icon,
   title,
   description,
-  badge,
   onClick,
 }: {
   icon: ReactNode;
   title: string;
   description: string;
-  badge: string;
   onClick: () => void;
 }) {
   return (
@@ -38,37 +36,18 @@ export function SettingsActionCard({
         duration: 0.45,
         ease: "easeOut",
       }}
-      whileHover={{
-        y: -7,
-        scale: 1.01,
-      }}
       whileTap={{
         scale: 0.985,
       }}
       onClick={onClick}
-      className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 text-left shadow-sm transition-shadow hover:border-primary hover:shadow-2xl hover:shadow-foreground/10"
+      className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:border-primary"
     >
-      <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-background transition duration-500 group-hover:scale-150 group-hover:bg-accent/70" />
-
-      <div className="relative">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-foreground/15 transition duration-300 group-hover:-rotate-3 group-hover:scale-105">
-            {icon}
-          </div>
-
-          <ChevronRight className="h-5 w-5 text-muted-foreground transition duration-300 group-hover:translate-x-1 group-hover:text-foreground" />
-        </div>
-
-        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          {badge}
-        </p>
-
-        <h2 className="mt-2 text-xl font-semibold text-foreground">{title}</h2>
-
-        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-          {description}
-        </p>
-      </div>
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-semibold text-foreground">{title}</span>
+        <span className="mt-1 block text-sm leading-6 text-muted-foreground">{description}</span>
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
     </motion.button>
   );
 }

@@ -16,7 +16,7 @@ export function StudentRollGate({ classroomId, children }: { classroomId: string
   if(query.data) return <>{children}</>;
   return <main className="mx-auto mt-12 max-w-xl rounded-3xl border border-border bg-card p-7 shadow-sm">
     <UserRound className="text-primary" size={32}/><h2 className="mt-4 text-2xl font-bold">Complete your student ID</h2>
-    <p className="mt-2 text-sm text-muted-foreground">You joined this class before rolls were required. Enter your unique ID / roll to access this classroom.</p>
+    <p className="mt-2 text-sm text-muted-foreground">Enter your student ID or roll to continue.</p>
     <form onSubmit={save} className="mt-5 space-y-3"><label htmlFor="legacy-roll" className="block text-sm font-semibold">Student ID / Roll</label>
       <input id="legacy-roll" required maxLength={32} pattern="[A-Za-z0-9][A-Za-z0-9_/-]{0,31}" value={roll} onChange={e=>setRoll(e.target.value)} placeholder="08" className="w-full rounded-xl border border-border bg-background p-3"/>
       {mutation.isError && <p role="alert" className="text-sm text-destructive">{getClassroomErrorMessage(mutation.error)}</p>}

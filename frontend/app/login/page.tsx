@@ -2,6 +2,7 @@
 import {Localized} from "@/components/ui/localized";
 import {safeReturnPath} from "@/lib/return-path";
 
+import { AuthBrand } from "@/components/auth/auth-brand";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -131,21 +132,13 @@ export default function LoginPage() {
   return (
     <main className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4 py-8">
       <div className="en-auth-grid">
-      <aside className="en-ticket-card en-ticket-dark en-auth-art en-grid-paper" aria-label="EduNexus welcome">
-        <div className="en-auth-art-mark"><span style={{display:"inline-flex",border:"1px solid #d6dfcf",borderRadius:"15px",padding:"8px 10px"}}>EN.</span> EduNexus</div>
-        <div><p className="en-label" style={{color:"#f1dbac"}}>EDUNEXUS</p><h2>Your classroom. <br /> Connected.</h2><p>Manage classes, exams and coursework.</p></div>
-
-      </aside>
+      <AuthBrand />
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl sm:p-8 en-auth-form">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            EduNexus
+            Sign in
           </h1>
 
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to continue to your
-            account
-          </p>
         </div>
 
         <form

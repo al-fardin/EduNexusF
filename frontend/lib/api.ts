@@ -113,7 +113,14 @@ async function requestNewTokens(
       refresh_token: refreshToken,
     }, { timeout: 10000 });
 
-  return response.data.data;
+  const tokens = response.data.data;
+  if (typeof window !== "undefined" && window.localStorage.getItem("refresh_token") !== refreshToken)
+    throw new Error("Session changed. Retry this request.");
+
+  // Commit the rotation once, inside the shared refresh operation. Each waiting
+  // request must see the same new session rather than attempting another save.
+  saveTokens(tokens);
+  return tokens;
 }
 
 /*
@@ -145,10 +152,57 @@ api.interceptors.request.use(
     Promise.reject(error)
 );
 
-/*
- * Protected API থেকে 401 এলে
- * refresh token দিয়ে নতুন token নেয়।
- */
+type TrackedConfig = InternalAxiosRequestConfig & {
+  __eduNexusUXTracked?: boolean;
+  __eduNexusUXWrite?: boolean;
+};
+let activeRequests = 0;
+let activeWrites = 0;
+function notifyRequestStatus() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("edunexus:api-status", {
+    detail: { active: activeRequests, writes: activeWrites },
+  }));
+}
+function settleRequest(config?: TrackedConfig) {
+  if (!config?.__eduNexusUXTracked) return;
+  config.__eduNexusUXTracked = false;
+  activeRequests = Math.max(0, activeRequests - 1);
+  if (config.__eduNexusUXWrite) activeWrites = Math.max(0, activeWrites - 1);
+  notifyRequestStatus();
+}
+api.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const tracked = config as TrackedConfig;
+    if (!tracked.__eduNexusUXTracked) {
+      tracked.__eduNexusUXTracked = true;
+      tracked.__eduNexusUXWrite = !["get", "head", "options"].includes((tracked.method || "get").toLowerCase());
+      activeRequests += 1;
+      if (tracked.__eduNexusUXWrite) activeWrites += 1;
+      notifyRequestStatus();
+    }
+  }
+  return config;
+});
+// Settle each transport attempt before authentication handles a retry. Otherwise
+// both the retried and outer response can decrement other requests' counters.
+api.interceptors.response.use(
+  (response) => {
+    settleRequest(response.config as TrackedConfig);
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("edunexus:connection", { detail: { reachable: true } }));
+    return response;
+  },
+  (error: unknown) => {
+    if (axios.isAxiosError(error)) {
+      settleRequest(error.config as TrackedConfig | undefined);
+      if (typeof window !== "undefined" && error.code !== "ERR_CANCELED")
+        window.dispatchEvent(new CustomEvent("edunexus:connection", { detail: { reachable: !!error.response } }));
+    }
+    return Promise.reject(error);
+  },
+);
+
+// Protected requests share one refresh operation when access tokens expire.
 api.interceptors.response.use(
   (response) => response,
 
@@ -214,10 +268,8 @@ api.interceptors.response.use(
       const newTokens =
         await refreshPromise;
 
-      if (typeof window !== "undefined" && window.localStorage.getItem("refresh_token") !== refreshToken)
+      if (typeof window !== "undefined" && window.localStorage.getItem("refresh_token") !== newTokens.refresh_token)
         throw new Error("Session changed. Retry this request.");
-
-      saveTokens(newTokens);
 
       originalRequest.headers.Authorization =
         `Bearer ${newTokens.access_token}`;
@@ -245,50 +297,4 @@ api.interceptors.response.use(
       );
     }
   }
-);
-
-// EduNexus UX V3: report every API operation for a shared non-blocking loading UI.
-// This interceptor does not delay requests, modify authentication or change responses.
-type EduNexusTrackedConfig = InternalAxiosRequestConfig & {
-  __eduNexusUXTracked?: boolean;
-  __eduNexusUXWrite?: boolean;
-};
-let eduNexusRequests = 0;
-let eduNexusWrites = 0;
-function notifyEduNexusUX() {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent("edunexus:api-status", {
-    detail: { active: eduNexusRequests, writes: eduNexusWrites },
-  }));
-}
-function settleEduNexusUX(config?: EduNexusTrackedConfig) {
-  if (!config?.__eduNexusUXTracked) return;
-  config.__eduNexusUXTracked = false;
-  eduNexusRequests = Math.max(0, eduNexusRequests - 1);
-  if (config.__eduNexusUXWrite) eduNexusWrites = Math.max(0, eduNexusWrites - 1);
-  notifyEduNexusUX();
-}
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const tracked = config as EduNexusTrackedConfig;
-    if (!tracked.__eduNexusUXTracked) {
-      tracked.__eduNexusUXTracked = true;
-      tracked.__eduNexusUXWrite = !["get", "head", "options"].includes((tracked.method || "get").toLowerCase());
-      eduNexusRequests += 1;
-      if (tracked.__eduNexusUXWrite) eduNexusWrites += 1;
-      notifyEduNexusUX();
-    }
-  }
-  return config;
-});
-api.interceptors.response.use(
-  (response) => {
-    settleEduNexusUX(response.config as EduNexusTrackedConfig);
-    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent("edunexus:connection",{detail:{reachable:true}}));
-    return response;
-  },
-  (error: unknown) => {
-    if (axios.isAxiosError(error)){settleEduNexusUX(error.config as EduNexusTrackedConfig | undefined);if(typeof window!=="undefined"&&error.code!=="ERR_CANCELED"&&!error.response)window.dispatchEvent(new CustomEvent("edunexus:connection",{detail:{reachable:false}}));}
-    return Promise.reject(error);
-  },
 );

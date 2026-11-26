@@ -1,5 +1,6 @@
 "use client";
 
+import { AuthBrand } from "@/components/auth/auth-brand";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -76,11 +77,7 @@ export default function ForgotPasswordPage() {
   return (
     <main className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="en-auth-grid">
-      <aside className="en-ticket-card en-ticket-dark en-auth-art en-grid-paper" aria-label="EduNexus welcome">
-        <div className="en-auth-art-mark"><span style={{display:"inline-flex",border:"1px solid #d6dfcf",borderRadius:"15px",padding:"8px 10px"}}>EN.</span> EduNexus</div>
-        <div><p className="en-label" style={{color:"#f1dbac"}}>YOUR CLASSROOM COMPANION</p><h2>BACK TO <br /> LEARNING.</h2><p>A quick reset and you’re right back where your classes are.</p></div>
-        <div className="en-auth-art-ticket">✦ &nbsp; Learn together. Build better. &nbsp; ✦</div>
-      </aside>
+      <AuthBrand />
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-xl en-auth-form">
         {successMessage ? (
           <SuccessContent
