@@ -1,5 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-<rect width="64" height="64" rx="19" fill="#876348"/>
-<path d="M12 18q10-3 20 3 10-6 20-3v29q-11-4-20 3-9-7-20-3z" fill="none" stroke="#fbfaf6" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M32 21v28M18 26q5-1 9 2M37 28q4-3 9-2M18 34q5-1 9 2M37 36q4-3 9-2" fill="none" stroke="#d7b48e" stroke-width="2" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="tile" x1="16" y1="0" x2="112" y2="128" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#104A51"/>
+      <stop offset="1" stop-color="#062D35"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="29" y1="33" x2="99" y2="94" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A4FFE0"/>
+      <stop offset=".48" stop-color="#42E8C0"/>
+      <stop offset="1" stop-color="#13B5AB"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="34" fill="url(#tile)"/>
+  <rect x=".75" y=".75" width="126.5" height="126.5" rx="33.25" stroke="#B4FFE6" stroke-opacity=".14" stroke-width="1.5"/>
+  <path d="M29 94V37C29 34.8 30.8 33 33 33H47L81 76V37C81 34.8 82.8 33 85 33H99V90C99 92.2 97.2 94 95 94H81L47 51V90C47 92.2 45.2 94 43 94H29Z" fill="url(#ribbon)"/>
+  <path d="M47 51L61.5 69.3L47 80V51Z" fill="#087F80" fill-opacity=".62"/>
+  <path d="M81 33H99V51L81 33Z" fill="#FF9B82"/>
+  <path d="M81 33L99 51H85C82.8 51 81 49.2 81 47V33Z" fill="#073A40" fill-opacity=".2"/>
 </svg>

@@ -149,6 +149,26 @@ a {
   color: var(--primary);
   flex: none;
 }
+.en-brand-accent {
+  color: #076c64;
+}
+.dark .en-brand-accent {
+  color: #8cf4d4;
+}
+.en-auth-mobile-brand {
+  display: none;
+}
+@media (max-width: 600px) {
+  .en-auth-mobile-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 0;
+    font-size: 23px;
+    letter-spacing: -0.045em;
+  }
+}
 .en-violet-sidebar > .en-violet-brand {
   padding: 0 12px;
   margin-bottom: 42px;
@@ -1178,8 +1198,8 @@ a {
     font-size: 20px;
   }
   .en-mobilebar .en-violet-mark {
-    width: 25px;
-    height: 27px;
+    width: 32px;
+    height: 32px;
   }
   .en-mobile-actions {
     display: flex;

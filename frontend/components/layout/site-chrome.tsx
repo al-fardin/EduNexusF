@@ -1,6 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { BrandMark, BrandWordmark } from "@/components/layout/brand-mark";
 import {
   Search,
   ChartNoAxesCombined,
@@ -68,18 +69,8 @@ const active = (path: string, href: string) =>
 function Logo() {
   return (
     <>
-      <svg
-        className="en-violet-mark"
-        width="31"
-        height="32"
-        viewBox="0 0 32 32"
-        aria-hidden="true"
-      >
-        <path d="M2 4L16 10V30L2 23Z" fill="currentColor" />
-        <path d="M16 10L30 4V23L16 30Z" fill="currentColor" opacity=".72" />
-        <path d="M2 4L16 10L30 4L16 1Z" fill="currentColor" opacity=".35" />
-      </svg>
-      <strong>EduNexus</strong>
+      <BrandMark className="en-violet-mark" />
+      <BrandWordmark />
     </>
   );
 }

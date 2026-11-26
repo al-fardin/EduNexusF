@@ -1,15 +1,18 @@
-import { GraduationCap } from "lucide-react";
+import { BrandMark, BrandWordmark } from "@/components/layout/brand-mark";
 
 export function AuthBrand() {
   return (
-    <aside className="en-ticket-card en-ticket-dark en-auth-art en-grid-paper" aria-label="EduNexus">
-      <div className="en-auth-art-mark">
-        <GraduationCap size={32} aria-hidden="true" />
-        EduNexus
-      </div>
-      <div>
-        <h2>Classes, exams<br />and coursework.</h2>
-      </div>
-    </aside>
+    <>
+      <div className="en-auth-mobile-brand"><BrandMark size={36} /><BrandWordmark /></div>
+      <aside className="en-ticket-card en-ticket-dark en-auth-art en-grid-paper" aria-label="EduNexus">
+        <div className="en-auth-art-mark">
+          <BrandMark size={44} />
+          <BrandWordmark />
+        </div>
+        <div>
+          <h2>Classes, exams<br />and coursework.</h2>
+        </div>
+      </aside>
+    </>
   );
 }
