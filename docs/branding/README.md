@@ -20,3 +20,9 @@ Application exports:
 Keep the background transparent when exporting. Do not add a black tile or
 replace the approved mark with a literal letter. The existing application theme
 is independent of the logo; wordmark accents use copper tones in both modes.
+
+The shared web mark is displayed slightly larger with a soft, diffuse backlight
+and a thin edge highlight in dark mode. These CSS effects separate the dark
+titanium folds from the surrounding surface without recoloring the image or
+adding a solid tile. The same treatment applies to desktop navigation, mobile
+headers and authentication pages. The exported logo files remain unchanged.
