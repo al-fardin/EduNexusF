@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 export function BrandMark({ size = 36, className = "" }: { size?: number; className?: string }) {
-  return <Image src="/edunexus-mark.svg" alt="" width={size} height={size} className={className} unoptimized />;
+  return <Image src="/edunexus-mark.png" alt="" width={size} height={size} className={className} unoptimized />;
 }
 
 export function BrandWordmark() {

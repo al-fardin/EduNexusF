@@ -66,8 +66,8 @@ self.addEventListener("push", (event) =>
       await self.registration.showNotification(payload.title || "EduNexus", {
         body: payload.body || "You have a new update.",
         tag: `edunexus-${payload.notification_id}`,
-        icon: "/edunexus-mark.svg",
-        badge: "/edunexus-mark.svg",
+        icon: "/icon-192.png",
+        badge: "/edunexus-mark.png",
         data: { url: target.href, user_id: payload.user_id },
       });
     })(),

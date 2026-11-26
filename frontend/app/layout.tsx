@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "EduNexus", statusBarStyle: "default" },
   title: "EduNexus",
   description: "Classes, exams and coursework.",
-  icons: { icon: "/edunexus-mark.svg", apple: "/icon-192.png" },
+  icons: { icon: { url: "/edunexus-mark.png", type: "image/png" }, apple: "/icon-192.png" },
 };
 
 export default function RootLayout({
