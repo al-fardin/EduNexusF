@@ -11,6 +11,7 @@ dist/
 build/
 release-builds/
 /tmp/pdfs/
+/output/pdf/*.zip
 
 # Secrets
 .env

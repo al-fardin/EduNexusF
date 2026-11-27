@@ -24,6 +24,22 @@
 - [Classroom workspace](WORKSPACE_UI.md)
 - [Deployment](../deploy/README.md)
 
+## বাংলা PDF library
+
+বড় অক্ষরে পড়ার জন্য আলাদা PDF। আগে walkthrough ও security guide পড়ুন;
+তারপর প্রয়োজনমতো file/function index ব্যবহার করুন।
+
+- [01 - পুরো codebase walkthrough](../output/pdf/edunexus-codebase-walkthrough-bn.pdf)
+- [02 - Security ও judge প্রশ্নোত্তর](../output/pdf/edunexus-security-and-judge-bn.pdf)
+- [03 - Backend file/function index](../output/pdf/edunexus-backend-code-map-bn.pdf)
+- [04 - Frontend file/function index](../output/pdf/edunexus-frontend-code-map-bn.pdf)
+- [05 - Database, Docker ও clients index](../output/pdf/edunexus-database-docker-clients-code-map-bn.pdf)
+- [06 - ৯৪টি commit-এর ব্যাখ্যা, বড় অক্ষরে](../output/pdf/edunexus-commit-history-large-bn.pdf)
+
+প্রথম পাঁচটি PDF-এর source snapshot `88658db`; commit history `78ca06f`
+পর্যন্ত। মূল Markdown-এর বিষয়বস্তু ও source links রাখা হয়েছে। পাশাপাশি রাখলে
+PDF-গুলোর companion links কাজ করে; source links খুলতে internet প্রয়োজন।
+
 ## Verification
 
 - [Code quality and checks](quality/code-quality.md)
