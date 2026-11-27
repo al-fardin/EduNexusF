@@ -2,6 +2,9 @@
 
 ## Guides
 
+- [বাংলায় সম্পূর্ণ codebase walkthrough: architecture, features, Docker ও presentation](guides/codebase-walkthrough-bn.md)
+- [বাংলায় security controls, limitations ও কঠিন judge প্রশ্নোত্তর](guides/security-and-judge-bn.md)
+- [Source/function/line maps: backend](reference/code-map-backend.md), [frontend](reference/code-map-frontend.md), [database and runtime](reference/code-map-data-runtime.md)
 - [Learning features and deployment migrations](guides/learning-features.md)
 - [Messaging, saved coursework and teacher history](guides/learning-workflows.md)
 - [Classwork, grading, scheduling and notification workflows](guides/coursework-workflows.md)
