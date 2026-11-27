@@ -10,6 +10,7 @@ __pycache__/
 dist/
 build/
 release-builds/
+/tmp/pdfs/
 
 # Secrets
 .env

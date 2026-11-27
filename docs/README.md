@@ -2,6 +2,7 @@
 
 ## Guides
 
+- [বাংলায় ৯৪টি commit-এর ব্যাখ্যা: PDF, snapshot 78ca06f](../output/pdf/edunexus-commit-history-bn.pdf)
 - [বাংলায় সম্পূর্ণ codebase walkthrough: architecture, features, Docker ও presentation](guides/codebase-walkthrough-bn.md)
 - [বাংলায় security controls, limitations ও কঠিন judge প্রশ্নোত্তর](guides/security-and-judge-bn.md)
 - [Source/function/line maps: backend](reference/code-map-backend.md), [frontend](reference/code-map-frontend.md), [database and runtime](reference/code-map-data-runtime.md)
