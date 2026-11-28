@@ -59,6 +59,7 @@ export function ExamCreator({
   const [allowPhone, setAllowPhone] = useState(false);
   const [uploads, setUploads] = useState(0);
   const [questions, setQuestions] = useState<ExamQuestion[]>([newQuestion()]);
+  const [validationError, setValidationError] = useState("");
   const mutation = useMutation({
     mutationFn: (payload: NewExam) => examService.create(classroomId, payload),
     onSuccess: onClose,
@@ -208,22 +209,17 @@ export function ExamCreator({
       />
       <QuestionBank
         classroomId={classroomId}
-        onAdd={(items) =>
-          setQuestions((current) => {
-            const existing = current.filter(
-              (q) =>
-                q.prompt.trim() ||
-                q.options?.some((o) => o.trim()) ||
-                q.sample_answer?.trim() ||
-                q.tester,
-            );
-            if (existing.length + items.length > 40) {
-              window.alert("Maximum 40 questions per exam");
-              return current;
-            }
-            return [...existing, ...items];
-          })
-        }
+        onAdd={(items) => {
+          const existing = questions.filter(
+            (q) => q.prompt.trim() || q.options?.some((o) => o.trim()) || q.sample_answer?.trim() || q.tester,
+          );
+          if (existing.length + items.length > 40) {
+            setValidationError("Maximum 40 questions per exam.");
+            return;
+          }
+          setValidationError("");
+          setQuestions([...existing, ...items]);
+        }}
       />
       <div className="mt-6 flex items-center justify-between gap-2">
         <h4 className="font-bold">Questions ({questions.length}/40)</h4>
@@ -412,6 +408,7 @@ export function ExamCreator({
           </section>
         ))}
       </div>
+      {validationError && <p className="mt-4 text-sm text-destructive" role="alert">{validationError}</p>}
       {mutation.isError && (
         <p className="mt-4 text-sm text-destructive" role="alert">
           {examError(mutation.error)}
@@ -438,9 +435,10 @@ export function ExamCreator({
           disabled={mutation.isPending || uploads > 0}
           onClick={() => {
             if (!title.trim() || !starts || !ends) {
-              window.alert("Provide a title, start and end time.");
+              setValidationError("Provide a title, start and end time.");
               return;
             }
+            setValidationError("");
             create();
           }}
         >

@@ -1,4 +1,5 @@
 "use client";
+import { requestConfirm } from "@/lib/action-dialog";
 
 import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import { PersonalNoteLink } from "@/components/workspace/personal-note-link";
@@ -254,10 +255,11 @@ export function ExamBoard({ classroomId, canManage }: Props) {
             key={exam.id}
             exam={exam}
             canManage={canManage}
-            onPublish={() => {
+            onPublish={async () => {
               if (
-                window.confirm(
+                await requestConfirm(
                   "Publish this exam for its selected students? Review the schedule and audience first.",
+                  { title: "Publish exam", confirmLabel: "Publish exam" },
                 )
               )
                 publish.mutate(exam.id);

@@ -22,6 +22,8 @@ import { NetworkFeedback } from "@/components/ui/network-feedback";
 import {OfflineProvider} from "@/providers/offline-provider";
 import {ErrorMonitorProvider} from "@/providers/error-monitor-provider";
 import {ReleaseGuide} from "@/components/settings/release-guide";
+import { ActionDialogHost } from "@/components/ui/action-dialog-host";
+import "./code-studio.css";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -64,6 +66,7 @@ export default function RootLayout({
             <SiteChrome>{children}</SiteChrome>
             <ReleaseGuide/>
             <NetworkFeedback />
+            <ActionDialogHost />
           </QueryProvider>
         </AppThemeProvider></PreferencesProvider>
       </body>

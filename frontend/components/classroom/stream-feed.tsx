@@ -1,4 +1,5 @@
 "use client";
+import { requestConfirm } from "@/lib/action-dialog";
 
 import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { AudienceFields, AudienceBadge } from "./audience-fields";
@@ -170,9 +171,10 @@ export function StreamFeed({ classroomId, canManage }: StreamFeedProps) {
     });
   }
 
-  function removePost(post: StreamPost) {
-    const confirmed = window.confirm(
+  async function removePost(post: StreamPost) {
+    const confirmed = await requestConfirm(
       "Delete this stream post? This action cannot be undone.",
+      { title: "Delete post", confirmLabel: "Delete post", destructive: true },
     );
 
     if (!confirmed) {

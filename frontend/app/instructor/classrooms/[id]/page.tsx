@@ -1,4 +1,5 @@
 "use client";
+import { requestConfirm } from "@/lib/action-dialog";
 
 import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import {Localized} from "@/components/ui/localized";
@@ -111,11 +112,12 @@ export default function ClassroomDetailsPage() {
     },
   });
 
-  function removeStudent(member: ClassroomMember) {
+  async function removeStudent(member: ClassroomMember) {
     const fullName = `${member.first_name} ${member.last_name}`.trim();
 
-    const confirmed = window.confirm(
+    const confirmed = await requestConfirm(
       `Remove ${fullName || member.email} from this class?`,
+      { title: "Remove student", confirmLabel: "Remove student", destructive: true },
     );
 
     if (confirmed) {

@@ -1,4 +1,5 @@
 "use client";
+import { showNotice } from "@/lib/action-dialog";
 
 import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import { QuestionText, QuestionPicture } from "./question-content";
@@ -71,7 +72,7 @@ export function ExamResults({
                 try {
                   await examManagement.downloadPDF(classroomId, id);
                 } catch (e) {
-                  alert(examError(e));
+                  await showNotice(examError(e), {title:"Download failed"});
                 } finally {
                   setDownloading("");
                 }

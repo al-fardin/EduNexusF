@@ -1,4 +1,5 @@
 "use client";
+import { requestConfirm } from "@/lib/action-dialog";
 
 import { LoadingIcon } from "@/components/ui/loading-indicator";
 import Link from "next/link";
@@ -172,11 +173,12 @@ export function ExamReadiness({
             type="button"
             className={primary}
             disabled={busy?.key === key || disabled}
-            onClick={() => {
+            onClick={async () => {
               if (
-                !window.confirm(
+                !(await requestConfirm(
                   "Publish this checked exam for its selected audience?",
-                )
+                  { title: "Publish exam", confirmLabel: "Publish exam" },
+                ))
               )
                 return;
               const version = ++request.current;

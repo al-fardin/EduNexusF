@@ -1,4 +1,5 @@
 "use client";
+import { requestConfirm, requestText } from "@/lib/action-dialog";
 
 import { LoadingIcon, LoadingIndicator } from "@/components/ui/loading-indicator";
 import { clientId } from "@/lib/client-id";
@@ -265,10 +266,11 @@ export function QuestionBank({
                   type="button"
                   className={btn}
                   disabled={busy}
-                  onClick={() => {
-                    const prompt = window.prompt(
+                  onClick={async () => {
+                    const prompt = await requestText(
                       "Edit question",
                       item.question.prompt,
+                      { title: "Edit question", multiline: true },
                     );
                     if (prompt === null) return;
                     void perform(() =>
@@ -286,10 +288,11 @@ export function QuestionBank({
                   type="button"
                   className={btn}
                   disabled={busy}
-                  onClick={() => {
+                  onClick={async () => {
                     if (
-                      confirm(
+                      await requestConfirm(
                         "Remove this bank question? Existing exams keep their copies.",
+                        { title: "Delete question", confirmLabel: "Delete question", destructive: true },
                       )
                     )
                       void perform(() =>

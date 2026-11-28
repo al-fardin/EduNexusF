@@ -1,9 +1,11 @@
 "use client";
+import { requestConfirm, requestText } from "@/lib/action-dialog";
 
 import { LoadingIcon, LoadingIndicator } from "@/components/ui/loading-indicator";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ChevronDown, ChevronRight, Code2, FileCode2, FilePlus2, Folder, FolderOpen,
   FolderPlus, Maximize2, Minimize2, Play,
@@ -110,8 +112,8 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
     // VS Code-like semantics: choosing a runnable file selects its compiler.
     if (detectFileLanguage(p) && workspace.entry !== p) persist({...workspace, entry:p});
   }
-  function addFolder() {
-    const v=window.prompt("New folder path (e.g. src/utils):", "src");
+  async function addFolder() {
+    const v=await requestText("Folder path", "src", {title:"New folder",confirmLabel:"Create folder"});
     if(v===null)return;
     const p=v.trim();
     if(!validateName(p)){setError("Invalid folder path; use letters, numbers, _, -, . and /.");return;}
@@ -120,8 +122,8 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
     for(let i=1;i<=parts.length;i++){const f=parts.slice(0,i).join("/");if(!folders.includes(f))folders.push(f);}
     persist({...workspace,folders});
   }
-  function addFile() {
-    const v=window.prompt("New filename with extension (e.g. main.cpp, Main.java, solution.py):", "");
+  async function addFile() {
+    const v=await requestText("Filename with extension (e.g. main.cpp)", "", {title:"New file",confirmLabel:"Create file"});
     if(v===null)return;
     const p=v.trim();
     if(!validateName(p)){setError("Invalid filename; use only letters, numbers, _, -, . and /.");return;}
@@ -129,8 +131,8 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
     const next={...workspace,files:[...workspace.files,{path:p,content:""}],entry:detectFileLanguage(p)?p:workspace.entry};
     if(persist(next)){setCurrent(p);setTabs(prev=>prev.includes(p)?prev:[...prev,p]);}
   }
-  function renameRow(row: TreeRow) {
-    const newPath=window.prompt(`Rename ${row.isFolder?"folder":"file"}:`,row.full);if(newPath===null||newPath===row.full)return;
+  async function renameRow(row: TreeRow) {
+    const newPath=await requestText("Path",row.full,{title:row.isFolder?"Rename folder":"Rename file",confirmLabel:"Rename"});if(newPath===null||newPath===row.full)return;
     const p=newPath.trim();if(!validateName(p)){setError("Invalid path.");return;}
     if(row.isFolder){
       if(workspace.folders.includes(p)||workspace.files.some(f=>f.path===p)){setError("Path already exists.");return;}
@@ -147,9 +149,9 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
       }
     }
   }
-  function removeRow(row: TreeRow) {
+  async function removeRow(row: TreeRow) {
     const victims=workspace.files.filter(f=>f.path===row.full||(row.isFolder&&f.path.startsWith(row.full+"/")));
-    if(!window.confirm(`Delete ${row.full}${row.isFolder ? ` and ${victims.length} contained file(s)` : ""}?`))return;
+    if(!(await requestConfirm(`Delete ${row.full}${row.isFolder ? ` and ${victims.length} contained file(s)` : ""}?`,{title:row.isFolder?"Delete folder":"Delete file",confirmLabel:"Delete",destructive:true})))return;
     const remaining=workspace.files.filter(f=>!victims.some(v=>v.path===f.path));
     const entry=remaining.some(f=>f.path===workspace.entry)?workspace.entry:(remaining.find(f=>detectFileLanguage(f.path))?.path ?? "");
     if(persist({...workspace,files:remaining,folders:workspace.folders.filter(f=>f!==row.full&&!f.startsWith(row.full+"/")),entry})){
@@ -186,9 +188,9 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
     });
     monaco.editor.setTheme(resolvedTheme==="dark"?"vs-dark":"edunexus-violet");
   };
-  return <div className={`${expanded?"fixed inset-3 z-[80] shadow-2xl":"relative"} overflow-hidden rounded-2xl border border-border bg-card text-foreground`}>
+  const studio = <div className={`en-code-studio-shell ${expanded?"en-code-studio-expanded":""}`}><div className="en-code-studio text-foreground">
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary px-3 py-2.5">
-      <div className="flex items-center gap-2 text-xs font-semibold"><Code2 size={17} className="text-muted-foreground"/> EduNexus Code Studio <span className="rounded-md bg-card px-2 py-1 text-[10px] tracking-wide text-muted-foreground">{entryLanguage ? `${entryLanguage} · ${workspace.entry}` : "New workspace"}</span></div>
+      <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs font-semibold"><Code2 size={17} className="shrink-0 text-muted-foreground"/> EduNexus Code Studio <span className="max-w-full truncate rounded-md bg-card px-2 py-1 text-[10px] tracking-wide text-muted-foreground">{entryLanguage ? `${entryLanguage} · ${workspace.entry}` : "New workspace"}</span></div>
       <div className="flex items-center gap-1.5">
         <button type="button" onClick={()=>setSidebar(v=>!v)} className={iconButton} title="Toggle file Explorer" aria-label="Toggle Explorer">{sidebar?<PanelLeftClose size={17}/>:<PanelLeftOpen size={17}/>}</button>
         <button type="button" onClick={()=>setExpanded(v=>!v)} className={iconButton} title={expanded?"Exit focus mode":"Expand editor"} aria-label="Toggle editor fullscreen">{expanded?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</button>
@@ -197,7 +199,7 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
         </button>
       </div>
     </div>
-    <div className={`flex ${expanded?"h-[calc(100vh-125px)]":"h-[465px]"} min-h-0`}>
+    <div className={`flex ${expanded?"min-h-0 flex-1":"h-[465px]"} min-h-0`}>
       {sidebar&&<aside className="flex w-[215px] min-w-[150px] shrink-0 flex-col border-r border-border bg-card text-xs">
         <div className="flex items-center justify-between border-b border-border px-3 py-2 font-bold uppercase tracking-[0.1em] text-muted-foreground"><span>Explorer</span><div className="flex gap-0.5"><button type="button" className={iconButton} onClick={addFile} title="New file" aria-label="New file"><FilePlus2 size={16}/></button><button type="button" className={iconButton} onClick={addFolder} title="New folder" aria-label="New folder"><FolderPlus size={16}/></button></div></div>
         <div className="flex-1 overflow-y-auto py-2">
@@ -251,5 +253,8 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
     {error&&<div role="alert" className="mx-3 my-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>}
     {notice&&<p className="mx-3 my-2 text-xs text-muted-foreground">{notice}</p>}
     <div className="border-t border-border bg-card px-3 py-2 text-xs text-muted-foreground">Running code does not submit your answers.</div>
-  </div>;
+  </div></div>;
+  // Workspace motion/containment can establish a containing block for fixed
+  // elements. Mount focus mode at body level so it fills the real viewport.
+  return expanded ? createPortal(studio, document.body) : studio;
 }

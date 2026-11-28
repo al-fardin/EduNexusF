@@ -27,6 +27,7 @@ function loadComponent(file, mocks, extra = "", globals = {}) {
     ...globals,
     require(name) {
       if (Object.hasOwn(mocks, name)) return mocks[name];
+      if (name === "@/lib/action-dialog") return loadComponent("lib/action-dialog.ts", {});
       if (name === "@/components/ui/loading-indicator") return { LoadingIcon: () => React.createElement("span", { "aria-hidden": true }), LoadingIndicator: () => React.createElement("div", { role: "status" }, "Loading") };
       if (name === "react" || name === "react/jsx-runtime") return require(name);
       throw Error(`Unexpected component dependency: ${name}`);

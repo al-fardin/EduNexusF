@@ -1,4 +1,5 @@
 "use client";
+import { requestConfirm } from "@/lib/action-dialog";
 
 import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import { QuestionText, QuestionPicture } from "./question-content";
@@ -307,11 +308,13 @@ export function ExamTake({
     if (
       !live ||
       submittingRef.current ||
-      !window.confirm(
+      !(await requestConfirm(
         "Submit your final answers? You cannot change them afterward.",
-      )
+        { title: "Submit exam", confirmLabel: "Submit final answers" },
+      ))
     )
       return;
+    if (submittingRef.current) return;
     const missing =
       live?.questions.flatMap((q, i) =>
         q.required && !answersRef.current[q.id]?.trim() ? [i + 1] : [],
@@ -410,11 +413,12 @@ export function ExamTake({
           <button
             type="button"
             className="ml-2 font-semibold underline"
-            onClick={() => {
+            onClick={async () => {
               if (
-                !window.confirm(
+                !(await requestConfirm(
                   "Replace the newer server answers with your older local draft? This will overwrite other changes.",
-                )
+                  { title: "Replace saved answers", confirmLabel: "Replace answers", destructive: true },
+                ))
               )
                 return;
               answersRef.current = conflictDraft;

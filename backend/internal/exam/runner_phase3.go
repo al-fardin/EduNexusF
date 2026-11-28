@@ -15,7 +15,7 @@ import (
 // This runner is for local development. Do NOT give public Internet users access
 // to a privileged Docker daemon on the same host as your production API/database.
 // In production use an isolated runner pool/VM with egress controls and quotas.
-var errRunnerDisabled = errors.New("code runner is disabled: set EXAM_RUNNER_ENABLED=true and pull the required Docker images")
+var errRunnerDisabled = errors.New("Code execution is unavailable. Ask your teacher or administrator to enable it.")
 
 type runOutput struct {
 	Status     string `json:"status"`
@@ -26,10 +26,15 @@ type runOutput struct {
 }
 
 type boundedBuffer struct {
-	bytes.Buffer
+	buffer  bytes.Buffer
 	max     int
 	clipped bool
 }
+
+// Do not embed bytes.Buffer: its promoted ReadFrom lets os/exec's io.Copy
+// bypass Write and retain unlimited output from an untrusted program.
+func (b *boundedBuffer) Len() int       { return b.buffer.Len() }
+func (b *boundedBuffer) String() string { return b.buffer.String() }
 
 func (b *boundedBuffer) Write(p []byte) (int, error) {
 	n := len(p)
@@ -42,7 +47,7 @@ func (b *boundedBuffer) Write(p []byte) (int, error) {
 		writeN = n
 	}
 	if writeN > 0 {
-		_, _ = b.Buffer.Write(p[:writeN])
+		_, _ = b.buffer.Write(p[:writeN])
 	}
 	if n > writeN {
 		b.clipped = true
@@ -69,7 +74,7 @@ func compilerSpec(lang string) (string, string, string, string, bool) {
 }
 
 func runSandbox(ctx context.Context, language, code, stdin string) (runOutput, error) {
-	if os.Getenv("EXAM_RUNNER_ENABLED") != "true" {
+	if !runnerEnabled() {
 		return runOutput{}, errRunnerDisabled
 	}
 	_, image, filename, command, ok := compilerSpec(language)

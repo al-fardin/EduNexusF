@@ -1,4 +1,5 @@
 "use client";
+import { requestConfirm } from "@/lib/action-dialog";
 
 import { LoadingIcon } from "@/components/ui/loading-indicator";
 import Link from "next/link";
@@ -48,6 +49,8 @@ export function PersonalEditor({
   const dirty = JSON.stringify(item) !== JSON.stringify(initial);
   useEffect(() => {
     if (!dirty) return;
+    let active = true;
+    let pendingNavigation = false;
     const unload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "";
@@ -65,18 +68,29 @@ export function PersonalEditor({
         e.target.closest('a[target="_blank"]')
       )
         return;
-      if (!window.confirm(t("Discard unsaved note changes?"))) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-      }
+      const link = (e.target as Element).closest<HTMLAnchorElement>("a[href]")!;
+      if (link.hasAttribute("download")) return;
+      const destination = new URL(link.href);
+      if (!["http:", "https:"].includes(destination.protocol)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (pendingNavigation) return;
+      pendingNavigation = true;
+      void requestConfirm(t("Discard unsaved note changes?"), {title:"Unsaved changes",confirmLabel:"Discard changes",destructive:true}).then(confirmed => {
+        pendingNavigation = false;
+        if (!confirmed || !active) return;
+        if (destination.origin === window.location.origin) router.push(destination.pathname + destination.search + destination.hash);
+        else window.location.assign(destination.href);
+      });
     };
     window.addEventListener("beforeunload", unload);
     document.addEventListener("click", navigate, true);
     return () => {
+      active = false;
       window.removeEventListener("beforeunload", unload);
       document.removeEventListener("click", navigate, true);
     };
-  }, [dirty, t]);
+  }, [dirty, t, router]);
   async function action(fn: () => Promise<unknown>) {
     setBusy(true);
     setError("");
