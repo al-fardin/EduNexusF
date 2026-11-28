@@ -121,7 +121,7 @@ function VerifyEmailContent() {
             onClick={() =>
               void verifyEmail()
             }
-            className="mt-7 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground"
+            className="mt-7 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90"
           >
             {status === "error" ? "Try again" : "Verify email"}
           </button>
@@ -140,7 +140,7 @@ function VerifyEmailContent() {
         {status === "success" && (
           <Link
             href="/"
-            className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground"
+            className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90"
           >
             Go to dashboard
           </Link>
@@ -167,7 +167,7 @@ function StatusIcon({
 }) {
   if (status === "success") {
     return (
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
         <CheckCircle2 className="h-8 w-8" />
       </div>
     );
@@ -175,14 +175,14 @@ function StatusIcon({
 
   if (status === "error") {
     return (
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-destructive">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/15 text-destructive">
         <XCircle className="h-8 w-8" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-background text-foreground">
+    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-primary">
       <MailCheck className="h-8 w-8" />
     </div>
   );
@@ -191,7 +191,7 @@ function StatusIcon({
 function PageLoader() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-border border-t-zinc-950" />
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-border border-t-primary" />
     </main>
   );
 }

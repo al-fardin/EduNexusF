@@ -332,7 +332,7 @@ export function Message({
       }}
       className={`mt-5 rounded-xl border px-4 py-3 text-sm ${
         type === "success"
-          ? "border-[#b8d3b6] bg-secondary text-primary"
+          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
           : "border-destructive/30 bg-destructive/10 text-destructive"
       }`}
     >

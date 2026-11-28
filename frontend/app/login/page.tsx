@@ -2,6 +2,7 @@
 import {Localized} from "@/components/ui/localized";
 import {safeReturnPath} from "@/lib/return-path";
 
+import {AuthTransition} from "@/components/auth/auth-transition";
 import { AuthBrand } from "@/components/auth/auth-brand";
 import axios from "axios";
 import Link from "next/link";
@@ -27,6 +28,8 @@ export default function LoginPage() {
 
   const [loading, setLoading] =
     useState(false);
+
+  const [entering, setEntering] = useState(false);
 
   const [errorMessage, setErrorMessage] =
     useState("");
@@ -100,8 +103,10 @@ export default function LoginPage() {
       );
 
       try { window.sessionStorage.setItem("en-verification-pending","1"); } catch { /* Login works without session storage. */ }
+      setEntering(true);
       router.replace(safeReturnPath(new URLSearchParams(window.location.search).get("next")));
     } catch (error: unknown) {
+      setEntering(false);
       if (
         axios.isAxiosError<ApiErrorResponse>(
           error
@@ -130,7 +135,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4 py-8">
+    <main aria-busy={loading || entering} className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4 py-8">
+      {(loading || entering) && <AuthTransition message={entering ? "Opening your workspace" : "Signing you in"} />}
       <div className="en-auth-grid">
       <AuthBrand />
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl sm:p-8 en-auth-form">
@@ -203,7 +209,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full touch-manipulation rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full touch-manipulation rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading
               ? "Signing in..."

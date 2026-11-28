@@ -138,7 +138,7 @@ export default function JoinClassroomPage() {
                 >
                   <div className="flex gap-3">
                     <CheckCircle2
-                      className="shrink-0 text-green-700"
+                      className="shrink-0 text-emerald-600 dark:text-emerald-400"
                       size={22}
                     />
                     <div>

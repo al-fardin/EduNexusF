@@ -139,7 +139,7 @@ export default function ForgotPasswordPage() {
               onClick={() =>
                 void sendResetEmail()
               }
-              className="mt-5 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-5 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading
                 ? "Sending reset link..."
@@ -168,7 +168,7 @@ function SuccessContent({
 }) {
   return (
     <div className="text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
         <CheckCircle2 className="h-8 w-8" />
       </div>
 
@@ -186,7 +186,7 @@ function SuccessContent({
 
       <Link
         href="/login"
-        className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground"
+        className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90"
       >
         Return to login
       </Link>

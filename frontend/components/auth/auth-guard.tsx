@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import {safeReturnPath} from "@/lib/return-path";
 
 import { VerificationPrompt } from "@/components/auth/verification-prompt";
+import {AuthTransition} from "@/components/auth/auth-transition";
 import { authService } from "@/services/auth";
 import { useAuthStore, type AuthUser } from "@/store/auth-store";
 
@@ -72,17 +73,7 @@ export function AuthGuard({
 
   if(profileError&&!user)return <main className="flex min-h-screen items-center justify-center"><div className="space-y-3 text-center"><p>Unable to verify your account. Check your connection.</p><button className="rounded-xl border border-border px-4 py-2" onClick={()=>{setProfileError(false);setProfileRetry(n=>n+1)}}>Retry</button></div></main>;
   if (!isClient || !accessToken || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-border border-t-zinc-950" />
-
-          <p className="mt-4 text-sm text-muted-foreground">
-            Checking authentication...
-          </p>
-        </div>
-      </main>
-    );
+    return <AuthTransition message="Opening your workspace"/>;
   }
 
   return <><VerificationPrompt key={user.id}/>{children}</>;

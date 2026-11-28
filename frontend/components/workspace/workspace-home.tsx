@@ -7,10 +7,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
+  Calendar,
   CalendarDays,
+  CheckSquare,
   ClipboardCheck,
   FileText,
+  FolderOpen,
+  Layers,
   Plus,
+  Search,
+  TrendingUp,
 } from "lucide-react";
 import { ClassroomCard } from "@/components/classroom/classroom-card";
 import { ContentSkeleton } from "@/components/ui/content-skeleton";
@@ -36,7 +42,7 @@ export function WorkspaceHome({
     <main className="en-workspace-page en-violet-home">
       <div className="en-workspace-container">
         <header className="en-page-heading">
-          <h1>{t(classesOnly ? "Classroom" : "Home")}</h1>
+          <div><span className="en-workspace-eyebrow">EduNexus / Workspace</span><h1>{t(classesOnly ? "Classroom" : "Home")}</h1></div>
           <div className="flex gap-3">
             <Link className="en-outline-button" href="/student/classrooms/join">
               {t("Join class")}
@@ -50,8 +56,16 @@ export function WorkspaceHome({
             </Link>
           </div>
         </header>
-        <div className="mb-4"><EnrollmentNotice/></div><nav className="mb-4 flex flex-wrap gap-2" aria-label="Workspace tools"><Link className="en-outline-button" href="/tasks">{t("Task inbox")}</Link><Link className="en-outline-button" href="/storage">{t("Storage")}</Link><Link className="en-outline-button" href="/semesters">{t("Semesters")}</Link><Link className="en-outline-button" href="/calendar">{t("Calendar")}</Link><Link className="en-outline-button" href="/progress">{t("Progress")}</Link><Link className="en-outline-button" href="/search">{t("Search")}</Link></nav>
-        <div className="en-home-filters" aria-label="Filter classes">
+        <div className="mb-4"><EnrollmentNotice/></div>
+        <nav className="en-quick-dock" aria-label="Workspace tools">
+          <Link className="en-quick-chip" href="/tasks"><CheckSquare size={15} /><span>{t("Task inbox")}</span></Link>
+          <Link className="en-quick-chip" href="/storage"><FolderOpen size={15} /><span>{t("Storage")}</span></Link>
+          <Link className="en-quick-chip" href="/semesters"><Layers size={15} /><span>{t("Semesters")}</span></Link>
+          <Link className="en-quick-chip" href="/calendar"><Calendar size={15} /><span>{t("Calendar")}</span></Link>
+          <Link className="en-quick-chip" href="/progress"><TrendingUp size={15} /><span>{t("Progress")}</span></Link>
+          <Link className="en-quick-chip" href="/search"><Search size={15} /><span>{t("Search")}</span></Link>
+        </nav>
+        <div className="en-classes-toolbar"><h2>{t("Classes")} <span>{query.data?.classes.length ?? 0}</span></h2><div className="en-home-filters" aria-label="Filter classes">
           {[
             ["all", "All"],
             ["teacher", "Teaching"],
@@ -65,7 +79,7 @@ export function WorkspaceHome({
               {t(label)}
             </button>
           ))}
-        </div>
+        </div></div>
         {query.isPending ? (
           <ContentSkeleton rows={2} />
         ) : query.isError ? (

@@ -6,6 +6,9 @@ import "./mobile.css";
 import "./workspace.css";
 import "./violet.css";
 import "./messaging-tools.css";
+import "./studio.css";
+import "./landing.css";
+import "./immersive.css";
 import { AppThemeProvider } from "@/providers/theme-provider";
 import { PushProvider } from "@/providers/push-provider";
 import { AppUpdateProvider } from "@/providers/app-update-provider";
@@ -22,7 +25,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#876348",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f4fc" },
+    { media: "(prefers-color-scheme: dark)", color: "#08040f" },
+  ],
 };
 export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",

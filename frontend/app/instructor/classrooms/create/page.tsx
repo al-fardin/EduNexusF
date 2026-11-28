@@ -79,13 +79,13 @@ export default function CreateClassroomPage() {
 
           <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
             <div className="border-b border-border bg-primary px-6 py-8 text-primary-foreground sm:px-8">
-              <div className="mb-4 inline-flex rounded-2xl bg-card/10 p-3">
+              <div className="mb-4 inline-flex rounded-2xl bg-primary-foreground/15 p-3">
                 <School size={28} />
               </div>
 
               <h1 className="text-3xl font-bold">Create a class</h1>
 
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-primary-foreground/85">
                 Choose class code access or invite students by email.
               </p>
             </div>
@@ -227,7 +227,7 @@ export default function CreateClassroomPage() {
                 <button
                   type="submit"
                   disabled={createMutation.isPending}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {createMutation.isPending ? (
                     <>

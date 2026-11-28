@@ -3,6 +3,8 @@ import {useAuthStore} from "@/store/auth-store";
 import Link from "next/link";
 import {
   Archive,
+  ArrowUpRight,
+  BookOpen,
   Copy,
   Info,
   LoaderCircle,
@@ -62,7 +64,11 @@ export function ClassroomCard({
         href={`/${kind === "teacher" ? "instructor" : "student"}/classrooms/${classroom.id}`}
         aria-label={`Open ${classroom.name}`}
       >
-        <CourseCover id={classroom.id} />
+        <div className="en-class-art">
+          <CourseCover id={classroom.id} />
+          <span className="en-class-label"><BookOpen size={14} />{kind === "teacher" ? "Teaching" : "Learning"}</span>
+          <span className="en-class-monogram">{Array.from(classroom.name.trim())[0]?.toUpperCase()}</span>
+        </div>
         <div className="en-course-card-body">
           <h2>{classroom.name}</h2>
           <p>
@@ -80,6 +86,7 @@ export function ClassroomCard({
             </span>
             <span>{teacherName}</span>
             {classroom.status === "archived" && <small>Archived</small>}
+            <ArrowUpRight className="en-class-open" size={19} aria-hidden="true" />
           </div>
         </div>
       </Link>

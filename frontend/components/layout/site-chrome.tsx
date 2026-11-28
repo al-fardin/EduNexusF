@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/store/auth-store";
 import {usePreferences} from "@/providers/preferences-provider";
+import {useHasSession} from "@/lib/use-has-session";
 const links = [
   { href: "/", label: "Home", icon: House },
   { href: "/instructor/classrooms", label: "Teaching", icon: GraduationCap },
@@ -77,8 +78,10 @@ function Logo() {
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const {t}=usePreferences();
   const path = usePathname() ?? "/";
+  const hasSession = useHasSession();
   const user = useAuthStore((s) => s.user);
   const unread = useUnreadMessages().data?.unread ?? 0;
+  if (path === "/" && !hasSession) return <>{children}</>;
   if (authPaths.includes(path))
     return (
       <>
@@ -93,6 +96,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   );
   return (
     <div className={`en-app-shell${inClass ? " en-in-classroom" : ""}`}>
+      <div className="en-app-ambient" aria-hidden="true"><span/><span/><i/></div>
       <a className="en-skip-link" href="#main-content">{t("Skip to main content")}</a>
       <aside className="en-violet-sidebar">
         <Link href="/" className="en-violet-brand" aria-label="EduNexus home">

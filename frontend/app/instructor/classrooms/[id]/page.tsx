@@ -346,7 +346,7 @@ function PeopleTab({
         <button
           type="button"
           onClick={onRetry}
-          className="mt-5 rounded-xl bg-red-700 px-5 py-2.5 text-sm font-semibold text-white"
+          className="mt-5 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
         ><Localized>Try again</Localized></button>
       </div>
     );

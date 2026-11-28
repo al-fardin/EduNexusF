@@ -1,5 +1,6 @@
 "use client";
 
+import {AuthTransition} from "@/components/auth/auth-transition";
 import { AuthBrand } from "@/components/auth/auth-brand";
 import axios from "axios";
 import Link from "next/link";
@@ -100,7 +101,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <main aria-busy={loading} className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      {loading && <AuthTransition message="Creating your account" />}
       <div className="en-auth-grid">
       <AuthBrand />
       {created ? <div className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-8 en-auth-form" role="status">
@@ -187,7 +189,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading
             ? "Creating account..."

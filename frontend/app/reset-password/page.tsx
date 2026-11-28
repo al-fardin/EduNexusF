@@ -241,7 +241,7 @@ function ResetPasswordContent() {
           <button
             type="submit"
             disabled={status === "loading"}
-            className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground shadow-lg shadow-foreground/10 transition hover:-translate-y-0.5 hover:bg-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground shadow-lg shadow-foreground/10 transition hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {status === "loading"
               ? "Resetting password..."
@@ -388,8 +388,8 @@ function StatusCard({
         <div
           className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
             type === "success"
-              ? "bg-green-100 text-green-600"
-              : "bg-red-100 text-destructive"
+              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+              : "bg-destructive/15 text-destructive"
           }`}
         >
           {type === "success" ? (
@@ -409,7 +409,7 @@ function StatusCard({
 
         <Link
           href={buttonHref}
-          className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-muted-foreground"
+          className="mt-7 block w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90"
         >
           {buttonText}
         </Link>

@@ -289,7 +289,7 @@ export function StreamFeed({ classroomId, canManage }: StreamFeedProps) {
                 onClick={() => {
                   void streamQuery.refetch();
                 }}
-                className="mt-5 min-h-11 rounded-xl bg-red-700 px-5 py-2.5 text-sm font-semibold text-white"
+                className="mt-5 min-h-11 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
               >
                 Try again
               </button>
@@ -344,7 +344,7 @@ export function StreamFeed({ classroomId, canManage }: StreamFeedProps) {
                       key={post.id}
                       className={`rounded-2xl border p-4 sm:p-5 ${
                         post.is_pinned
-                          ? "border-amber-300 bg-secondary/60"
+                          ? "border-amber-500/40 bg-amber-500/5"
                           : "border-border bg-card"
                       }`}
                     >
@@ -365,7 +365,7 @@ export function StreamFeed({ classroomId, canManage }: StreamFeedProps) {
                               </span>
 
                               {post.is_pinned && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-900">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:text-amber-300">
                                   <Pin size={13} />
                                   Pinned
                                 </span>

@@ -12,6 +12,7 @@ const localAddresses = Object.values(networkInterfaces()).flatMap((entries) =>
 );
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   output: "standalone",
   distDir: process.env.EDUNEXUS_NEXT_DIST_DIR || ".next",
   allowedDevOrigins: ["localhost", "127.0.0.1", ...localAddresses],
