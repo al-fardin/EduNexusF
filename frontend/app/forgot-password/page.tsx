@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { AuthBrand } from "@/components/auth/auth-brand";
 import axios from "axios";
 import {
@@ -141,7 +142,7 @@ export default function ForgotPasswordPage() {
               }
               className="mt-5 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading
+              {(loading) && <LoadingIcon size={16}/>} {loading
                 ? "Sending reset link..."
                 : "Send reset link"}
             </button>

@@ -1,11 +1,12 @@
 "use client";
 
+import { LoadingIcon, LoadingIndicator } from "@/components/ui/loading-indicator";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ChevronDown, ChevronRight, Code2, FileCode2, FilePlus2, Folder, FolderOpen,
-  FolderPlus, Maximize2, Minimize2, Play, RefreshCw,
+  FolderPlus, Maximize2, Minimize2, Play,
   TerminalSquare, Trash2, X, Pencil, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { codingService, type ActivityEvent } from "@/services/coding";
@@ -21,7 +22,7 @@ import { loader, type OnMount } from "@monaco-editor/react";
 loader.config({ paths: { vs: "/monaco/vs" } });
 
 // The same Monaco editor engine used in VS Code, with EduNexus-specific colors.
-const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false, loading: () => <div className="flex h-full items-center justify-center animate-pulse text-sm text-muted-foreground">Loading editor…</div> });
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false, loading: () => <LoadingIndicator message="Loading editor"/> });
 
 type Props = { classroomId: string; examId: string; questionId: string; language: string; code: string; onChange: (next: string) => void };
 const maxWorkspaceBytes = 19500; // Existing exam answers cap each coding response at 20,000 bytes.
@@ -192,7 +193,7 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
         <button type="button" onClick={()=>setSidebar(v=>!v)} className={iconButton} title="Toggle file Explorer" aria-label="Toggle Explorer">{sidebar?<PanelLeftClose size={17}/>:<PanelLeftOpen size={17}/>}</button>
         <button type="button" onClick={()=>setExpanded(v=>!v)} className={iconButton} title={expanded?"Exit focus mode":"Expand editor"} aria-label="Toggle editor fullscreen">{expanded?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</button>
         <button type="button" onClick={()=>requestRun()} disabled={running || !entryLanguage} className="ml-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50">
-          {running?<RefreshCw size={15} className="animate-spin"/>:<Play size={15} fill="currentColor"/>}{running?"Running…":"Run"}
+          {running?<LoadingIcon size={15}/>:<Play size={15} fill="currentColor"/>}{running?"Running…":"Run"}
         </button>
       </div>
     </div>

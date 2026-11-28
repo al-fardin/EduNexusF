@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { QuestionText, QuestionPicture } from "./question-content";
 import { correctIndices, MCQAnswer } from "./mcq-fields";
 import { useState } from "react";
@@ -175,7 +177,7 @@ export function SavedExamPreview({
             </DialogDescription>
           </DialogHeader>
           {query.isPending ? (
-            <p>Loading preview…</p>
+            <LoadingIndicator message="Loading preview"/>
           ) : query.isError ? (
             <p role="alert">{examError(query.error)}</p>
           ) : (

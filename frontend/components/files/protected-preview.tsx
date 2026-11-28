@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { useEffect, useRef, useState } from "react";
 import { Eye, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 import Image from "next/image";
@@ -149,7 +151,7 @@ function PDFPages({ bytes }: { bytes: ArrayBuffer }) {
         </button>
       </div>
       <div ref={container} className="en-pdf-canvas-scroll">
-        {busy && <p role="status">Rendering page…</p>}
+        {busy && <LoadingIndicator message="Rendering page"/>}
         {error && <p role="alert">{error}</p>}
         <canvas ref={canvas} aria-label={`PDF page ${page}`} />
       </div>
@@ -243,9 +245,7 @@ export function ProtectedFilePreview({
             <DialogDescription>File preview</DialogDescription>
           </DialogHeader>
           {busy ? (
-            <div className="en-file-preview-loading" role="status">
-              Loading preview…
-            </div>
+            <LoadingIndicator message="Loading preview"/>
           ) : error ? (
             <p role="alert" className="en-chat-error">
               {error}

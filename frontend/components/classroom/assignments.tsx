@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { ScheduleCheck } from "./schedule-check";
 import { AudienceFields, AudienceBadge } from "./audience-fields";
 import { AssignmentRubricEditor } from "./grading-tools";
@@ -340,7 +342,7 @@ function AssignmentEditor({
       )}
       <div className="flex gap-2">
         <button className={btn} disabled={busy}>
-          {busy ? "Saving…" : "Save assignment"}
+          {(busy) && <LoadingIcon size={16}/>} {busy ? "Saving…" : "Save assignment"}
         </button>
         <button
           type="button"

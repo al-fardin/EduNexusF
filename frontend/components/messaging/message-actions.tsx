@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import {PersonalNoteLink} from "@/components/workspace/personal-note-link";
 import {ReportMessage} from "./message-moderation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -339,7 +341,7 @@ export function MessageActions({
                 )
               }
             >
-              {busy ? "Saving…" : edit ? "Save changes" : "Delete"}
+              {(busy) && <LoadingIcon size={16}/>} {busy ? "Saving…" : edit ? "Save changes" : "Delete"}
             </button>
           </div>
         </DialogContent>

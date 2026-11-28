@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { AudienceFields } from "./audience-fields";
 import { type AudienceRule, EVERYONE } from "@/services/audience";
 import { useState } from "react";
@@ -254,7 +256,7 @@ function DraftEditor({
       </p>
       <div className="flex gap-2">
         <Button type="submit" disabled={busy || !content.trim()}>
-          {busy ? "Saving…" : schedule ? "Schedule announcement" : "Save draft"}
+          {(busy) && <LoadingIcon size={16}/>} {busy ? "Saving…" : schedule ? "Schedule announcement" : "Save draft"}
         </Button>
         <Button
           type="button"

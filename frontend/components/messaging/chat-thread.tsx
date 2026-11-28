@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon, LoadingIndicator } from "@/components/ui/loading-indicator";
 import {Fragment} from "react";
 import {ConversationPins} from "./conversation-tools";
 import { sendTyping } from "@/store/realtime-store";
@@ -8,7 +10,8 @@ import { CallButtons } from "./call-buttons";
 import { StarredMessages } from "./starred-messages";
 import { GrowingEmojiButton } from "./growing-emoji";
 import { VoiceRecorder } from "./voice-recorder";
-import { ArrowLeft, LoaderCircle, Paperclip, X, Send } from "lucide-react";
+import { ArrowLeft, Paperclip, X, Send } from "lucide-react";
+
 import { type Conversation } from "@/services/messaging";
 import { MessageSettings } from "@/components/messaging/message-settings";
 import { EmojiPicker } from "@/components/messaging/emoji-picker";
@@ -138,11 +141,11 @@ export function ChatThread({
               disabled={query.isFetchingNextPage}
               onClick={() => void loadEarlier()}
             >
-              {query.isFetchingNextPage ? "Loading…" : "Load earlier messages"}
+              {(query.isFetchingNextPage) && <LoadingIcon size={16}/>} {query.isFetchingNextPage ? "Loading…" : "Load earlier messages"}
             </button>
           )}
           {query.isPending ? (
-            <p className="en-panel-empty">Loading messages…</p>
+            <LoadingIndicator message="Loading messages"/>
           ) : query.isError ? (
             <p role="alert" className="en-chat-error">
               {examError(query.error)}
@@ -281,7 +284,7 @@ export function ChatThread({
       )}
       {busy && file && (
         <div className="en-chat-upload" role="status">
-          <progress max={100} value={uploadProgress} />
+          <LoadingIcon size={24}/><progress max={100} value={uploadProgress} aria-label="Upload progress"/>
           <span>
             {uploadProgress < 100
               ? `Uploading ${uploadProgress}%`
@@ -440,7 +443,7 @@ export function ChatThread({
             aria-label="Send message"
           >
             {busy ? (
-              <LoaderCircle size={20} className="animate-spin" />
+              <LoadingIcon size={20}  />
             ) : (
               <Send size={20} />
             )}

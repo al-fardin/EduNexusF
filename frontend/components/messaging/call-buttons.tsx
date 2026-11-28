@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { useState, useEffect } from "react";
 import {
   Phone,
@@ -88,7 +90,7 @@ export function CallButtons({
           </DialogHeader>
 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={missedOnly} onChange={e=>setMissedOnly(e.target.checked)}/>Missed calls only</label>
           {history.isPending ? (
-            <p role="status">Loading calls…</p>
+            <LoadingIndicator message="Loading calls"/>
           ) : history.isError ? (
             <p role="alert">{examError(history.error)}</p>
           ) : history.data?.filter(call=>!missedOnly||call.reason==="missed").length === 0 ? (

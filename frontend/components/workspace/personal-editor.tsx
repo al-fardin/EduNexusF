@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
@@ -183,7 +185,7 @@ export function PersonalEditor({
               type="submit"
               disabled={!item.title.trim() || busy}
             >
-              {t(busy ? "Saving…" : "Save note")}
+              {(busy) && <LoadingIcon size={16}/>} {t(busy ? "Saving…" : "Save note")}
             </Button>
             {dirty && (
               <span role="status" className="text-xs text-muted-foreground">

@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import {Localized} from "@/components/ui/localized";
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth-store";
@@ -97,11 +99,7 @@ export default function StudentClassroomPage() {
     return (
       <AuthGuard>
         <main className="min-h-screen bg-background px-4 py-8">
-          <div className="en-workspace-container">
-            <div className="h-56 animate-pulse rounded-3xl bg-accent" />
-            <div className="mt-6 h-20 animate-pulse rounded-2xl bg-accent" />
-            <div className="mt-6 h-80 animate-pulse rounded-3xl bg-accent" />
-          </div>
+          <div className="en-workspace-container"><LoadingIndicator/></div>
         </main>
       </AuthGuard>
     );

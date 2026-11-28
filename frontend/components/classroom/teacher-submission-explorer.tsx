@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { loader } from "@monaco-editor/react";
@@ -18,7 +19,7 @@ import { detectFileLanguage, parseWorkspace, type Workspace } from "@/services/w
 loader.config({ paths: { vs: "/monaco/vs" } });
 const CodeViewer = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
-  loading: () => <div className="flex h-[360px] items-center justify-center text-sm text-muted-foreground">Loading read-only code viewer…</div>,
+  loading: () => <LoadingIndicator message="Loading read-only code viewer"/>,
 });
 
 type StudentAttempt = ExamSubmission & { student_roll?: string | null };
@@ -92,7 +93,7 @@ export function TeacherSubmissionExplorer({ classroomId, examId, onClose }: { cl
       <div><h3 className="flex items-center gap-2 text-lg font-bold"><Users size={20}/> Student submissions</h3><p className={`mt-1 text-xs ${muted}`}>Review submitted folders and files by student.</p></div>
       <button type="button" className={`inline-flex items-center gap-1 rounded-lg border ${border} bg-card px-3 py-2 text-sm hover:bg-secondary`} onClick={onClose}><X size={15}/> Close review</button>
     </header>
-    {(attempts.isPending || exam.isPending) && <div role="status" className="space-y-3 p-5"><div className="h-9 animate-pulse rounded bg-secondary"/><div className="h-52 animate-pulse rounded bg-secondary"/></div>}
+    {(attempts.isPending || exam.isPending) && <div role="status" className="space-y-3 p-5"><LoadingIndicator/></div>}
     {(attempts.isError || exam.isError) && <p role="alert" className="p-4 text-sm text-destructive">Could not load submissions: {examError(attempts.error || exam.error)}</p>}
     {!attempts.isPending && !exam.isPending && !attempts.isError && !exam.isError && <>
       <div className={`flex flex-wrap items-center justify-between gap-2 border-b ${border} px-4 py-3`}>

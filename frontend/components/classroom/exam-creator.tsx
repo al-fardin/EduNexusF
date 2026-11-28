@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { clientId } from "@/lib/client-id";
 import { ExamReadiness } from "./exam-readiness";
 import { QuestionImport } from "./question-import";
@@ -17,7 +19,8 @@ import {
 } from "@/components/classroom/question-bank";
 
 import { useMutation } from "@tanstack/react-query";
-import { Plus, Save, Trash2, LoaderCircle } from "lucide-react";
+import { Plus, Save, Trash2 } from "lucide-react";
+
 import { useState } from "react";
 import {
   examError,
@@ -442,7 +445,7 @@ export function ExamCreator({
           }}
         >
           {mutation.isPending ? (
-            <LoaderCircle size={16} className="animate-spin" />
+            <LoadingIcon size={16}  />
           ) : (
             <Save size={16} />
           )}{" "}

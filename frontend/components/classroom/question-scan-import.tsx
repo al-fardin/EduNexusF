@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useEffect, useRef, useState } from "react";
 import { recognizeQuestionScan, type ScanText } from "@/lib/question-ocr";
 import { parseQuestionText, type ImportRow } from "@/lib/question-import";
@@ -154,6 +156,7 @@ export function QuestionScanImport({
       </div>
       {progress && (
         <p role="status" className="text-sm">
+          {busy && <LoadingIcon size={20}/>}
           {progress}
         </p>
       )}

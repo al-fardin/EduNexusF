@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/store/auth-store";
@@ -139,7 +141,7 @@ export function ExamReadiness({
           disabled={busy?.key === key || disabled}
           onClick={() => void check()}
         >
-          {busy?.key === key ? "Checking…" : "Check saved data & schedule"}
+          {(busy?.key === key) && <LoadingIcon size={16}/>} {busy?.key === key ? "Checking…" : "Check saved data & schedule"}
         </button>
         {error && (
           <p role="alert" className="text-sm text-destructive">

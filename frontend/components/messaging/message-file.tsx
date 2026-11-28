@@ -1,7 +1,10 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { ProtectedFilePreview } from "@/components/files/protected-preview";
 import { useState } from "react";
-import { Download, FileText, LoaderCircle } from "lucide-react";
+import { Download, FileText } from "lucide-react";
+
 import { messaging, type ChatMessage } from "@/services/messaging";
 import { examError } from "@/services/exams";
 import { VoiceMessage } from "./voice-message";
@@ -55,7 +58,7 @@ export function MessageFile({
           </small>
         </span>
         {busy ? (
-          <LoaderCircle size={18} className="animate-spin" />
+          <LoadingIcon size={18}  />
         ) : (
           <Download size={18} />
         )}

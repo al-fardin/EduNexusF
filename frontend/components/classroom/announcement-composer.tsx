@@ -1,8 +1,11 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { AudienceFields } from "./audience-fields";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, Megaphone, Send } from "lucide-react";
+import { Megaphone, Send } from "lucide-react";
+
 import { type FormEvent, useState } from "react";
 
 import {
@@ -158,7 +161,7 @@ export function AnnouncementComposer({
           >
             {createMutation.isPending ? (
               <>
-                <LoaderCircle size={18} className="animate-spin" />
+                <LoadingIcon size={18}  />
                 Posting...
               </>
             ) : (

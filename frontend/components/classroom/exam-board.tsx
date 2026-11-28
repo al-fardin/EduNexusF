@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import { PersonalNoteLink } from "@/components/workspace/personal-note-link";
 import { ExamSets } from "./exam-sets";
 import { ExamReadiness } from "./exam-readiness";
@@ -10,14 +12,8 @@ import { TeacherSubmissionExplorer } from "@/components/classroom/teacher-submis
 import { QuestionBank } from "@/components/classroom/question-bank";
 import { clearActiveExam, rememberActiveExam } from "@/lib/exam-resume";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Plus,
-  Send,
-  ClipboardList,
-  Play,
-  Eye,
-  LoaderCircle,
-} from "lucide-react";
+import { Plus, Send, ClipboardList, Play, Eye } from "lucide-react";
+
 import { useEffect, useState } from "react";
 import { examError, examService, type ExamInfo } from "@/services/exams";
 import { useExamSelection } from "./use-exam-selection";
@@ -76,7 +72,7 @@ export function ExamBoard({ classroomId, canManage }: Props) {
   if (!canManage && restoreState === "checking") {
     return (
       <div className={panel} role="status">
-        <LoaderCircle size={18} className="mr-2 inline animate-spin" />{" "}
+        <LoadingIcon size={18} className="mr-2 inline" />{" "}
         Restoring your exam session…
       </div>
     );
@@ -375,7 +371,7 @@ function ExamCard({
                 disabled={busy}
               >
                 {busy ? (
-                  <LoaderCircle size={15} className="animate-spin" />
+                  <LoadingIcon size={15}  />
                 ) : (
                   <Send size={15} />
                 )}{" "}
@@ -426,23 +422,4 @@ function TeacherReview({
 }
 
 /** Lightweight placeholders while real API requests are in flight. */
-function ExamListSkeleton({ small = false }: { small?: boolean }) {
-  return (
-    <div
-      className={`grid gap-4 ${small ? "" : "lg:grid-cols-2"}`}
-      role="status"
-      aria-label="Loading exams"
-    >
-      {Array.from({ length: small ? 2 : 4 }, (_, i) => (
-        <div key={i} className={panel}>
-          <div className="en-skeleton mb-5 h-5 w-24 rounded-full" />
-          <div className="en-skeleton mb-3 h-6 w-3/5 rounded-md" />
-          <div className="en-skeleton mb-4 h-4 w-5/6 rounded-md" />
-          <div className="en-skeleton mb-2 h-3 w-1/2 rounded-md" />
-          <div className="en-skeleton mt-7 h-10 w-40 rounded-xl" />
-        </div>
-      ))}
-      <span className="sr-only">Loading classroom examinations…</span>
-    </div>
-  );
-}
+function ExamListSkeleton({small=false}:{small?:boolean}){return <LoadingIndicator compact={small} message="Loading exams"/>}

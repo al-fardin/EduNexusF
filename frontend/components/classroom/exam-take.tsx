@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import { QuestionText, QuestionPicture } from "./question-content";
 import { ExamReadingView } from "./exam-reading-view";
 import { MCQAnswer } from "./mcq-fields";
@@ -17,15 +18,8 @@ import { CodingWorkbench } from "@/components/classroom/coding-workbench";
 import { codingService } from "@/services/coding";
 import { clearActiveExam } from "@/lib/exam-resume";
 
-import {
-  Clock3,
-  Send,
-  CheckCircle2,
-  Save,
-  LockKeyhole,
-  LoaderCircle,
-  ArrowLeft,
-} from "lucide-react";
+import { Clock3, Send, CheckCircle2, Save, LockKeyhole, ArrowLeft } from "lucide-react";
+
 import {
   useCallback,
   useEffect,
@@ -576,7 +570,7 @@ export function ExamTake({
                   onClick={() => void save()}
                 >
                   {saving ? (
-                    <LoaderCircle size={17} className="animate-spin" />
+                    <LoadingIcon size={17}  />
                   ) : (
                     <Save size={17} />
                   )}{" "}
@@ -588,7 +582,7 @@ export function ExamTake({
                   onClick={() => void submit()}
                 >
                   {saving ? (
-                    <LoaderCircle size={17} className="animate-spin" />
+                    <LoadingIcon size={17}  />
                   ) : (
                     <Send size={17} />
                   )}{" "}
@@ -605,25 +599,4 @@ export function ExamTake({
     </ExamReadingView>
   );
 }
-function ExamSessionSkeleton() {
-  return (
-    <div className="space-y-4" role="status" aria-label="Joining exam">
-      <div className="flex items-center gap-3">
-        <LoaderCircle size={18} className="animate-spin text-foreground" />
-        <span className="text-sm text-muted-foreground">Loading exam…</span>
-      </div>
-      <div className="en-skeleton h-10 w-36 rounded-xl" />
-      {Array.from({ length: 2 }, (_, i) => (
-        <div
-          key={i}
-          className="rounded-[24px] border border-border bg-background p-5"
-        >
-          <div className="en-skeleton h-5 w-2/3 rounded-lg" />
-          <div className="en-skeleton mt-5 h-12 w-full rounded-xl" />
-          <div className="en-skeleton mt-3 h-12 w-full rounded-xl" />
-        </div>
-      ))}
-      <span className="sr-only">Exam details are loading…</span>
-    </div>
-  );
-}
+function ExamSessionSkeleton() {return <LoadingIndicator message="Loading exam"/>;}

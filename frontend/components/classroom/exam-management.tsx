@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { ExamReadiness } from "./exam-readiness";
 import { QuestionImport } from "./question-import";
 import { QuestionMediaFields } from "./question-image-editor";
@@ -151,7 +153,7 @@ function ExamManagementBody({
         <p className="mt-1 text-sm text-muted-foreground"></p>
       </div>
       {listing.isPending && (
-        <div className="h-16 animate-pulse rounded-2xl bg-secondary" />
+        <LoadingIndicator message="Loading"/>
       )}
       <label className="block text-sm font-semibold">
         Select exam
@@ -175,7 +177,7 @@ function ExamManagementBody({
       {!!selected && (
         <div className="space-y-4">
           {details.isPending && (
-            <div className="h-28 animate-pulse rounded-2xl bg-secondary" />
+            <LoadingIndicator message="Loading"/>
           )}
           {details.data && (
             <>
@@ -249,16 +251,7 @@ function ExamManagementBody({
               teacher marks before publication. Students with no submission are
               eligible only after the deadline.
             </p>
-            {grades.isPending && (
-              <div className="space-y-2">
-                {[1, 2].map((i) => (
-                  <div
-                    className="h-16 animate-pulse rounded-xl bg-secondary"
-                    key={i}
-                  />
-                ))}
-              </div>
-            )}
+            {grades.isPending && <LoadingIndicator/>}
             {grades.isError && (
               <p role="alert" className="text-sm text-destructive">
                 {examError(grades.error)}

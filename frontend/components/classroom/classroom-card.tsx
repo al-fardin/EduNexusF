@@ -1,18 +1,10 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import {useAuthStore} from "@/store/auth-store";
 import Link from "next/link";
-import {
-  Archive,
-  ArrowUpRight,
-  BookOpen,
-  Copy,
-  Info,
-  LoaderCircle,
-  LogOut,
-  MoreHorizontal,
-  RotateCcw,
-  Trash2,
-} from "lucide-react";
+import { Archive, ArrowUpRight, BookOpen, Copy, Info, LogOut, MoreHorizontal, RotateCcw, Trash2 } from "lucide-react";
+
 import { useQuery } from "@tanstack/react-query";
 import { CourseCover } from "@/components/classroom/course-cover";
 import { useCardLight } from "@/components/visual/use-card-light";
@@ -100,7 +92,7 @@ export function ClassroomCard({
             disabled={busy}
           >
             {busy ? (
-              <LoaderCircle size={19} className="animate-spin" />
+              <LoadingIcon size={19}  />
             ) : (
               <MoreHorizontal size={21} />
             )}

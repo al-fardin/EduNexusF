@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { AuthBrand } from "@/components/auth/auth-brand";
 import axios from "axios";
 import {
@@ -421,13 +422,7 @@ function StatusCard({
 function PageLoader() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-border border-t-zinc-950" />
-
-        <p className="mt-4 text-sm text-muted-foreground">
-          Loading reset page...
-        </p>
-      </div>
+      <div className="text-center"><LoadingIndicator/></div>
     </main>
   );
 }

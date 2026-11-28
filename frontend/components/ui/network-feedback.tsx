@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { WifiOff } from "lucide-react";
@@ -51,8 +53,8 @@ export function NetworkFeedback() {
   return (
     <>
       {visible && (
-        <div className="en-save-progress" role="status" aria-label="Saving">
-          <span />
+        <div className="en-save-indicator" role="status" aria-label="Saving">
+          <LoadingIcon size={24}/>
           <span className="sr-only">Saving…</span>
         </div>
       )}
@@ -77,7 +79,7 @@ export function NetworkFeedback() {
               }
             }}
           >
-            {retrying ? "Retrying…" : "Retry"}
+            {(retrying) && <LoadingIcon size={16}/>} {retrying ? "Retrying…" : "Retry"}
           </button>
         </div>
       )}

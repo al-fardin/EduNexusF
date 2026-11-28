@@ -1,4 +1,5 @@
 "use client";
+import {LoadingIcon} from "@/components/ui/loading-indicator";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -136,7 +137,7 @@ function UpdateAction({ release }: { release: AndroidRelease }) {
             }
           }}
         >
-          {t(busy ? "Updating…" : "Verify & install update")}
+          {busy && <LoadingIcon size={16}/>} {t(busy ? "Updating…" : "Verify & install update")}
         </Button>
       ) : (
         <a className="en-outline-button" href={release.url} download>

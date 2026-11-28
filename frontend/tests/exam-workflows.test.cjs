@@ -3,6 +3,7 @@ const {loadComponent}=require('./helpers/classroom-component-render.cjs');
 const images=loadComponent('lib/question-images.ts',{}),parser=loadComponent('lib/question-import.ts',{'./question-images':images}),readiness=loadComponent('lib/exam-readiness.ts',{'./question-import':parser});
 const {parseExamDisplay}=loadComponent('lib/exam-display.ts',{});
 function nodes(tree,predicate){const out=[];function visit(n){if(!n||typeof n!=='object')return;if(predicate(n))out.push(n);React.Children.forEach(n.props?.children,visit)}visit(tree);return out;}
+function text(node){if(typeof node==='string'||typeof node==='number')return String(node);return React.Children.toArray(node?.props?.children).map(text).join('').trim();}
 test('readiness identifies editable fields and never treats missing keys as publishable',()=>{
  const draft={title:'Final exam',description:'',starts_at:'2030-01-01T10:00:00Z',ends_at:'2030-01-01T11:00:00Z',duration_minutes:30,questions:[{id:'q',kind:'mcq',prompt:'Select prime',points:5,options:['2','4']}]};
  let report=readiness.inspectDraft(draft,0);assert.equal(report.ready,false);assert.ok(report.issues.some(i=>i.question_id==='q'&&/missing/.test(i.message)));
@@ -19,7 +20,7 @@ test('set generation is preview-only and approval forwards the reviewed snapshot
  const fake={...React,useState(initial){const i=cursor++;if(!(i in slots))slots[i]=initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v]}};
  const {ExamSets}=loadComponent('components/classroom/exam-sets.tsx',{react:fake,'@tanstack/react-query':{useQueryClient:()=>({invalidateQueries:async()=>{}})},'@/lib/api':{api:{post:async(path,body)=>{calls.push({path,body});return {data:{data:preview}}}}},'@/services/exams':{examError:e=>e.message},'./exam-preview':{},'./exam-presentation':{}});
  function render(){cursor=0;return ExamSets({exam:{id:'exam',classroom_id:'class',title:'Final',duration_minutes:30}})}
- let tree=render();assert.equal(calls.length,0);nodes(tree,n=>n.type==='button'&&n.props.children==='Generate preview')[0].props.onClick();await new Promise(r=>setImmediate(r));assert.equal(calls.length,1);assert.match(calls[0].path,/preview$/);
+ let tree=render();assert.equal(calls.length,0);nodes(tree,n=>n.type==='button'&&text(n)==='Generate preview')[0].props.onClick();await new Promise(r=>setImmediate(r));assert.equal(calls.length,1);assert.match(calls[0].path,/preview$/);
  tree=render();let approve=nodes(tree,n=>n.type==='button'&&n.props.children==='Approve & create private drafts')[0];assert.equal(approve.props.disabled,true);
  nodes(tree,n=>n.type==='input'&&n.props.type==='checkbox')[0].props.onChange({target:{checked:true}});tree=render();approve=nodes(tree,n=>n.type==='button'&&n.props.children==='Approve & create private drafts')[0];assert.equal(approve.props.disabled,false);approve.props.onClick();await new Promise(r=>setImmediate(r));assert.match(calls[1].path,/approve$/);assert.equal(calls[1].body.receipt,'signed-preview');assert.equal(calls[1].body.sets,preview.sets);
 });
@@ -101,7 +102,7 @@ test("failed readiness recheck clears a previously successful report", async () 
       tree,
       (n) =>
         n.type === "button" &&
-        ["Check saved data & schedule", "Checking…"].includes(n.props.children),
+        ["Check saved data & schedule", "Checking…"].includes(text(n)),
     )[0];
   button(render()).props.onClick();
   await new Promise((r) => setImmediate(r));

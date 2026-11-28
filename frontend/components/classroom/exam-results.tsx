@@ -1,9 +1,12 @@
 "use client";
+
+import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import { QuestionText, QuestionPicture } from "./question-content";
 import { prettyWorkspaceAnswer } from "@/services/workspace-phase6";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Eye, LoaderCircle } from "lucide-react";
+import { Download, Eye } from "lucide-react";
+
 import { examManagement } from "@/services/exam-management";
 import { examError } from "@/services/exams";
 
@@ -38,16 +41,7 @@ export function ExamResults({
           stays private to each student.
         </p>
       </div>
-      {listing.isPending && (
-        <div className="space-y-3" aria-label="Loading published results">
-          {[1, 2, 3].map((i) => (
-            <div
-              className="h-20 animate-pulse rounded-2xl bg-secondary"
-              key={i}
-            />
-          ))}
-        </div>
-      )}
+      {listing.isPending && <LoadingIndicator/>}
       {listing.isError && (
         <p
           role="alert"
@@ -85,7 +79,7 @@ export function ExamResults({
               className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-semibold hover:bg-secondary disabled:opacity-50"
             >
               {downloading === id ? (
-                <LoaderCircle className="animate-spin" size={16} />
+                <LoadingIcon  size={16} />
               ) : (
                 <Download size={16} />
               )}{" "}
@@ -135,7 +129,7 @@ export function ExamResults({
           {!canManage && expanded === id && (
             <div className="rounded-xl bg-secondary p-4">
               {own.isPending ? (
-                <div className="h-20 animate-pulse rounded-xl bg-card" />
+                <LoadingIndicator message="Loading"/>
               ) : own.isError ? (
                 <p role="status" className="text-sm">
                   Your individual result is not published (or you did not

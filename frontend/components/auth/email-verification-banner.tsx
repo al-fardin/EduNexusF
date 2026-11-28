@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import axios from "axios";
 import { MailWarning, RefreshCw } from "lucide-react";
 import { useState } from "react";
@@ -84,11 +85,9 @@ export function EmailVerificationBanner({
           }
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <RefreshCw
-            className={`h-4 w-4 ${
-              sending ? "animate-spin" : ""
-            }`}
-          />
+          {sending ? <LoadingIcon size={16}/> : <RefreshCw
+
+          />}
 
           {sending
             ? "Sending..."

@@ -1,11 +1,14 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import {InstitutionPlacementFields} from "@/components/institutions/placement-fields";
 import type {InstitutionPlacement} from "@/services/institutions";
 import { JoinPolicyFields } from "@/components/classroom/join-policy-fields";
 import type { JoinPolicy } from "@/services/enrollment";
 
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, BookOpen, LoaderCircle, School } from "lucide-react";
+import { ArrowLeft, BookOpen, School } from "lucide-react";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -231,7 +234,7 @@ export default function CreateClassroomPage() {
                 >
                   {createMutation.isPending ? (
                     <>
-                      <LoaderCircle size={18} className="animate-spin" />
+                      <LoadingIcon size={18}  />
                       Creating...
                     </>
                   ) : (

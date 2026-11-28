@@ -1,17 +1,13 @@
 "use client";
+
+import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import { ChatThread } from "./chat-thread";
 import { useRealtimeStore } from "@/store/realtime-store";
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  ChevronRight,
-  LoaderCircle,
-  MessageSquare,
-  Plus,
-  Search,
-} from "lucide-react";
+import { ArrowLeft, ChevronRight, MessageSquare, Plus, Search } from "lucide-react";
+
 import { messaging } from "@/services/messaging";
 import { useAuthStore } from "@/store/auth-store";
 import {
@@ -110,7 +106,7 @@ export function Inbox() {
         <aside className="en-message-classes">
           <h2>Your classes</h2>
           {classes.isPending ? (
-            <p className="en-panel-empty">Loading classes…</p>
+            <LoadingIndicator message="Loading classes"/>
           ) : classes.isError ? (
             <p role="alert" className="en-chat-error">
               {examError(classes.error)}
@@ -181,7 +177,7 @@ export function Inbox() {
               Choose a class to view its conversations.
             </p>
           ) : conversations.isPending ? (
-            <p className="en-panel-empty">Loading conversations…</p>
+            <LoadingIndicator message="Loading conversations"/>
           ) : conversations.isError ? (
             <p role="alert" className="en-chat-error">
               {examError(conversations.error)}
@@ -268,7 +264,7 @@ export function Inbox() {
           </label>
           <div className="en-recipient-list">
             {recipients.isPending ? (
-              <p>Loading class members…</p>
+              <LoadingIndicator message="Loading class members"/>
             ) : recipients.isError ? (
               <p role="alert">{examError(recipients.error)}</p>
             ) : (
@@ -288,7 +284,7 @@ export function Inbox() {
                       <small>{r.role}</small>
                     </span>
                     {creating ? (
-                      <LoaderCircle size={17} className="animate-spin" />
+                      <LoadingIcon size={17}  />
                     ) : (
                       <ChevronRight size={17} />
                     )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { ChevronRight, Eye, EyeOff, X } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -281,37 +282,7 @@ export function PasswordStrength({ password }: { password: string }) {
   );
 }
 
-export function SettingsSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="mb-6 rounded-2xl border border-border bg-card p-5">
-        <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-accent" />
-
-          <div className="flex-1">
-            <div className="h-4 w-40 rounded bg-accent" />
-            <div className="mt-3 h-3 w-56 rounded bg-background" />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-5 md:grid-cols-2">
-        {[1, 2].map((item) => (
-          <div
-            key={item}
-            className="rounded-3xl border border-border bg-card p-6"
-          >
-            <div className="h-12 w-12 rounded-2xl bg-accent" />
-            <div className="mt-7 h-3 w-28 rounded bg-background" />
-            <div className="mt-4 h-6 w-52 rounded bg-accent" />
-            <div className="mt-4 h-3 w-full rounded bg-background" />
-            <div className="mt-2 h-3 w-3/4 rounded bg-background" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+export function SettingsSkeleton() {return <LoadingIndicator message="Loading profile"/>;}
 
 export function Message({
   type,

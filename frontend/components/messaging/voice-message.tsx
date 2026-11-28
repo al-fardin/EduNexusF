@@ -1,6 +1,9 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useEffect, useRef, useState } from "react";
-import { Mic, Play, LoaderCircle } from "lucide-react";
+import { Mic, Play } from "lucide-react";
+
 import { api } from "@/lib/api";
 import { examError } from "@/services/exams";
 export function VoiceMessage({
@@ -65,7 +68,7 @@ export function VoiceMessage({
             onClick={() => void load()}
           >
             {busy ? (
-              <LoaderCircle size={17} className="animate-spin" />
+              <LoadingIcon size={17}  />
             ) : (
               <Play size={18} />
             )}

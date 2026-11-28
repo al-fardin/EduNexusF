@@ -1,7 +1,10 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, LoaderCircle } from "lucide-react";
+import { BellRing } from "lucide-react";
+
 import { push, pushDeviceID } from "@/services/push";
 import { useAuthStore } from "@/store/auth-store";
 import { examError } from "@/services/exams";
@@ -122,7 +125,7 @@ export function PushSettings() {
         disabled={busy || query.isPending || (!enabled && !configured)}
         onClick={() => void toggle()}
       >
-        {busy ? <LoaderCircle size={16} className="animate-spin" /> : null}
+        {busy ? <LoadingIcon size={16}  /> : null}
         {enabled
           ? "Disable on this device"
           : configured

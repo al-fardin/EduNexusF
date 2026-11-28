@@ -1,7 +1,9 @@
 "use client";
 
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useQuery } from "@tanstack/react-query";
-import { ShieldAlert, LoaderCircle } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
+
 import { codingService } from "@/services/coding";
 import { examError } from "@/services/exams";
 
@@ -11,7 +13,7 @@ export function ExamActivityReport({ classroomId, examId, attemptId }: { classro
     queryFn: () => codingService.report(classroomId, examId, attemptId),
     staleTime: 5000,
   });
-  if (report.isPending) return <div role="status" className="mt-4 flex items-center gap-2 rounded-xl bg-secondary p-3 text-xs text-muted-foreground"><LoaderCircle size={15} className="animate-spin" /> Loading activity evidence…</div>;
+  if (report.isPending) return <div role="status" className="mt-4 flex items-center gap-2 rounded-xl bg-secondary p-3 text-xs text-muted-foreground"><LoadingIcon size={15}  /> Loading activity evidence…</div>;
   if (report.isError) return <p role="alert" className="mt-3 text-xs text-destructive">Activity report unavailable: {examError(report.error)}</p>;
   const data = report.data;
   if (!data) return <p role="status" className="mt-3 text-xs text-muted-foreground">No activity report is available yet.</p>;

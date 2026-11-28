@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import {AuthTransition} from "@/components/auth/auth-transition";
 import { AuthBrand } from "@/components/auth/auth-brand";
 import axios from "axios";
@@ -191,7 +192,7 @@ export default function RegisterPage() {
           disabled={loading}
           className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading
+          {(loading) && <LoadingIcon size={16}/>} {loading
             ? "Creating account..."
             : "Create account"}
         </button>

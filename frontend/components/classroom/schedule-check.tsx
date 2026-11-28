@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useAuthStore } from "@/store/auth-store";
 import { useState } from "react";
 import { api } from "@/lib/api";
@@ -106,7 +108,7 @@ export function ScheduleCheck({
         disabled={!user || !valid || busy || disabled}
         onClick={() => void check()}
       >
-        {t(busy ? "Checking…" : "Check schedule")}
+        {(busy) && <LoadingIcon size={16}/>} {t(busy ? "Checking…" : "Check schedule")}
       </Button>
       {checked === encoded &&
         (busy ? (

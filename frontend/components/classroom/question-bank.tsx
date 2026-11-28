@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon, LoadingIndicator } from "@/components/ui/loading-indicator";
 import { clientId } from "@/lib/client-id";
 import { QuestionImport } from "./question-import";
 import { BankFiltersFields, BankEntryTools } from "./bank-catalogue-tools";
@@ -96,7 +98,7 @@ export function SaveBankQuestion({
               }
             }}
           >
-            {busy ? "Saving…" : "Save question"}
+            {(busy) && <LoadingIcon size={16}/>} {busy ? "Saving…" : "Save question"}
           </button>
         </div>
       )}
@@ -229,9 +231,7 @@ export function QuestionBank({
           </div>
         )}
         {list.isPending && (
-          <p role="status" className="text-sm">
-            Loading question bank…
-          </p>
+          <LoadingIndicator message="Loading question bank"/>
         )}
         {(error || list.isError) && (
           <p role="alert" className="text-sm text-destructive">

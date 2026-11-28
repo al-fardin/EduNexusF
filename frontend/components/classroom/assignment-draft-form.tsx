@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import {Localized} from "@/components/ui/localized";
 import { useState } from "react";
 import { useAssignmentDraft } from "./use-assignment-draft";
@@ -27,9 +29,9 @@ export function AssignmentDraftForm({ classroomId, assignment: a, baseVersion }:
    <label className="block text-sm font-semibold"><Localized>Your answer</Localized><textarea aria-label="Your answer" rows={4} maxLength={20000} value={draft.answer} className="mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm" disabled={busy || draft.loading || draft.locked || draft.conflicted} onChange={e => draft.editAnswer(e.target.value)}/></label>
    <label className="block text-sm">Attach file · up to 15 MB<input type="file" className="mt-1 w-full rounded-xl border border-border bg-card p-2 text-sm" disabled={busy || draft.loading || draft.locked || draft.conflicted} onChange={e => draft.editFile(e.target.files?.[0] ?? null)} accept=".pdf,.txt,.md,.zip,.docx,.png,.jpg,.jpeg,.py,.cpp,.c,.h,.java,.js,.ts,.go,.rs"/></label>
    {draft.file && <p className="break-all text-xs text-muted-foreground">Saved attachment: {draft.file.name}</p>}
-   {draft.record?.value.state === "syncing" && <div role="status" className="en-chat-upload"><progress aria-label="Submission upload" value={draft.progress} max={100}/><span>{draft.progress < 100 ? `Uploading ${draft.progress}%` : "Confirming…"}</span></div>}
+   {draft.record?.value.state === "syncing" && <div role="status" className="en-chat-upload"><LoadingIcon size={24}/><progress aria-label="Submission upload" value={draft.progress} max={100}/><span>{draft.progress < 100 ? `Uploading ${draft.progress}%` : "Confirming…"}</span></div>}
    {draft.record?.value.error && <ErrorState message={draft.record.value.error}/>}
-   <div className="flex flex-wrap gap-2"><Button type="submit" disabled={busy || draft.loading || draft.locked || draft.conflicted || draft.expectedVersion < 0 || (!draft.answer.trim() && !draft.file)}>{busy ? "Saving…" : draft.locked ? "Submission queued" : "Submit assignment"}</Button>
+   <div className="flex flex-wrap gap-2"><Button type="submit" disabled={busy || draft.loading || draft.locked || draft.conflicted || draft.expectedVersion < 0 || (!draft.answer.trim() && !draft.file)}>{(busy) && <LoadingIcon size={16}/>} {busy ? "Saving…" : draft.locked ? "Submission queued" : "Submit assignment"}</Button>
    {!draft.locked && !draft.conflicted && <Button type="button" variant="outline" disabled={busy || draft.loading} onClick={() => { setBusy(true); void draft.persist(false).catch(e => draft.setError(examError(e))).finally(() => setBusy(false)); }}><Localized>Save draft</Localized></Button>}
    {draft.conflicted && <Button type="button" variant="outline" onClick={() => void draft.reload().catch(e => draft.setError(examError(e)))}>Reload saved draft</Button>}
    {draft.record?.value.state === "blocked" && !draft.conflicted && baseVersion !== undefined && <Button type="button" variant="outline" disabled={busy} onClick={() => { setBusy(true); void draft.persist(false, baseVersion).catch(e => draft.setError(examError(e))).finally(() => setBusy(false)); }}>Use current submission version</Button>}</div>

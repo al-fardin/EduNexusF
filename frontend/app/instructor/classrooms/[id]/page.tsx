@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import {Localized} from "@/components/ui/localized";
 import {Gradebook} from "@/components/classroom/gradebook";
 import {ActivityHistory} from "@/components/classroom/activity-history";
@@ -11,15 +13,8 @@ import { ExamManagement } from "@/components/classroom/exam-management";
 import { ExamBoard } from "@/components/classroom/exam-board";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  ClipboardCheck,
-  LoaderCircle,
-  Megaphone,
-  ShieldAlert,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, ClipboardCheck, Megaphone, ShieldAlert, Trash2, Users } from "lucide-react";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -132,13 +127,7 @@ export default function ClassroomDetailsPage() {
     return (
       <AuthGuard>
         <main className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
-          <div className="en-workspace-container">
-            <div className="h-56 animate-pulse rounded-3xl bg-accent" />
-
-            <div className="mt-6 h-20 animate-pulse rounded-2xl bg-accent" />
-
-            <div className="mt-6 h-80 animate-pulse rounded-3xl bg-accent" />
-          </div>
+          <div className="en-workspace-container"><LoadingIndicator/></div>
         </main>
       </AuthGuard>
     );
@@ -320,14 +309,7 @@ function PeopleTab({
   if (isPending) {
     return (
       <div className="space-y-3">
-        {Array.from({
-          length: 4,
-        }).map((_, index) => (
-          <div
-            key={index}
-            className="h-24 animate-pulse rounded-2xl border border-border bg-card"
-          />
-        ))}
+        {<LoadingIndicator/>}
       </div>
     );
   }
@@ -456,7 +438,7 @@ function PeopleSection({
                     className="inline-flex items-center gap-2 rounded-xl border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {removing ? (
-                      <LoaderCircle size={15} className="animate-spin" />
+                      <LoadingIcon size={15}  />
                     ) : (
                       <Trash2 size={15} />
                     )}

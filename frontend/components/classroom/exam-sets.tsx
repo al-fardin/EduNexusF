@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -87,7 +89,7 @@ export function ExamSets({ exam }: { exam: ExamInfo }) {
               .finally(() => setBusy(false));
           }}
         >
-          {busy ? "Preparing…" : "Generate preview"}
+          {(busy) && <LoadingIcon size={16}/>} {busy ? "Preparing…" : "Generate preview"}
         </button>
         {error && (
           <p role="alert" className="break-words text-sm text-destructive">

@@ -1,6 +1,9 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useState } from "react";
-import { LoaderCircle, SmilePlus, X } from "lucide-react";
+import { SmilePlus, X } from "lucide-react";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { messaging, type ChatMessage } from "@/services/messaging";
 import { useAuthStore } from "@/store/auth-store";
@@ -88,7 +91,7 @@ export function MessageReactions({
         }}
       >
         {busy ? (
-          <LoaderCircle size={16} className="animate-spin" />
+          <LoadingIcon size={16}  />
         ) : (
           <SmilePlus size={17} />
         )}

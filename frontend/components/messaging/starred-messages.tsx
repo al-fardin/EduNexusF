@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { useEffect, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Star, Reply } from "lucide-react";
@@ -50,7 +52,7 @@ export function StarredMessages({
           <DialogDescription>Saved privately for you.</DialogDescription>
         </DialogHeader>
         {query.isPending ? (
-          <p>Loading messages…</p>
+          <LoadingIndicator message="Loading messages"/>
         ) : query.isError ? (
           <p role="alert">{examError(query.error)}</p>
         ) : (

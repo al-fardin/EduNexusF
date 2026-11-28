@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { AudienceFields, AudienceBadge } from "./audience-fields";
 import { AnnouncementDrafts } from "./announcement-drafts";
 import { AnnouncementDetailsModal } from "./announcement-details";
@@ -16,21 +18,8 @@ import { ArrowLeft, FileUp, MoreHorizontal } from "lucide-react";
 import { ExamMarksheetDownload } from "@/components/classroom/exam-marksheet-download";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  LoaderCircle,
-  Megaphone,
-  Pencil,
-  Pin,
-  PinOff,
-  RefreshCw,
-  Save,
-  Trash2,
-  X,
-} from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Eye, Megaphone, Pencil, Pin, PinOff, RefreshCw, Save, Trash2, X } from "lucide-react";
+
 import { type FormEvent, useState } from "react";
 
 import { AnnouncementComposer } from "@/components/classroom/announcement-composer";
@@ -261,10 +250,10 @@ export function StreamFeed({ classroomId, canManage }: StreamFeedProps) {
             }}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RefreshCw
+            {streamQuery.isFetching ? <LoadingIcon size={17}/> : <RefreshCw
               size={17}
-              className={streamQuery.isFetching ? "animate-spin" : undefined}
-            />
+
+            />}
             Refresh
           </button>
         </header>
@@ -509,9 +498,9 @@ export function StreamFeed({ classroomId, canManage }: StreamFeedProps) {
                               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {updating ? (
-                                <LoaderCircle
+                                <LoadingIcon
                                   size={17}
-                                  className="animate-spin"
+
                                 />
                               ) : (
                                 <Save size={17} />

@@ -1,9 +1,12 @@
 "use client";
+
+import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import { useAuthStore } from "@/store/auth-store";
 import { clientId } from "@/lib/client-id";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, ShieldAlert, ShieldCheck, LoaderCircle } from "lucide-react";
+import { Activity, ShieldAlert, ShieldCheck } from "lucide-react";
+
 import { examMonitor } from "@/services/exam-monitor";
 import { examError } from "@/services/exams";
 import {
@@ -345,7 +348,7 @@ export function TeacherExamMonitoring({
       )}
       <div className="mt-3 space-y-2">
         {live.isPending && (
-          <div className="h-12 animate-pulse rounded-lg bg-muted" />
+          <LoadingIndicator message="Loading"/>
         )}
         {live.data?.students.map((student) => (
           <div
@@ -426,7 +429,7 @@ export function TeacherMonitorEvidence({
       </h5>
       {report.isPending && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <LoaderCircle size={14} className="animate-spin" /> Fetching timeline…
+          <LoadingIcon size={14}  /> Fetching timeline…
         </p>
       )}
       {report.isError && (

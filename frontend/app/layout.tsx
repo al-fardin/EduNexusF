@@ -10,6 +10,7 @@ import "./studio.css";
 import "./landing.css";
 import "./immersive.css";
 import "./kinetic.css";
+import "./loading-indicator.css";
 import { AppThemeProvider } from "@/providers/theme-provider";
 import { PushProvider } from "@/providers/push-provider";
 import { AppUpdateProvider } from "@/providers/app-update-provider";

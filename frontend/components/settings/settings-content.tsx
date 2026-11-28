@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import {Localized} from "@/components/ui/localized";
 import {AccountSecurity} from "./account-security";
 import {ReleaseHelp} from "./release-guide";
@@ -260,7 +262,7 @@ export function SettingsContent() {
                 >
                   <Save className="h-4 w-4" />
 
-                  {savingProfile ? "Saving..." : "Save changes"}
+                  {(savingProfile) && <LoadingIcon size={16}/>} {savingProfile ? "Saving..." : "Save changes"}
                 </button>
               </div>
             </form>
@@ -341,7 +343,7 @@ export function SettingsContent() {
                 >
                   <KeyRound className="h-4 w-4" />
 
-                  {changingPassword ? "Updating..." : "Update password"}
+                  {(changingPassword) && <LoadingIcon size={16}/>} {changingPassword ? "Updating..." : "Update password"}
                 </button>
               </div>
             </form>

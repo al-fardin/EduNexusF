@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon, LoadingIndicator } from "@/components/ui/loading-indicator";
 import { useAuthStore } from "@/store/auth-store";
 import { clientId } from "@/lib/client-id";
 import { MobileExamEntry } from "@/components/classroom/mobile-exam-entry";
@@ -262,12 +264,7 @@ function BrowserExamEntryGate({
         </button>
       </header>
       {policy.isPending && (
-        <div
-          role="status"
-          className="animate-pulse rounded-xl bg-secondary p-5 text-sm text-muted-foreground"
-        >
-          Checking exam requirements…
-        </div>
+        <LoadingIndicator message="Checking exam requirements"/>
       )}
       {admission.isError && <div role="alert" className="rounded-xl border border-destructive/30 p-4 text-sm"><p>Unable to check your exam session.</p><button type="button" className="mt-2 font-semibold text-primary" onClick={()=>void admission.refetch()}>Retry connection</button></div>}
       {policy.isError && (
@@ -402,10 +399,10 @@ function BrowserExamEntryGate({
                   }
                   className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-secondary disabled:opacity-60"
                 >
-                  <RefreshCw
+                  {checking ? <LoadingIcon size={16}/> : <RefreshCw
                     size={16}
-                    className={checking ? "animate-spin" : ""}
-                  />
+
+                  />}
                   {checking ? "Checking…" : "Check extension connection"}
                 </button>
                 <span className="text-sm text-muted-foreground">

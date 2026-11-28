@@ -1,7 +1,10 @@
 "use client";
+
+import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
+
 import { enrollmentPhase5 } from "@/services/enrollment-phase5";
 import { getClassroomErrorMessage } from "@/services/classroom";
 
@@ -11,7 +14,7 @@ export function StudentRollGate({ classroomId, children }: { classroomId: string
   const query = useQuery({ queryKey: ["student-roll",classroomId], queryFn: () => enrollmentPhase5.myRoll(classroomId), enabled: !!classroomId });
   const mutation = useMutation({ mutationFn: () => enrollmentPhase5.setMyRoll(classroomId,roll.trim()), onSuccess: () => client.invalidateQueries({ queryKey: ["student-roll",classroomId] }) });
   function save(e: FormEvent<HTMLFormElement>){e.preventDefault();mutation.mutate();}
-  if(query.isPending) return <div className="mx-auto mt-12 h-48 max-w-2xl animate-pulse rounded-3xl bg-secondary" aria-label="Checking classroom membership"/>;
+  if(query.isPending) return <LoadingIndicator message="Loading"/>;
   if(query.isError) return <p role="alert" className="mx-auto mt-12 max-w-lg rounded-2xl bg-card p-6 text-destructive">{getClassroomErrorMessage(query.error)}</p>;
   if(query.data) return <>{children}</>;
   return <main className="mx-auto mt-12 max-w-xl rounded-3xl border border-border bg-card p-7 shadow-sm">
@@ -20,7 +23,7 @@ export function StudentRollGate({ classroomId, children }: { classroomId: string
     <form onSubmit={save} className="mt-5 space-y-3"><label htmlFor="legacy-roll" className="block text-sm font-semibold">Student ID / Roll</label>
       <input id="legacy-roll" required maxLength={32} pattern="[A-Za-z0-9][A-Za-z0-9_/-]{0,31}" value={roll} onChange={e=>setRoll(e.target.value)} placeholder="08" className="w-full rounded-xl border border-border bg-background p-3"/>
       {mutation.isError && <p role="alert" className="text-sm text-destructive">{getClassroomErrorMessage(mutation.error)}</p>}
-      <button disabled={mutation.isPending} className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground disabled:opacity-50">{mutation.isPending&&<LoaderCircle size={17} className="animate-spin"/>} Save student ID</button>
+      <button disabled={mutation.isPending} className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground disabled:opacity-50">{mutation.isPending&&<LoadingIcon size={17} />} Save student ID</button>
     </form>
   </main>;
 }

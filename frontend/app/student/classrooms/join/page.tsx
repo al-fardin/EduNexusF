@@ -1,16 +1,10 @@
 "use client";
 
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  GraduationCap,
-  KeyRound,
-  LoaderCircle,
-  ShieldCheck,
-  UserRound,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle2, GraduationCap, KeyRound, ShieldCheck, UserRound } from "lucide-react";
+
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGuard } from "@/components/auth/auth-guard";
@@ -110,7 +104,7 @@ export default function JoinClassroomPage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                 >
                   {lookup.isPending ? (
-                    <LoaderCircle size={16} className="animate-spin" />
+                    <LoadingIcon size={16}  />
                   ) : (
                     <ShieldCheck size={16} />
                   )}{" "}
@@ -195,7 +189,7 @@ export default function JoinClassroomPage() {
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary p-3.5 font-semibold text-primary-foreground disabled:opacity-50"
                   >
                     {join.isPending ? (
-                      <LoaderCircle size={18} className="animate-spin" />
+                      <LoadingIcon size={18}  />
                     ) : (
                       <GraduationCap size={18} />
                     )}{" "}

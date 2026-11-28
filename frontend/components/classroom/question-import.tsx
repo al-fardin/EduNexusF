@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { duplicateWarnings } from "@/lib/question-duplicates";
@@ -309,7 +311,7 @@ export function QuestionImport({
               preview editor.
             </p>
           </details>
-          {busy && <p role="status">Processing questions…</p>}
+          {busy && <LoadingIndicator message="Processing questions"/>}
           {error && (
             <p role="alert" className="break-words text-sm text-destructive">
               {error}

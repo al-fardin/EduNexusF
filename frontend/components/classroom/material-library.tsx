@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator, LoadingIcon } from "@/components/ui/loading-indicator";
 import {PersonalNoteLink} from "@/components/workspace/personal-note-link";
 import { AudienceFields, AudienceBadge } from "./audience-fields";
 import { type AudienceRule, EVERYONE } from "@/services/audience";
@@ -19,15 +21,8 @@ import { ProtectedFilePreview } from "@/components/files/protected-preview";
 import { useClassroomComposer } from "@/lib/classroom-composer";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  BookOpen,
-  Download,
-  FileUp,
-  LoaderCircle,
-  Paperclip,
-  RefreshCw,
-  Trash2,
-} from "lucide-react";
+import { BookOpen, Download, FileUp, Paperclip, RefreshCw, Trash2 } from "lucide-react";
+
 import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 import { getStreamErrorMessage } from "@/services/stream";
 import { materialService, type ClassroomMaterial } from "@/services/materials";
@@ -224,7 +219,7 @@ export function MaterialUploadForm({
           className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
           {mutation.isPending ? (
-            <LoaderCircle size={17} className="animate-spin" />
+            <LoadingIcon size={17}  />
           ) : (
             <FileUp size={17} />
           )}{" "}
@@ -271,7 +266,7 @@ export function MaterialDownloadButton({
         className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-secondary px-4 py-2 text-sm font-semibold text-foreground hover:brightness-95 disabled:opacity-50"
       >
         {working ? (
-          <LoaderCircle size={16} className="animate-spin" />
+          <LoadingIcon size={16}  />
         ) : (
           <Download size={16} />
         )}{" "}
@@ -370,31 +365,14 @@ export function MaterialLibrary({
               className="rounded-xl border border-border p-3 disabled:opacity-60"
               aria-label="Refresh materials"
             >
-              <RefreshCw
+              {materials.isFetching ? <LoadingIcon size={18}/> : <RefreshCw
                 size={18}
-                className={materials.isFetching ? "animate-spin" : ""}
-              />
+
+              />}
             </button>
           </div>
         </div>
-        {materials.isPending && (
-          <div
-            className="space-y-3"
-            role="status"
-            aria-label="Loading materials"
-          >
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-border bg-background p-4"
-              >
-                <div className="en-skeleton mb-3 h-5 w-2/5 rounded-lg" />
-                <div className="en-skeleton mb-3 h-3 w-4/5 rounded-lg" />
-                <div className="en-skeleton h-9 w-32 rounded-xl" />
-              </div>
-            ))}
-          </div>
-        )}
+        {materials.isPending && <LoadingIndicator/>}
         {remove.isError && (
           <p
             role="alert"
@@ -495,7 +473,7 @@ export function MaterialLibrary({
                         >
                           {remove.isPending &&
                           remove.variables?.id === item.id ? (
-                            <LoaderCircle size={15} className="animate-spin" />
+                            <LoadingIcon size={15}  />
                           ) : (
                             <Trash2 size={15} />
                           )}{" "}

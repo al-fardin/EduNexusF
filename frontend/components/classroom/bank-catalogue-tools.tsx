@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -199,7 +201,7 @@ export function BankEntryTools({
       {open && (
         <div className="space-y-2 text-xs">
           {usage.isPending ? (
-            <p role="status">Checking question usage…</p>
+            <LoadingIndicator message="Checking question usage"/>
           ) : usage.isError ? (
             <p role="alert">{examError(usage.error)}</p>
           ) : usage.data?.items.length ? (

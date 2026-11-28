@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -253,7 +255,7 @@ function TimingForm({
       </label>
       {error && <ErrorState message={error} />}
       <Button type="submit" disabled={!resource || busy}>
-        {t(busy ? "Saving…" : "Save timing")}
+        {(busy) && <LoadingIcon size={16}/>} {t(busy ? "Saving…" : "Save timing")}
       </Button>
     </form>
   );

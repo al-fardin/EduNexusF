@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import {personalNoteHref} from "@/services/personal-workspace";
 import { SectionSettings } from "./section-settings";
 import { ContentSchedules } from "./content-schedules";
@@ -113,7 +115,7 @@ export function ClassroomDetailsDialog({
             </dt>
             <dd>
               {details.isPending ? (
-                <span className="en-skeleton block h-4 w-32 rounded" />
+                <LoadingIcon size={18}/>
               ) : details.isError ? (
                 <span role="alert" className="text-destructive text-sm">
                   {getClassroomErrorMessage(details.error)}

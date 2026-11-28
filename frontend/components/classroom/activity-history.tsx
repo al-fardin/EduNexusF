@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingIcon } from "@/components/ui/loading-indicator";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ContentSkeleton } from "@/components/ui/content-skeleton";
@@ -130,7 +132,7 @@ export function ActivityHistory({ classroomId }: { classroomId: string }) {
           disabled={query.isFetchingNextPage}
           onClick={() => void query.fetchNextPage()}
         >
-          {query.isFetchingNextPage ? "Loading…" : "Older changes"}
+          {(query.isFetchingNextPage) && <LoadingIcon size={16}/>} {query.isFetchingNextPage ? "Loading…" : "Older changes"}
         </Button>
       )}
     </section>
