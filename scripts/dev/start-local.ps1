@@ -111,7 +111,11 @@ try {
     $webEnvironment = @{ BACKEND_API_URL="http://127.0.0.1:$ApiPort"; NEXT_PUBLIC_API_URL='/api'; EDUNEXUS_NEXT_DIST_DIR=".next-local-$WebPort" }
     if (-not (Get-VerifiedLocalProcess $state.Web)) {
         if ($Production) { Invoke-LocalCommand $node @($nextEntry,'build') $frontend (Join-Path $runLogs 'web-build') $webEnvironment 600 }
-        $state.Web = Start-LocalRecordedProcess $node @($nextEntry,$mode,'--hostname','0.0.0.0','--port',[string]$WebPort) $frontend (Join-Path $runLogs 'web') $webEnvironment
+        $webArguments = @($nextEntry,$mode,'--hostname','0.0.0.0','--port',[string]$WebPort)
+        # Turbopack's restart HMR messages can loop on Windows development hosts.
+        # Use Next's supported Webpack dev server; release builds stay unchanged.
+        if (-not $Production) { $webArguments += '--webpack' }
+        $state.Web = Start-LocalRecordedProcess $node $webArguments $frontend (Join-Path $runLogs 'web') $webEnvironment
         $newProcesses += $state.Web
         Save-LocalState $statePath $state
     }
