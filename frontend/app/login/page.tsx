@@ -139,6 +139,7 @@ export default function LoginPage() {
 
   return (
     <main aria-busy={loading || entering} className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4 py-8">
+      <template data-login-loading><AuthTransition message="Signing you in"/></template>
       {(loading || entering) && <AuthTransition message={entering ? "Opening your workspace" : "Signing you in"} />}
       <div className="en-auth-grid">
       <AuthBrand />
@@ -151,10 +152,13 @@ export default function LoginPage() {
         </div>
 
         <form
+          data-edunexus-login
+          data-hydrated={ready ? "true" : "false"}
           method="post"
           onSubmit={handleSubmit}
           className="mt-8 space-y-4"
         >
+          <noscript><p role="alert">Enable JavaScript to sign in.</p></noscript>
           <div>
             <label
               htmlFor="email"
@@ -212,7 +216,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={!ready || loading || entering}
+            disabled={loading || entering}
             className="w-full touch-manipulation rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading

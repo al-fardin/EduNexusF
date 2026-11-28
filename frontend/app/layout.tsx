@@ -50,6 +50,7 @@ export default function RootLayout({
       <head>
         {/* Runs independently of React so stale cached chunks cannot prevent recovery. */}
         <script src="/edunexus-recovery.js" async />
+        <script src="/edunexus-login.js" async />
       </head>
       <body className="flex min-h-full flex-col">
         <PreferencesProvider><AppThemeProvider>
