@@ -25,7 +25,10 @@ function setup(response, hydrated = false) {
     },
     HTMLFormElement: Form,
     FormData: class { get(name) { return { email: ' fixture@example.invalid ', password: 'fixture-only', code: '' }[name]; } },
-    fetch: async (url, options) => { state.requests.push({ url, options }); return typeof response === 'function' ? response() : response; },
+    fetch: async (url, options) => { state.requests.push({ url, options }); return typeof response === 'function' ? response(options) : response; },
+    AbortController,
+    setTimeout: callback => { state.timeout = callback; return 1; },
+    clearTimeout: () => { state.timerCleared = true; },
     localStorage: { setItem: (key, value) => state.values.set(key, value) },
     sessionStorage: { setItem() {} },
     location: { pathname: '/login', replace: path => state.redirects.push(path) },
@@ -81,4 +84,15 @@ test('a late React mount cannot discard an already successful sign-in', async ()
   resolve({ ok: true, json: async () => ({ data: { access_token: 'fixture-access', refresh_token: 'fixture-refresh' } }) });
   await pending;
   assert.deepEqual(fixture.state.redirects, ['/dashboard']);
+});
+
+test('a stalled sign-in times out and restores a retryable form',async()=>{
+  const fixture=setup(options=>new Promise((_,reject)=>options.signal.addEventListener('abort',()=>reject(Error('aborted')))));
+  const pending=fixture.submit();
+  assert.equal(fixture.button.disabled,true);
+  fixture.state.timeout();await pending;
+  assert.equal(fixture.button.disabled,false);
+  assert.equal(fixture.error.textContent,'Sign-in timed out. Please try again.');
+  assert.equal(fixture.state.removed,1);
+  assert.equal(fixture.state.timerCleared,true);
 });

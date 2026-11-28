@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { push, pushDeviceID } from "@/services/push";
+import { parseNativePushStatus } from "@/lib/native-push-status";
 declare global {
   interface Window {
     EduNexusPush?: {
@@ -68,13 +69,16 @@ export function PushProvider() {
         worker?.postMessage({ type: "bind-user", user: user ?? null });
         if (!user || !token) return;
         if (window.EduNexusPush) {
-          const bound = JSON.parse(window.EduNexusPush.status()).user;
+          const native = parseNativePushStatus(window.EduNexusPush.status());
+          if (!native) return;
+          const bound = native.user;
           if (bound && bound !== user) window.EduNexusPush.unbind();
         }
         if (localStorage.getItem(`edunexus:push-enabled:${user}`) !== "true")
           return;
         if (window.EduNexusPush) {
-          const native = JSON.parse(window.EduNexusPush.status());
+          const native = parseNativePushStatus(window.EduNexusPush.status());
+          if (!native) return;
           if (native.configured && native.permission)
             window.EduNexusPush.enable(token, user);
           return;

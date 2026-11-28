@@ -8,6 +8,7 @@ import { BellRing } from "lucide-react";
 import { push, pushDeviceID } from "@/services/push";
 import { useAuthStore } from "@/store/auth-store";
 import { examError } from "@/services/exams";
+import { parseNativePushStatus } from "@/lib/native-push-status";
 function applicationKey(value: string) {
   const raw = atob(value.replaceAll("-", "+").replaceAll("_", "/"));
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
@@ -27,12 +28,7 @@ export function PushSettings() {
     nativeSnapshot,
     () => "null",
   );
-  const native: {
-    configured: boolean;
-    permission: boolean;
-    enabled: boolean;
-    user?: string;
-  } | null = JSON.parse(rawNative);
+  const native = parseNativePushStatus(rawNative);
   const [device] = useState(() => {
     try {
       return pushDeviceID();

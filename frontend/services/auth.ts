@@ -62,7 +62,8 @@ export const authService = {
   login: async (data: LoginRequest) => {
     const res = await api.post(
       "/auth/login",
-      data
+      data,
+      { timeout: 20000 }
     );
 
     return res.data;
@@ -78,9 +79,25 @@ export const authService = {
   },
 
   me: async () => {
-    const token=typeof window!=="undefined"?localStorage.getItem("access_token"):null;
-    try{const res=await api.get("/auth/me");rememberOfflineSession(res.data.data,token);return res.data;}
-    catch(error){const cached=unavailableNetwork(error)?offlineSession(token):null;if(cached)return {success:true,data:cached};throw error;}
+    const token = typeof window !== "undefined"
+      ? localStorage.getItem("access_token")
+      : null;
+    try {
+      const res = await api.get("/auth/me", { timeout: 10000 });
+      const headers = res.config?.headers;
+      const authorization = typeof headers?.get === "function"
+        ? headers.get("Authorization")
+        : headers?.Authorization ?? headers?.authorization;
+      const verifiedToken = typeof authorization === "string" && authorization.startsWith("Bearer ")
+        ? authorization.slice(7)
+        : token;
+      rememberOfflineSession(res.data.data, verifiedToken);
+      return res.data;
+    } catch (error) {
+      const cached = unavailableNetwork(error) ? offlineSession(token) : null;
+      if (cached) return { success: true, data: cached };
+      throw error;
+    }
   },
 
   logout: async (refresh_token: string) => {

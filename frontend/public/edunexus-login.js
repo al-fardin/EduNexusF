@@ -41,9 +41,12 @@
     form.setAttribute("aria-busy", "true");
     if (button) { button.disabled = true; button.textContent = "Signing in…"; }
     var entering = false;
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 20000);
     try {
       var response = await fetch("/api/auth/login", {
         method: "POST", credentials: "same-origin", cache: "no-store",
+        signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email, password: password, code: String(fields.get("code") || "").trim() })
       });
@@ -61,10 +64,13 @@
       location.replace("/dashboard");
     } catch (failure) {
       if (form.isConnected) {
-        error.textContent = failure instanceof Error ? failure.message : "Unable to connect to the server.";
+        error.textContent = controller.signal.aborted
+          ? "Sign-in timed out. Please try again."
+          : failure instanceof Error ? failure.message : "Unable to connect to the server.";
         error.hidden = false;
       }
     } finally {
+      clearTimeout(timeout);
       if (!entering) {
         if (overlay) overlay.remove();
         delete form.dataset.loginBusy;
