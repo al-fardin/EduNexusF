@@ -5,3 +5,9 @@ test('notification return paths preserve classroom tabs and reject external redi
 test('sign-in returns to planner, personal notes, institutions and class creation',()=>{
  for(const path of ['/planner?class=abc','/personal?note=abc','/institutions?id=abc&tab=people','/instructor/classrooms/create','/trash'])assert.equal(out.safeReturnPath(path),path);
 });
+
+test('successful sign-in targets the protected dashboard without losing valid return paths',()=>{
+ for(const value of [null,undefined,'/','https://evil.invalid','//evil.invalid','/login'])assert.equal(out.signInDestination(value),'/dashboard');
+ for(const value of ['/dashboard','/calendar','/student/classrooms/88888888-8888-4888-8888-888888888888?tab=exam'])assert.equal(out.signInDestination(value),value);
+ assert.equal(out.signInDestination('/?view=all'),'/dashboard?view=all');
+});

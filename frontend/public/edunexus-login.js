@@ -21,8 +21,21 @@
       form.insertBefore(error, button);
     }
     error.hidden = true;
-    var template = document.querySelector("template[data-login-loading]");
-    var overlay = template && template.content.firstElementChild ? template.content.firstElementChild.cloneNode(true) : null;
+    var template = document.querySelector("[data-login-loading]");
+    var scene = template && (template.content ? template.content.firstElementChild : template.firstElementChild);
+    var overlay = scene ? scene.cloneNode(true) : null;
+    if (overlay) {
+      overlay.querySelectorAll("[id]").forEach(function (node) {
+        var previous = node.id, next = previous + "-login-fallback";
+        node.id = next;
+        overlay.querySelectorAll("[fill], [stroke]").forEach(function (shape) {
+          ["fill", "stroke"].forEach(function (attribute) {
+            var value = shape.getAttribute(attribute);
+            if (value) shape.setAttribute(attribute, value.replaceAll("url(#" + previous + ")", "url(#" + next + ")"));
+          });
+        });
+      });
+    }
     if (overlay) document.body.appendChild(overlay);
     form.dataset.loginBusy = "true";
     form.setAttribute("aria-busy", "true");
@@ -45,7 +58,7 @@
       entering = true;
       // The React handler preserves requested return paths once it is hydrated.
       // Before hydration, enter the same-origin workspace without trusting a URL.
-      location.replace("/");
+      location.replace("/dashboard");
     } catch (failure) {
       if (form.isConnected) {
         error.textContent = failure instanceof Error ? failure.message : "Unable to connect to the server.";

@@ -1,7 +1,7 @@
 /* No academic data, authentication tokens, or exam responses are cached here. */
 const storeName = "edunexus-push-binding";
-const shellCache="edunexus-offline-shell-v2";
-const assetCache="edunexus-offline-assets-v2";
+const shellCache="edunexus-offline-shell-v3";
+const assetCache="edunexus-offline-assets-v3";
 async function prepareOfflineShell(){const cache=await caches.open(shellCache);const response=await fetch("/offline",{cache:"reload"});if(!response.ok)return;const html=await response.clone().text();await cache.put("/offline",response);const assets=[...html.matchAll(/(?:src|href)="([^\"]+)"/g)].map(match=>match[1]).filter(path=>path.startsWith("/_next/static/")).slice(0,100);await Promise.allSettled(assets.map(async path=>{const file=await fetch(path);if(file.ok)await cache.put(path,file);}));}
 function binding(write, value) {
   return new Promise((resolve) => {
@@ -25,6 +25,9 @@ self.addEventListener("install", event => {self.skipWaiting();event.waitUntil(pr
 self.addEventListener("fetch", event => {
   const request = event.request, url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
+  // Next's timestamped development chunks are mutable and must reach the
+  // browser directly, without a worker stream or Cache Storage dependency.
+  if (url.pathname.startsWith("/_next/static/") && url.searchParams.has("v")) return;
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(async () => {
       if (url.pathname !== "/offline") return Response.redirect(new URL("/offline", self.location.origin).href, 302);
@@ -33,30 +36,39 @@ self.addEventListener("fetch", event => {
     return;
   }
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/pdfjs/")) {
-    event.respondWith((async () => {
-      const cache = await caches.open(assetCache);
+    let copy;
+    const response = (async () => {
       try {
-        // Dev chunk filenames are reused. Cached-first responses can break hydration.
         const response = await fetch(request);
-        if (response.ok) {
-          const keys = await cache.keys();
-          if (keys.length > 180) for (const old of keys.slice(0, keys.length - 160)) await cache.delete(old);
-          await cache.put(request, response.clone());
-        }
+        if (response.ok) copy = response.clone();
         return response;
       } catch (error) {
-        const cached = await (await caches.open(shellCache)).match(request) ?? await cache.match(request);
-        if (cached) return cached;
+        try {
+          const cached = await (await caches.open(shellCache)).match(request) ?? await (await caches.open(assetCache)).match(request);
+          if (cached) return cached;
+        } catch { /* Storage failure cannot recover an offline network request. */ }
         throw error;
       }
-    })());
+    })();
+    event.respondWith(response);
+    // Register lifetime work during dispatch, but never await it in the response.
+    // Failed or stalled cache storage cannot gate delivery of the app's scripts.
+    event.waitUntil(response.then(async () => {
+      if (!copy) return;
+      const cache = await caches.open(assetCache);
+      const keys = await cache.keys();
+      if (keys.length > 180) for (const old of keys.slice(0, keys.length - 160)) await cache.delete(old);
+      await cache.put(request, copy);
+    }).catch(() => {}));
   }
 });
 self.addEventListener("activate", (event) =>
   event.waitUntil((async () => {
-    for (const name of await caches.keys()) {
-      if ((name.startsWith("edunexus-offline-shell-") || name.startsWith("edunexus-offline-assets-")) && name !== shellCache && name !== assetCache) await caches.delete(name);
-    }
+    try {
+      for (const name of await caches.keys()) {
+        if ((name.startsWith("edunexus-offline-shell-") || name.startsWith("edunexus-offline-assets-")) && name !== shellCache && name !== assetCache) await caches.delete(name);
+      }
+    } catch { /* Optional cleanup must not block recovery on broken storage. */ }
     await self.clients.claim();
   })()),
 );

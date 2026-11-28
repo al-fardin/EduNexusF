@@ -1,5 +1,6 @@
 const roots = new Set([
   "/",
+  "/dashboard",
   "/messages",
   "/notifications",
   "/invitations",
@@ -43,4 +44,12 @@ export function safeReturnPath(value: string | null | undefined): string {
   } catch {
     return "/";
   }
+}
+
+/** Successful sign-in enters the protected workspace, never the guest landing. */
+export function signInDestination(value: string | null | undefined): string {
+  const path = safeReturnPath(value);
+  return path === "/" || path.startsWith("/?") || path.startsWith("/#")
+    ? "/dashboard" + path.slice(1)
+    : path;
 }

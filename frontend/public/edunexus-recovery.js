@@ -14,9 +14,12 @@
   navigator.serviceWorker.addEventListener("controllerchange", function () {
     if (!controlled) { controlled = true; return; }
     if (reloading) return;
+    var form = document.querySelector("[data-edunexus-login]");
+    var password = form && form.querySelector('input[name="password"]');
+    if (form && (form.dataset.loginBusy === "true" || form.closest('main[aria-busy="true"]') || (password && password.value))) return;
     try {
-      if (sessionStorage.getItem("edunexus:asset-recovery:v2")) return;
-      sessionStorage.setItem("edunexus:asset-recovery:v2", "1");
+      if (sessionStorage.getItem("edunexus:asset-recovery:v3")) return;
+      sessionStorage.setItem("edunexus:asset-recovery:v3", "1");
     } catch { /* A worker replacement happens once even without storage. */ }
     reloading = true;
     location.reload();

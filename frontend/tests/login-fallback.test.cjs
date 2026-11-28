@@ -20,7 +20,7 @@ function setup(response, hydrated = false) {
   vm.runInNewContext(fs.readFileSync('public/edunexus-login.js', 'utf8'), {
     document: {
       addEventListener(_, callback) { handler = callback; },
-      querySelector() { return { content: { firstElementChild: { cloneNode: () => ({ remove: () => state.removed++ }) } } }; },
+      querySelector() { return { firstElementChild: { cloneNode: () => ({ querySelectorAll: () => [], remove: () => state.removed++ }) } }; },
       body: { appendChild() {} },
     },
     HTMLFormElement: Form,
@@ -53,7 +53,7 @@ test('fallback success stores both tokens and enters only the local workspace', 
   await fixture.submit();
   assert.equal(fixture.state.values.get('access_token'), 'fixture-access');
   assert.equal(fixture.state.values.get('refresh_token'), 'fixture-refresh');
-  assert.deepEqual(fixture.state.redirects, ['/']);
+  assert.deepEqual(fixture.state.redirects, ['/dashboard']);
   assert.equal(fixture.button.disabled, true);
   assert.equal(fixture.state.removed, 0);
 });
@@ -80,5 +80,5 @@ test('a late React mount cannot discard an already successful sign-in', async ()
   fixture.form.isConnected = false;
   resolve({ ok: true, json: async () => ({ data: { access_token: 'fixture-access', refresh_token: 'fixture-refresh' } }) });
   await pending;
-  assert.deepEqual(fixture.state.redirects, ['/']);
+  assert.deepEqual(fixture.state.redirects, ['/dashboard']);
 });

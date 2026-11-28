@@ -37,7 +37,7 @@ import { useAuthStore } from "@/store/auth-store";
 import {usePreferences} from "@/providers/preferences-provider";
 import {useHasSession} from "@/lib/use-has-session";
 const links = [
-  { href: "/", label: "Home", icon: House },
+  { href: "/dashboard", label: "Home", icon: House },
   { href: "/instructor/classrooms", label: "Teaching", icon: GraduationCap },
   { href: "/student/classrooms", label: "Learning", icon: BookOpen },
   { href: "/classrooms", label: "Classroom", icon: Layers },
@@ -69,7 +69,7 @@ const authPaths = [
   "/verify-email",
 ];
 const active = (path: string, href: string) =>
-  href === "/" ? path === "/" : path.startsWith(href);
+  href === "/dashboard" ? path === "/" || path === "/dashboard" : path.startsWith(href);
 function Logo() {
   return (
     <>
@@ -104,7 +104,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       <div className="en-app-ambient" aria-hidden="true"><span/><span/><i/></div>
       <a className="en-skip-link" href="#main-content">{t("Skip to main content")}</a>
       <aside className="en-violet-sidebar">
-        <Link href="/" className="en-violet-brand" aria-label="EduNexus home">
+        <Link href="/dashboard" className="en-violet-brand" aria-label="EduNexus home">
           <Logo />
         </Link>
         <nav aria-label="Primary navigation">
@@ -154,7 +154,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="en-app-content">
         <header className="en-mobilebar">
-          <Link href="/" className="en-violet-brand" aria-label="EduNexus home">
+          <Link href="/dashboard" className="en-violet-brand" aria-label="EduNexus home">
             <Logo />
           </Link>
           <div className="en-mobile-actions"><Link href="/search" className="en-icon-button" aria-label={t("Search")}><Search size={20}/></Link>

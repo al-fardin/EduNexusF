@@ -1,6 +1,6 @@
 "use client";
 import {Localized} from "@/components/ui/localized";
-import {safeReturnPath} from "@/lib/return-path";
+import {signInDestination} from "@/lib/return-path";
 
 import {AuthTransition} from "@/components/auth/auth-transition";
 import { AuthBrand } from "@/components/auth/auth-brand";
@@ -107,7 +107,7 @@ export default function LoginPage() {
 
       try { window.sessionStorage.setItem("en-verification-pending","1"); } catch { /* Login works without session storage. */ }
       setEntering(true);
-      router.replace(safeReturnPath(new URLSearchParams(window.location.search).get("next")));
+      router.replace(signInDestination(new URLSearchParams(window.location.search).get("next")));
     } catch (error: unknown) {
       setEntering(false);
       if (
@@ -139,7 +139,7 @@ export default function LoginPage() {
 
   return (
     <main aria-busy={loading || entering} className="en-auth-page flex min-h-screen items-center justify-center bg-background px-4 py-8">
-      <template data-login-loading><AuthTransition message="Signing you in"/></template>
+      <div data-login-loading hidden aria-hidden="true"><AuthTransition message="Signing you in"/></div>
       {(loading || entering) && <AuthTransition message={entering ? "Opening your workspace" : "Signing you in"} />}
       <div className="en-auth-grid">
       <AuthBrand />
