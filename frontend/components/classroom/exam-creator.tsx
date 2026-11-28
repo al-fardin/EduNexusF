@@ -15,7 +15,6 @@ import {
   QuestionBank,
   SaveBankQuestion,
 } from "@/components/classroom/question-bank";
-import { QuestionTesterUpload } from "@/components/classroom/question-tester-upload";
 
 import { useMutation } from "@tanstack/react-query";
 import { Plus, Save, Trash2, LoaderCircle } from "lucide-react";
@@ -407,23 +406,6 @@ export function ExamCreator({
               </div>
             )}
             <SaveBankQuestion classroomId={classroomId} question={q} />
-            {q.kind === "coding" && (
-              <QuestionTesterUpload
-                classroomId={classroomId}
-                tester={q.tester}
-                disabled={mutation.isPending || uploads > 0}
-                onBusyChange={(delta) => setUploads((n) => n + delta)}
-                onChange={(tester) =>
-                  setQuestions((list) =>
-                    list.map((item) =>
-                      item.id === q.id && item.kind === "coding"
-                        ? { ...item, tester }
-                        : item,
-                    ),
-                  )
-                }
-              />
-            )}
           </section>
         ))}
       </div>

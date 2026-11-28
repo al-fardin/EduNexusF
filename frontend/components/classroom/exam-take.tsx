@@ -10,7 +10,6 @@ import {
   removeExamDraft,
   sameAnswers,
 } from "@/lib/exam-drafts";
-import { StudentDesktopPair } from "@/components/classroom/desktop-monitoring";
 
 import { StudentExamMonitor } from "@/components/classroom/exam-monitoring";
 
@@ -401,7 +400,7 @@ export function ExamTake({
       {!online && (
         <p
           role="status"
-          className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"
+          className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200"
         >
           Offline: your draft is stored in this browser. Reconnect before the
           deadline to submit.
@@ -410,7 +409,7 @@ export function ExamTake({
       {conflictDraft && (
         <div
           role="alert"
-          className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"
+          className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-foreground"
         >
           Another tab/device saved a newer answer version. Your local draft is
           retained.{" "}
@@ -459,9 +458,6 @@ export function ExamTake({
       )}
       {live && now > 0 && (
         <>
-          {live.attempt.entry_mode !== "mobile" && (
-            <StudentDesktopPair classroomId={classroomId} examId={examId} />
-          )}
           {live.attempt.entry_mode !== "mobile" && (
             <StudentExamMonitor
               classroomId={classroomId}
@@ -514,7 +510,7 @@ export function ExamTake({
                     tabIndex={-1}
                     role="group"
                     aria-label={`Question ${i + 1}`}
-                    className="en-exam-question scroll-mt-5 rounded-[22px_10px_18px_12px] border border-border bg-background p-4"
+                    className="en-exam-question scroll-mt-5 rounded-2xl border border-border bg-background p-4"
                   >
                     <div className="mb-3 flex items-start justify-between gap-4">
                       <p className="font-semibold">
@@ -552,7 +548,7 @@ export function ExamTake({
                             classroomId={classroomId}
                             examId={examId}
                             questionId={q.id}
-                            tester={q.tester}
+
                             language={q.language || "other"}
                             code={answers[q.id] ?? ""}
                             onChange={(value) => change(q.id, value)}

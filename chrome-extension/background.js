@@ -123,7 +123,7 @@ chrome.runtime.onMessage.addListener((message,sender,sendResponse)=>{
       chrome.alarms.create('edunexus_expire',{periodInMinutes:1});
       return {ok:true,connected:true};
     }
-    if (type==='STATUS') return {ok:true,connected:!!s,version:'1.3.2',sessionKey:s?.sessionKey||null,expiresAt:s?.expiresAt||null,pending:(await state()).events.length,aiDiagnostic:(await chrome.storage.local.get([AI_DIAG_KEY]))[AI_DIAG_KEY]||null};
+    if (type==='STATUS') return {ok:true,connected:!!s,version:'1.4.0',sessionKey:s?.sessionKey||null,expiresAt:s?.expiresAt||null,pending:(await state()).events.length,aiDiagnostic:(await chrome.storage.local.get([AI_DIAG_KEY]))[AI_DIAG_KEY]||null};
     if (type==='AI_MONITOR_READY') {
       if(!s || !sender.tab?.id)return {ok:false};
       const domain=domainFromURL(sender.tab.url);

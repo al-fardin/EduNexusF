@@ -13,8 +13,8 @@ import (
 
 // Phase 11 is explicitly opt-in. Evidence is not a cheating verdict.
 func RegisterPhase11(g fiber.Router, h *Handler) {
-	RegisterPhase14(g, h)
 	g.Get("/:examID/monitor-policy", h.MonitorPolicy)
+	g.Get("/:examID/monitor-admission", h.MonitorAdmissionStatus)
 	g.Post("/:examID/monitor-admission", h.MonitorAdmission)
 	g.Put("/:examID/monitor-policy", h.SetMonitorPolicy)
 	g.Post("/:examID/monitor-heartbeat", h.MonitorHeartbeat)

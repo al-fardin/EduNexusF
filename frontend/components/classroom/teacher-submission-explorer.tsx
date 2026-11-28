@@ -1,5 +1,4 @@
 "use client";
-import { TeacherDesktopEvidence } from "@/components/classroom/desktop-monitoring";
 
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
@@ -88,7 +87,7 @@ export function TeacherSubmissionExplorer({ classroomId, examId, onClose }: { cl
     || workspace?.files[0];
   const files = workspace && question ? fileTree(workspace, collapsed, question.id) : [];
 
-  return <section className={`overflow-hidden rounded-[27px_14px_24px_16px] border ${border} bg-card text-foreground shadow-[0_12px_32px_rgba(20,26,21,0.06)]`}>
+  return <section className={`overflow-hidden rounded-2xl border ${border} bg-card text-foreground shadow-sm`}>
     <header className={`flex flex-wrap items-center justify-between gap-3 border-b ${border} bg-card p-4 sm:p-5`}>
       <div><h3 className="flex items-center gap-2 text-lg font-bold"><Users size={20}/> Student submissions</h3><p className={`mt-1 text-xs ${muted}`}>Review submitted folders and files by student.</p></div>
       <button type="button" className={`inline-flex items-center gap-1 rounded-lg border ${border} bg-card px-3 py-2 text-sm hover:bg-secondary`} onClick={onClose}><X size={15}/> Close review</button>
@@ -98,8 +97,8 @@ export function TeacherSubmissionExplorer({ classroomId, examId, onClose }: { cl
     {!attempts.isPending && !exam.isPending && !attempts.isError && !exam.isError && <>
       <div className={`flex flex-wrap items-center justify-between gap-2 border-b ${border} px-4 py-3`}>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <button type="button" className={`rounded-lg px-3 py-2 ${tab === "submitted" ? "bg-primary text-white" : "bg-secondary"}`} onClick={() => { setTab("submitted"); setPickedStudent(null); }}>Submitted ({rows.filter(r => r.status === "submitted").length})</button>
-          <button type="button" className={`rounded-lg px-3 py-2 ${tab === "all" ? "bg-primary text-white" : "bg-secondary"}`} onClick={() => { setTab("all"); setPickedStudent(null); }}>All attempts ({rows.length})</button>
+          <button type="button" className={`rounded-lg px-3 py-2 font-semibold ${tab === "submitted" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`} onClick={() => { setTab("submitted"); setPickedStudent(null); }}>Submitted ({rows.filter(r => r.status === "submitted").length})</button>
+          <button type="button" className={`rounded-lg px-3 py-2 font-semibold ${tab === "all" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`} onClick={() => { setTab("all"); setPickedStudent(null); }}>All attempts ({rows.length})</button>
         </div>
         <label className={`flex items-center gap-2 rounded-lg border ${border} bg-card px-3 py-2`}><Search size={15}/><input aria-label="Search by student roll or name" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search Roll / Name" className="w-40 bg-transparent text-xs outline-none sm:w-56"/></label>
       </div>
@@ -122,7 +121,7 @@ export function TeacherSubmissionExplorer({ classroomId, examId, onClose }: { cl
               <span className="rounded-lg bg-secondary px-3 py-2 text-xs">{questions.length} questions</span>
             </div>
             <div className={`flex flex-wrap gap-2 border-b ${border} p-3`}>
-              {questions.map((q, i) => <button type="button" key={q.id} onClick={() => { setPickedQuestion(q.id); setPickedFile(null); }} className={`rounded-lg px-3 py-2 text-xs font-semibold ${question?.id === q.id ? "bg-primary text-white" : "bg-card hover:bg-secondary"}`}>Q{i + 1} · {q.kind}{q.kind === "coding" && student.answers?.[q.id] ? " · files" : ""}</button>)}
+              {questions.map((q, i) => <button type="button" key={q.id} onClick={() => { setPickedQuestion(q.id); setPickedFile(null); }} className={`rounded-lg px-3 py-2 text-xs font-semibold ${question?.id === q.id ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-accent"}`}>Q{i + 1} · {q.kind}{q.kind === "coding" && student.answers?.[q.id] ? " · files" : ""}</button>)}
             </div>
             {question ? <div className="p-3 sm:p-4">
               <h5 className="mb-3 text-sm font-bold"><BookOpenText size={16} className="mr-1 inline"/> {question.prompt}</h5>
@@ -150,7 +149,7 @@ export function TeacherSubmissionExplorer({ classroomId, examId, onClose }: { cl
                 </div>
               </div>}
             </div> : <p className={`p-4 text-sm ${muted}`}>No questions found.</p>}
-            <div className={`border-t ${border} p-4`}><div className="mb-1 flex items-center gap-2 text-sm font-bold"><ShieldCheck size={16}/> Activity evidence (teacher only)</div><p className={`text-xs ${muted}`}>Paste, edits, code runs and tab visibility logs are review signals—not proof of cheating.</p><ExamActivityReport classroomId={classroomId} examId={examId} attemptId={student.id}/><TeacherMonitorEvidence classroomId={classroomId} examId={examId} attemptId={student.id}/><TeacherDesktopEvidence classroomId={classroomId} examId={examId} attemptId={student.id}/></div>
+            <div className={`border-t ${border} p-4`}><div className="mb-1 flex items-center gap-2 text-sm font-bold"><ShieldCheck size={16}/> Activity evidence (teacher only)</div><p className={`text-xs ${muted}`}>Paste, edits, code runs and tab visibility logs are review signals—not proof of cheating.</p><ExamActivityReport classroomId={classroomId} examId={examId} attemptId={student.id}/><TeacherMonitorEvidence classroomId={classroomId} examId={examId} attemptId={student.id}/></div>
           </>}
         </div>
       </div>

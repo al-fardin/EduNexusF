@@ -82,9 +82,7 @@ jobs:
       - name: Check reachable Go vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./internal/... ./apps/...
       - run: go test -race -p 1 -count=1 ./internal/... ./apps/...
-      - name: Bounded tester parser fuzzing
-        run: go test ./internal/exam -run '^$' -fuzz FuzzRedTeamTesterBytes -fuzztime 10s -parallel 2
-  desktop:
+  windows-launcher:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -93,13 +91,6 @@ jobs:
           node-version: '24'
       - name: Verify Windows PowerShell local launcher
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/qa/test-local-launcher.ps1
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: desktop-client/requirements.txt
-      - run: python -m pip install -r desktop-client/requirements.txt
-      - run: python -m unittest discover -s desktop-client/tests -v
   android:
     uses: ./.github/workflows/build-android.yml
     with:

@@ -22,8 +22,6 @@ func New(db *pgxpool.Pool) *Handler { return &Handler{db: db} }
 
 func Register(app *fiber.App, db *pgxpool.Pool) {
 	h := New(db)
-	RegisterPhase14Client(app, h)
-	registerQuestionTesters(app, h)
 	registerQuestionBank(app, h)
 	g := app.Group("/classrooms/:id/exams", authMiddleware.JWTProtected())
 	g.Get("/", h.List)
@@ -158,7 +156,7 @@ type PublicQuestion struct {
 func publicQuestions(questions []Question) []PublicQuestion {
 	out := make([]PublicQuestion, 0, len(questions))
 	for _, q := range questions {
-		out = append(out, PublicQuestion{Required: q.Required, Image: q.Image, OptionImages: q.OptionImages, Selection: q.Selection, Section: q.Section, ShuffleOptions: q.ShuffleOptions, ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language, Tester: q.Tester, Topic: q.Topic})
+		out = append(out, PublicQuestion{Required: q.Required, Image: q.Image, OptionImages: q.OptionImages, Selection: q.Selection, Section: q.Section, ShuffleOptions: q.ShuffleOptions, ID: q.ID, Kind: q.Kind, Prompt: q.Prompt, Points: q.Points, Options: q.Options, Language: q.Language, Topic: q.Topic})
 	}
 	return out
 }
@@ -492,11 +490,6 @@ func (h *Handler) attemptData(c *fiber.Ctx, create bool) error {
 	if err = phoneAttemptAllowed(c, e, questions, a); err != nil {
 		return err
 	}
-	if create && a.Status == "in_progress" {
-		if err = h.promoteDesktopPreflight(c, e.ID, user, a.ID); err != nil {
-			return err
-		}
-	}
 	return result(c, 200, fiber.Map{"exam": e, "questions": publicQuestions(questions), "attempt": a, "server_time": time.Now().UTC()})
 }
 func (h *Handler) Start(c *fiber.Ctx) error {
@@ -517,9 +510,6 @@ func (h *Handler) Start(c *fiber.Ctx) error {
 	}
 
 	if err := h.requireMonitorAdmission(c); err != nil {
-		return err
-	}
-	if err := h.requireDesktopPreflight(c); err != nil {
 		return err
 	}
 	return h.attemptData(c, true)

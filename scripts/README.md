@@ -55,4 +55,4 @@ not a substitute for the complete setup instructions. Moving scripts does not
 apply migrations, change the database or start services.
 
 Android and Windows client build scripts stay beside their respective projects:
-[Android](../android-app/) and [desktop client](../desktop-client/).
+[Android](../android-app/) and [browser extension](../chrome-extension/).

@@ -7,6 +7,7 @@ export type MonitorStudent = {attempt_id:string;roll:string;student_name:string;
 export type MonitorLive = {enabled:boolean;flag_after_exits:number;students:MonitorStudent[]};
 export type MonitorReport = {summary:{exits:number;external_sites:number;interruptions:number;searches:number;ai_prompts:number;exam_pastes:number;external_copies:number;consented:boolean;extension_connected:boolean;heartbeat_current:boolean;red_flag_events:number;last_seen:string|null};flags:string[];events:{kind:string;source:string;domain:string;text:string;duration_seconds:number;recorded_at:string}[];notice:string};
 export const examMonitor = {
+  async admission(cid:string,eid:string) {const r=await api.get<Envelope<{admitted:boolean;attempt_id?:string;expires_at?:string}>>(`${base(cid,eid)}/monitor-admission`);return r.data.data;},
   async policy(cid:string,eid:string) { const r=await api.get<Envelope<MonitorPolicy>>(`${base(cid,eid)}/monitor-policy`);return r.data.data; },
   async setPolicy(cid:string,eid:string,enabled:boolean,flag_after_exits:number) {const r=await api.put<Envelope<MonitorPolicy>>(`${base(cid,eid)}/monitor-policy`,{enabled,flag_after_exits});return r.data.data;},
   async admit(cid:string,eid:string,extension_ready:boolean) { await api.post(`${base(cid,eid)}/monitor-admission`,{consented:true,extension_ready}); },

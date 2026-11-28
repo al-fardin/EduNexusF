@@ -39,12 +39,12 @@ export function monitorBridge(type: MonitorBridgeType, payload: Record<string,un
         event.data?.source!==EXT || event.data?.requestId!==requestId || event.data?.type!==type) return;
       finish(event.data.response??{ok:false,error:"Empty extension response"});
     };
-    const timeout = window.setTimeout(() => finish({ok:false,error:"Extension did not reply. Check its localhost site access and reload the exam."}), 5000);
+    const timeout = window.setTimeout(() => finish({ok:false,error:"Extension not connected. Enable site access for this address, then reload this page."}), 2500);
     window.addEventListener("message",onMessage);
     window.postMessage({source:WEB,type,payload,requestId},window.location.origin);
   });
 }
 
-export function approvedExamKey(classroomId:string,examId:string) {
-  return `edunexus:monitor:admitted:${classroomId}:${examId}`;
+export function approvedExamKey(classroomId:string,examId:string,userId = "") {
+  return `edunexus:monitor:admitted:${userId}:${classroomId}:${examId}`;
 }

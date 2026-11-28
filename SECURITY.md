@@ -10,6 +10,6 @@ Use the latest `main` revision and review its CI results. A passing scan is not
 proof that every attack is prevented. Deployment controls and limits are
 documented in [the production security baseline](docs/quality/production-security.md).
 
-Native teacher executables require trust and are disabled by default in
-production. Approval and process limits are not an operating-system sandbox.
+Native desktop companions and teacher executable testers are retired.
+Browser monitoring is consent-scoped and does not inspect OS processes.
 The optional Docker runner belongs on a dedicated execution host.

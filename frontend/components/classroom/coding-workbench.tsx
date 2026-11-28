@@ -1,7 +1,5 @@
 "use client";
 
-import { LocalTesterPanel } from "@/components/classroom/local-tester-panel";
-import type { TesterAttachment } from "@/services/question-testers";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -25,12 +23,12 @@ loader.config({ paths: { vs: "/monaco/vs" } });
 // The same Monaco editor engine used in VS Code, with EduNexus-specific colors.
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false, loading: () => <div className="flex h-full items-center justify-center animate-pulse text-sm text-muted-foreground">Loading editor…</div> });
 
-type Props = { tester?: TesterAttachment; classroomId: string; examId: string; questionId: string; language: string; code: string; onChange: (next: string) => void };
+type Props = { classroomId: string; examId: string; questionId: string; language: string; code: string; onChange: (next: string) => void };
 const maxWorkspaceBytes = 19500; // Existing exam answers cap each coding response at 20,000 bytes.
 const filePathPattern = /^[A-Za-z0-9_./-]+$/;
-const light = "#FCFAFF";
-const ink = "#251333";
-const buttonClass = "inline-flex items-center gap-2 rounded-[12px_7px_11px_8px] border border-border px-3 py-2 text-xs font-semibold transition hover:bg-secondary disabled:opacity-40";
+const light = "#FFFFFF";
+const ink = "#0F172A";
+const buttonClass = "inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold transition hover:bg-secondary disabled:opacity-40";
 const iconButton = "rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-foreground";
 const monacoLanguage = (lang: string, filename: string) => {
   const ext = filename.split(".").pop()?.toLowerCase() ?? "";
@@ -57,7 +55,7 @@ function validateName(name: string) {
   return name.length > 0 && name.length <= 120 && filePathPattern.test(name) && !name.split("/").some(x => x === "." || x === ".." || x.startsWith(".")) && !name.startsWith("/") && !name.endsWith("/") && !name.includes("//");
 }
 
-export function CodingWorkbench({ classroomId, examId, questionId, language, code, onChange, tester }: Props) {
+export function CodingWorkbench({ classroomId, examId, questionId, language, code, onChange }: Props) {
   const {resolvedTheme}=useTheme();
   const workspace = useMemo(() => parseWorkspace(code, language), [code, language]);
   const [current, setCurrent] = useState<string | null>(null);
@@ -180,20 +178,20 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
   const onMount:OnMount = (_editor, monaco) => {
     monaco.editor.defineTheme("edunexus-violet",{
       base:"vs",inherit:true,rules:[
-        {token:"comment",foreground:"829080"},{token:"keyword",foreground:"7839B8",fontStyle:"bold"},
-        {token:"string",foreground:"A16E39"},{token:"number",foreground:"875B9A"},
-        {token:"type",foreground:"486B7B"},
-      ],colors:{"editor.background":light,"editor.foreground":ink,"editorLineNumber.foreground":"#9CA79D","editorLineNumber.activeForeground":"#526B55","editor.selectionBackground":"#E8D6FA","editor.lineHighlightBackground":"#F7F3FB","editorCursor.foreground":"#7839B8","editorIndentGuide.background1":"#E4DAED"},
+        {token:"comment",foreground:"64748B"},{token:"keyword",foreground:"1D4ED8",fontStyle:"bold"},
+        {token:"string",foreground:"047857"},{token:"number",foreground:"B45309"},
+        {token:"type",foreground:"0369A1"},
+      ],colors:{"editor.background":light,"editor.foreground":ink,"editorLineNumber.foreground":"#94A3B8","editorLineNumber.activeForeground":"#1D4ED8","editor.selectionBackground":"#DBEAFE","editor.lineHighlightBackground":"#F8FAFC","editorCursor.foreground":"#1D4ED8","editorIndentGuide.background1":"#E2E8F0"},
     });
     monaco.editor.setTheme(resolvedTheme==="dark"?"vs-dark":"edunexus-violet");
   };
-  return <div className={`${expanded?"fixed inset-3 z-[80] shadow-2xl":"relative"} overflow-hidden rounded-[22px_12px_19px_13px] border border-border bg-card text-foreground`}>
+  return <div className={`${expanded?"fixed inset-3 z-[80] shadow-2xl":"relative"} overflow-hidden rounded-2xl border border-border bg-card text-foreground`}>
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary px-3 py-2.5">
-      <div className="flex items-center gap-2 text-xs font-semibold"><Code2 size={17} className="text-muted-foreground"/> EduNexus Code Studio <span className="rounded-md bg-secondary px-2 py-1 text-[10px] tracking-wide text-muted-foreground">{entryLanguage ? `${entryLanguage} · ${workspace.entry}` : "New workspace"}</span></div>
+      <div className="flex items-center gap-2 text-xs font-semibold"><Code2 size={17} className="text-muted-foreground"/> EduNexus Code Studio <span className="rounded-md bg-card px-2 py-1 text-[10px] tracking-wide text-muted-foreground">{entryLanguage ? `${entryLanguage} · ${workspace.entry}` : "New workspace"}</span></div>
       <div className="flex items-center gap-1.5">
         <button type="button" onClick={()=>setSidebar(v=>!v)} className={iconButton} title="Toggle file Explorer" aria-label="Toggle Explorer">{sidebar?<PanelLeftClose size={17}/>:<PanelLeftOpen size={17}/>}</button>
         <button type="button" onClick={()=>setExpanded(v=>!v)} className={iconButton} title={expanded?"Exit focus mode":"Expand editor"} aria-label="Toggle editor fullscreen">{expanded?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</button>
-        <button type="button" onClick={()=>requestRun()} disabled={running || !entryLanguage} className="ml-2 inline-flex items-center gap-2 rounded-[12px_7px_11px_8px] bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition hover:bg-primary disabled:opacity-50">
+        <button type="button" onClick={()=>requestRun()} disabled={running || !entryLanguage} className="ml-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-50">
           {running?<RefreshCw size={15} className="animate-spin"/>:<Play size={15} fill="currentColor"/>}{running?"Running…":"Run"}
         </button>
       </div>
@@ -241,12 +239,11 @@ export function CodingWorkbench({ classroomId, examId, questionId, language, cod
       <pre role="status" className="mt-1 max-h-48 min-h-16 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-card p-3 font-mono text-xs leading-5 text-foreground">{running?"Running…":output?(output.stdout||"")+(output.stderr?"\n"+output.stderr:"") || "Finished with no output.":"No output yet."}</pre>
       {output?.truncated&&<p className="mt-1 text-muted-foreground">Output limit reached.</p>}
     </div>}
-    {tester && <LocalTesterPanel classroomId={classroomId} examId={examId} questionId={questionId} tester={tester} workspace={workspace} language={entryLanguage || language} />}
     {showInputDialog && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 p-4" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setShowInputDialog(false)}}>
-      <div role="dialog" aria-modal="true" aria-label="Run program input" className="w-full max-w-xl rounded-[23px_13px_21px_16px] border border-border bg-card p-5 shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-label="Run program input" className="w-full max-w-xl rounded-2xl border border-border bg-card p-5 shadow-2xl">
         <div className="flex items-center gap-2 font-semibold text-foreground"><TerminalSquare size={18}/> Run {workspace.entry}</div>
         <p className="mt-2 text-xs text-muted-foreground">Enter standard input for your program.</p>
-        <textarea autoFocus rows={6} maxLength={4096} value={stdin} onChange={e=>setStdin(e.target.value)} placeholder="Program input, for example: 5" className="mt-3 w-full rounded-lg border border-border bg-card p-3 font-mono text-sm text-foreground focus:outline-[#617B61]" onKeyDown={e=>{if(e.key==="Escape")setShowInputDialog(false); if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))void execute(stdin);}}/>
+        <textarea autoFocus rows={6} maxLength={4096} value={stdin} onChange={e=>setStdin(e.target.value)} placeholder="Program input, for example: 5" className="mt-3 w-full rounded-lg border border-border bg-card p-3 font-mono text-sm text-foreground focus:outline-ring" onKeyDown={e=>{if(e.key==="Escape")setShowInputDialog(false); if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))void execute(stdin);}}/>
         <div className="mt-3 flex justify-end gap-2"><button type="button" className={buttonClass} onClick={()=>setShowInputDialog(false)}>Cancel</button><button type="button" className={buttonClass} onClick={()=>void execute("")} title="Run with empty standard input (EOF)">Run without input</button><button type="button" className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground" onClick={()=>void execute(stdin)}>OK · Run</button></div>
       </div>
     </div>}

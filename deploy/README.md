@@ -25,9 +25,8 @@ Firebase dependencies. Never distribute the debug signing key as a production ke
 Read the [production security baseline](../docs/quality/production-security.md)
 before an online release. Migration 58, short-lived access tokens, a separate
 gateway proof secret and a preserved MFA encryption key are now required in
-production. Default native Windows testers are disabled online unless an
-administrator explicitly enables the trusted-teacher channel. Development/LAN
-testing retains its existing behavior.
+production. Browser-only exam monitoring replaces native desktop companions
+and executable testers. See the [browser exam guide](../docs/guides/browser-only-exams.md).
 
 This optional Docker setup runs on a server with Docker and incoming ports 80/443.
 It is separate from local `docker-compose.yml`. Point a domain's DNS to the server.

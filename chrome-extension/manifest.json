@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "EduNexus Exam Monitor",
   "description": "Consented exam-only: browser domains, search terms, supported AI prompts, selection copies and exam pastes; never historical chats or passwords.",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "permissions": [
     "tabs",
     "storage",
@@ -21,8 +21,10 @@
   "content_scripts": [
     {
       "matches": [
-        "http://localhost:3000/*",
-        "http://127.0.0.1:3000/*"
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://localhost/*",
+        "https://127.0.0.1/*"
       ],
       "js": [
         "content.js"
@@ -45,5 +47,9 @@
   "action": {
     "default_title": "EduNexus monitoring status",
     "default_popup": "popup.html"
-  }
+  },
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
 }

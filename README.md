@@ -1,6 +1,6 @@
 # EduNexus
 
-Classroom, coursework and exam platform with a Go API, PostgreSQL, Next.js frontend, Windows exam client and Android WebView app.
+Classroom, coursework and exam platform with a Go API, PostgreSQL, Next.js frontend, browser exam monitoring and Android WebView app.
 
 ## Project structure
 
@@ -9,8 +9,7 @@ backend/         Go API, services, tests, generated API docs and sqlc config
 frontend/        Next.js, React and TypeScript interface
 database/        SQL migrations and queries
 android-app/     Android application and build tools
-desktop-client/  Windows exam client and build tools
-chrome-extension/ Browser extension
+chrome-extension/ Browser-only exam monitoring for Windows and Linux
 scripts/         Local development and database administration
 deploy/          Docker images, Compose and hosting configuration
 docs/            Guides, verification notes and design previews
@@ -67,7 +66,7 @@ The home workspace uses actual class memberships, recent stream posts and upcomi
 
 ## Desktop client and optional question testers
 
-EduNexus Desktop 1.5 adds a refreshed interface and optional Windows `.exe` testers on coding questions. See [Desktop setup](desktop-client/README_CLIENT.md) and the [tester protocol](desktop-client/TESTER_PROTOCOL.md). Apply migration `000022_question_testers` before using attachments.
+Exams use the EduNexus browser extension in Chrome or Edge on Windows and Linux. No native desktop client or Windows executable tester is required or distributed. See [browser exam setup](docs/guides/browser-only-exams.md).
 
 ## Learning features rollout
 

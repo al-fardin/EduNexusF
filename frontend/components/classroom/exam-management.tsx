@@ -19,7 +19,6 @@ import { ReasonDialog } from "@/components/ui/reason-dialog";
 import { SavedExamPreview, AnswerReviewSettings } from "./exam-preview";
 import { clientId } from "@/lib/client-id";
 import { MobileExamOption } from "@/components/classroom/mobile-exam-option";
-import { QuestionTesterUpload } from "@/components/classroom/question-tester-upload";
 import { TeacherExamMonitoring } from "@/components/classroom/exam-monitoring";
 import { prettyWorkspaceAnswer } from "@/services/workspace-phase6";
 import { useEffect, useState } from "react";
@@ -861,21 +860,6 @@ function ExamEditForm({
                 className={field}
               />
             </label>
-          )}
-          {q.kind === "coding" && (
-            <QuestionTesterUpload
-              classroomId={classroomId}
-              tester={q.tester}
-              disabled={busy}
-              onBusyChange={(delta) => setUploads((n) => n + delta)}
-              onChange={(tester) =>
-                setQuestions((list) =>
-                  list.map((item) =>
-                    item.id === q.id ? { ...item, tester } : item,
-                  ),
-                )
-              }
-            />
           )}
         </div>
       ))}

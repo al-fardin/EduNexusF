@@ -1,14 +1,18 @@
 "use client";
+import { useAuthStore } from "@/store/auth-store";
+import { clientId } from "@/lib/client-id";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, ShieldAlert, ShieldCheck, LoaderCircle } from "lucide-react";
 import { examMonitor } from "@/services/exam-monitor";
-import { desktopMonitor } from "@/services/desktop-monitor";
 import { examError } from "@/services/exams";
 import {
   monitorBridge as bridge,
   approvedExamKey,
 } from "@/lib/exam-monitor-bridge";
+
+// A resumed mount supersedes delayed cleanup from the previous screen.
+let monitorOwner: symbol | null = null;
 
 export function StudentExamMonitor({
   classroomId,
@@ -23,6 +27,8 @@ export function StudentExamMonitor({
   expiresAt: string;
   active: boolean;
 }) {
+  const userId = useAuthStore(s => s.user?.id ?? "");
+  const [reconnect, setReconnect] = useState(0);
   const policy = useQuery({
     queryKey: ["monitor-policy", classroomId, examId],
     queryFn: () => examMonitor.policy(classroomId, examId),
@@ -77,13 +83,23 @@ export function StudentExamMonitor({
   // The gate records consent BEFORE creating the attempt. No second checkbox.
   useEffect(() => {
     if (!active || !policy.data?.enabled) return;
-    const sessionKey = window.sessionStorage.getItem(
-      approvedExamKey(classroomId, examId),
-    );
-    if (!sessionKey) return;
     let cancelled = false;
     const connect = async () => {
       setConnecting(true);
+      let sessionKey = window.sessionStorage.getItem(approvedExamKey(classroomId, examId, userId));
+      if (!sessionKey) {
+        try {
+          const admitted = await examMonitor.admission(classroomId, examId);
+          if (!admitted.admitted || admitted.attempt_id !== attemptId) throw new Error("This attempt has no saved monitoring consent.");
+          const existing = await bridge("STATUS");
+          sessionKey = existing.sessionKey?.startsWith(`exam-${examId}-${userId}-`)
+            ? existing.sessionKey : `exam-${examId}-${userId}-${clientId()}`;
+          if (!cancelled) window.sessionStorage.setItem(approvedExamKey(classroomId, examId, userId), sessionKey);
+        } catch (error) {
+          if (!cancelled) { setConnecting(false); setProblem(examError(error)); }
+          return;
+        }
+      }
       const status = await bridge("STATUS");
       if (cancelled) return;
       if (!status.ok) {
@@ -118,11 +134,11 @@ export function StudentExamMonitor({
     return () => {
       cancelled = true;
     };
-  }, [active, policy.data?.enabled, classroomId, examId, attemptId, expiresAt]);
+  }, [active, policy.data?.enabled, classroomId, examId, attemptId, expiresAt, userId, reconnect]);
   useEffect(() => {
     if (!active || !started) return;
     const sessionKey = window.sessionStorage.getItem(
-      approvedExamKey(classroomId, examId),
+      approvedExamKey(classroomId, examId, userId),
     );
     if (!sessionKey) return;
     const beat = async () => {
@@ -141,7 +157,7 @@ export function StudentExamMonitor({
     void beat();
     const timer = window.setInterval(() => void beat(), 8000);
     return () => window.clearInterval(timer);
-  }, [active, started, attemptId, classroomId, examId, flush]);
+  }, [active, started, attemptId, classroomId, examId, flush, userId]);
   useEffect(() => {
     if (!active || !started) return;
     let id: number | undefined;
@@ -171,6 +187,8 @@ export function StudentExamMonitor({
     })();
   }, [active, flush]);
   useEffect(() => {
+    const owner = Symbol("exam-monitor");
+    monitorOwner = owner;
     mountedRef.current = true;
     if (delayedStopRef.current !== undefined) {
       window.clearTimeout(delayedStopRef.current);
@@ -181,12 +199,12 @@ export function StudentExamMonitor({
       // rehearsal/remount must not tear down a real, consented exam session.
       mountedRef.current = false;
       delayedStopRef.current = window.setTimeout(() => {
-        if (mountedRef.current) return;
+        if (mountedRef.current || monitorOwner !== owner) return;
         void (async () => {
           const r = await bridge("STATUS");
-          if (mountedRef.current) return;
+          if (mountedRef.current || monitorOwner !== owner) return;
           const sessionKey = window.sessionStorage.getItem(
-            approvedExamKey(classroomId, examId),
+            approvedExamKey(classroomId, examId, userId),
           );
           if (
             r.ok &&
@@ -196,23 +214,24 @@ export function StudentExamMonitor({
           ) {
             await bridge("STOP");
           }
+          if (monitorOwner === owner) monitorOwner = null;
         })();
       }, 1200);
     };
-  }, [attemptId, classroomId, examId]);
+  }, [attemptId, classroomId, examId, userId]);
   if (!policy.data?.enabled) return null;
   return (
-    <div className="mb-4 rounded-2xl border border-[#CCD8C9] bg-[#F1F4EE] px-4 py-3 text-foreground">
+    <div className="mb-4 rounded-2xl border border-border bg-secondary px-4 py-3 text-foreground">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="flex items-center gap-2 font-semibold">
-          <ShieldCheck size={17} /> Exam monitoring
+          <ShieldCheck size={17} className="text-primary" /> Exam monitoring
         </span>
         <span
           role="status"
           className={
             connected
-              ? "font-medium text-[#346A45]"
-              : "font-medium text-[#9D463E]"
+              ? "font-medium text-emerald-700 dark:text-emerald-400"
+              : "font-medium text-destructive"
           }
         >
           {connected
@@ -225,7 +244,7 @@ export function StudentExamMonitor({
         </span>
       </div>
       {((!connected && !connecting) || problem) && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#9D463E]">
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-destructive">
           <span role="alert">
             {problem ||
               "Extension session is offline. Reconnect to resume exam monitoring."}
@@ -234,54 +253,8 @@ export function StudentExamMonitor({
             <button
               type="button"
               disabled={connecting}
-              className="rounded-lg border border-[#B7C2B3] bg-white px-2 py-1 font-semibold text-foreground"
-              onClick={() => {
-                const sessionKey = window.sessionStorage.getItem(
-                  approvedExamKey(classroomId, examId),
-                );
-                if (!sessionKey) {
-                  setProblem(
-                    "Consent required before reconnecting. Return to exams and select Join.",
-                  );
-                  return;
-                }
-                setConnecting(true);
-                void (async () => {
-                  const status = await bridge("STATUS");
-                  if (!status.ok) {
-                    setProblem(status.error || "Extension unavailable");
-                    setConnected(false);
-                    setConnecting(false);
-                    return;
-                  }
-                  if (status.connected && status.sessionKey !== sessionKey) {
-                    setProblem(
-                      "A different exam session is active in the extension.",
-                    );
-                    setConnecting(false);
-                    return;
-                  }
-                  const r = status.connected
-                    ? status
-                    : await bridge("START", {
-                        sessionKey,
-                        expiresAt: Math.min(
-                          Date.parse(expiresAt),
-                          Date.now() + 4 * 60 * 60 * 1000,
-                        ),
-                      });
-                  setConnecting(false);
-                  if (r.ok && r.connected) {
-                    setConnected(true);
-                    setStarted(true);
-                    setProblem("");
-                    void flush();
-                  } else {
-                    setConnected(false);
-                    setProblem(r.error || "Unable to reconnect");
-                  }
-                })();
-              }}
+              className="rounded-lg border border-border bg-card px-2.5 py-1 font-semibold text-foreground transition hover:bg-muted"
+              onClick={() => setReconnect(n => n + 1)}
             >
               Reconnect monitoring
             </button>
@@ -295,21 +268,21 @@ export function StudentExamMonitor({
           aria-label="Exam activity notice"
           className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4"
         >
-          <div className="w-full max-w-sm rounded-2xl bg-[#FBFAF6] p-6 text-foreground shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-2xl">
             <h4 className="mb-2 flex items-center gap-2 font-bold">
-              <ShieldAlert size={20} /> Exam activity notice
+              <ShieldAlert size={20} className="text-destructive" /> Exam activity notice
             </h4>
             <p className="text-sm">
               You left the exam tab. The teacher can review this event.
             </p>
-            <p className="mt-2 text-xs text-[#687567]">
+            <p className="mt-2 text-xs text-muted-foreground">
               {exitCount} exit signal(s) recorded. This is not proof of
               cheating.
             </p>
             <button
               type="button"
               autoFocus
-              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+              className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
               onClick={() => setExitNotice(false)}
             >
               Continue exam
@@ -340,43 +313,43 @@ export function TeacherExamMonitoring({
     refetchInterval: 8000,
   });
   return (
-    <section className="rounded-2xl border border-[#D1D9CE] bg-[#F3F5F0] p-4 text-foreground">
+    <section className="rounded-2xl border border-border bg-secondary p-4 text-foreground">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h4 className="flex items-center gap-2 text-sm font-bold">
-            <Activity size={17} /> Browser monitoring
+            <Activity size={17} className="text-primary" /> Browser monitoring
           </h4>
-          <p className="mt-1 text-xs text-[#6B756A]">
+          <p className="mt-1 text-xs text-muted-foreground">
             Required for exam entry. Students must install the extension and
             agree before the exam timer starts.
           </p>
         </div>
-        <span className="rounded-full border border-[#A8C6A5] bg-[#E4EFE2] px-3 py-1 text-xs font-bold text-[#36633A]">
+        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
           Required
         </span>
       </div>
       {policy.isError && (
-        <p role="alert" className="mt-3 text-xs text-[#9D463E]">
+        <p role="alert" className="mt-3 text-xs text-destructive">
           Monitoring policy unavailable: {examError(policy.error)}
         </p>
       )}
       {policy.data && !policy.data.enabled && (
-        <p className="mt-3 text-xs text-[#9D463E]">
+        <p className="mt-3 text-xs text-destructive">
           Database policy still disabled. Apply the V12 migration.
         </p>
       )}
       {attemptCount > 0 && (
-        <p className="mt-2 text-xs text-[#6B756A]">
+        <p className="mt-2 text-xs text-muted-foreground">
           {attemptCount} attempt(s) recorded.
         </p>
       )}
       <div className="mt-3 space-y-2">
         {live.isPending && (
-          <div className="h-12 animate-pulse rounded-lg bg-[#E1E8DE]" />
+          <div className="h-12 animate-pulse rounded-lg bg-muted" />
         )}
         {live.data?.students.map((student) => (
           <div
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#D1D9CE] bg-white px-3 py-2 text-xs"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-card-foreground"
             key={student.attempt_id}
           >
             <span>
@@ -385,8 +358,8 @@ export function TeacherExamMonitoring({
             <span
               className={
                 student.extension_connected
-                  ? "text-[#2F7955]"
-                  : "text-[#9D463E]"
+                  ? "font-medium text-emerald-700 dark:text-emerald-400"
+                  : "font-medium text-destructive"
               }
             >
               {student.extension_connected
@@ -399,17 +372,17 @@ export function TeacherExamMonitoring({
               {student.exits} exits · {student.interruptions} gaps
             </span>
             {student.red_flag_events > 0 && (
-              <strong className="text-[#9D463E]">
+              <strong className="text-destructive">
                 {student.red_flag_events} review flag(s)
               </strong>
             )}
           </div>
         ))}
         {live.data?.students.length === 0 && (
-          <p className="text-xs text-[#657365]">No exam attempts yet.</p>
+          <p className="text-xs text-muted-foreground">No exam attempts yet.</p>
         )}
       </div>
-      <p className="mt-3 text-xs text-[#6B756A]">
+      <p className="mt-3 text-xs text-muted-foreground">
         Updates about every 8 seconds. Search, AI prompt, paste and tab events
         are incomplete review evidence, not proof of cheating.
       </p>
@@ -431,17 +404,8 @@ export function TeacherMonitorEvidence({
     queryFn: () => examMonitor.report(classroomId, examId, attemptId),
     refetchInterval: 12000,
   });
-  const clipboard = useQuery({
-    queryKey: ["desktop-monitor-evidence", classroomId, examId, attemptId],
-    queryFn: () => desktopMonitor.report(classroomId, examId, attemptId),
-    refetchInterval: 12000,
-    retry: 1,
-  });
-  const clipboardChanges = (clipboard.data?.events ?? []).filter(
-    (e) => e.kind === "clipboard_changed",
-  );
   // A supported AI-site selection-copy with identical text is stronger evidence
-  // than a clipboard-change/app correlation, but still requires human review.
+  // for human review.
   const matchedSelection = (at: string, text: string) => {
     if (!text.trim()) return null;
     const when = Date.parse(at);
@@ -455,23 +419,13 @@ export function TeacherMonitorEvidence({
       )?.domain ?? null
     );
   };
-  const possibleSource = (at: string) => {
-    const pastedAt = Date.parse(at);
-    const matched = clipboardChanges
-      .map((e) => ({ e, delta: pastedAt - Date.parse(e.recorded_at) }))
-      .filter((x) => x.delta >= 0 && x.delta <= 90000)
-      .sort((a, b) => a.delta - b.delta)[0];
-    return matched
-      ? `${matched.e.app_name} · clipboard changed ${Math.round(matched.delta / 1000)}s earlier`
-      : null;
-  };
   return (
-    <div className="mt-3 space-y-2 rounded-xl border border-[#D1D9CE] bg-[#FBFAF6] p-4">
+    <div className="mt-3 space-y-2 rounded-xl border border-border bg-card p-4 text-card-foreground">
       <h5 className="flex items-center gap-2 text-sm font-semibold">
-        <ShieldAlert size={16} /> Browser monitoring evidence (teacher only)
+        <ShieldAlert size={16} className="text-primary" /> Browser monitoring evidence (teacher only)
       </h5>
       {report.isPending && (
-        <p className="flex items-center gap-2 text-xs">
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <LoaderCircle size={14} className="animate-spin" /> Fetching timeline…
         </p>
       )}
@@ -491,13 +445,13 @@ export function TeacherMonitorEvidence({
               ["Exam pastes", report.data.summary.exam_pastes],
               ["Copies observed", report.data.summary.external_copies],
             ].map(([label, value]) => (
-              <div className="rounded-lg bg-[#E9EDE5] p-3" key={label}>
-                <span className="block text-[#68766A]">{label}</span>
-                <b className="text-lg">{value}</b>
+              <div className="rounded-lg bg-secondary p-3" key={label}>
+                <span className="block text-muted-foreground">{label}</span>
+                <b className="text-lg text-foreground">{value}</b>
               </div>
             ))}
           </div>
-          <p className="text-xs text-[#68766A]">
+          <p className="text-xs text-muted-foreground">
             {report.data.summary.extension_connected
               ? "Extension connected"
               : "Extension not currently connected"}{" "}
@@ -507,7 +461,7 @@ export function TeacherMonitorEvidence({
               : "No consent/heartbeat recorded"}
           </p>
           {!report.data.summary.consented && (
-            <p className="rounded-lg bg-[#F5EEDD] p-2 text-xs">
+            <p className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-200">
               Website detection unavailable for this attempt: no extension
               consent/heartbeat was recorded. Clipboard paste and tab-hide
               events may still be shown in the separate Exam activity report;
@@ -516,14 +470,17 @@ export function TeacherMonitorEvidence({
           )}
           {report.data.summary.consented &&
             report.data.summary.external_sites === 0 && (
-              <p className="rounded-lg bg-[#F5EEDD] p-2 text-xs">
+              <p className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-200">
                 No external-domain events were received. This may indicate no
                 observed visits or incomplete extension coverage; it does not
                 prove that no websites were visited.
               </p>
             )}
           {report.data.flags.map((flag) => (
-            <p key={flag} className="rounded-lg bg-[#F5EEDD] p-2 text-xs">
+            <p
+              key={flag}
+              className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-200"
+            >
               Review: {flag}
             </p>
           ))}
@@ -534,7 +491,7 @@ export function TeacherMonitorEvidence({
             <div className="mt-2 max-h-[30rem] space-y-1 overflow-auto">
               {report.data.events.map((ev, i) => (
                 <article
-                  className="rounded-lg border-b border-[#DCE3DA] bg-white p-3"
+                  className="rounded-lg border border-border bg-background p-3"
                   key={i}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -543,39 +500,32 @@ export function TeacherMonitorEvidence({
                       {ev.domain ? ` · ${ev.domain}` : ""}
                       {ev.duration_seconds ? ` · ~${ev.duration_seconds}s` : ""}
                     </span>
-                    <time className="text-[#718071]">
+                    <time className="text-muted-foreground">
                       {new Date(ev.recorded_at).toLocaleString()}
                     </time>
                   </div>
                   {ev.kind === "exam_paste" &&
                     matchedSelection(ev.recorded_at, ev.text) && (
-                      <p className="mt-2 rounded-md bg-[#E7F0E7] p-2 text-xs text-[#365F44]">
+                      <p className="mt-2 rounded-md border border-emerald-500/25 bg-emerald-500/10 p-2 text-xs text-emerald-800 dark:text-emerald-200">
                         <strong>Matching selection copy:</strong> identical text
                         was observed copied on{" "}
                         {matchedSelection(ev.recorded_at, ev.text)} before this
                         exam paste. Review context before drawing conclusions.
                       </p>
                     )}
-                  {ev.kind === "exam_paste" &&
-                    !matchedSelection(ev.recorded_at, ev.text) &&
-                    possibleSource(ev.recorded_at) && (
-                      <p className="mt-2 rounded-md bg-[#EDF1E8] p-2 text-xs text-[#4F634D]">
-                        <strong>Possible copy source:</strong>{" "}
-                        {possibleSource(ev.recorded_at)}. Clipboard change is
-                        not confirmation of a copy or text match.
-                      </p>
-                    )}
                   {ev.text && (
-                    <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[#F2F4EF] p-2 font-mono text-xs select-text">
+                    <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-md bg-secondary p-2 font-mono text-xs text-foreground select-text">
                       {ev.text}
                     </pre>
                   )}
                 </article>
               ))}
-              {!report.data.events.length && <p>No events reported.</p>}
+              {!report.data.events.length && (
+                <p className="text-muted-foreground">No events reported.</p>
+              )}
             </div>
           </details>
-          <p className="text-xs text-[#68766A]">{report.data.notice}</p>
+          <p className="text-xs text-muted-foreground">{report.data.notice}</p>
         </>
       )}
     </div>

@@ -37,7 +37,7 @@ func (h *Handler) MonitorAdmission(c *fiber.Ctx) error {
 	var available bool
 	err = h.db.QueryRow(c.UserContext(), `SELECT EXISTS(
         SELECT 1 FROM classroom_exams WHERE id=$1::uuid AND classroom_id=$2::uuid
-        AND status='published' AND now() >= starts_at AND now() < ends_at
+        AND status='published' AND closed_at IS NULL AND now() >= starts_at AND now() < ends_at
     )`, eid, c.Params("id")).Scan(&available)
 	if err != nil {
 		return err
@@ -61,10 +61,10 @@ func (h *Handler) requireMonitorAdmission(c *fiber.Ctx) error {
 		return err
 	}
 	if role != "student" {
-		return failure(c, 403, "student only")
+		return fiber.NewError(403, "student only")
 	}
 	if !enabled {
-		return failure(c, 409, "teacher must enable exam monitoring")
+		return fiber.NewError(409, "teacher must enable exam monitoring")
 	}
 	uid, err := identity(c)
 	if err != nil {
@@ -73,11 +73,56 @@ func (h *Handler) requireMonitorAdmission(c *fiber.Ctx) error {
 	var when time.Time
 	err = h.db.QueryRow(c.UserContext(), `SELECT consented_at FROM classroom_exam_monitor_admissions
         WHERE exam_id=$1::uuid AND student_id=$2::uuid`, eid, uid).Scan(&when)
-	if errors.Is(err, pgx.ErrNoRows) || err == nil && time.Since(when) > 15*time.Minute {
-		return failure(c, 403, "agree to browser monitoring before entering this exam")
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fiber.NewError(403, "agree to browser monitoring before entering this exam")
 	}
 	if err != nil {
 		return err
 	}
+	if time.Since(when) > 15*time.Minute {
+		var resume bool
+		err = h.db.QueryRow(c.UserContext(), `SELECT EXISTS(SELECT 1 FROM classroom_exam_attempts a
+          JOIN classroom_exams e ON e.id=a.exam_id WHERE a.exam_id=$1::uuid AND a.student_id=$2::uuid
+          AND a.status='in_progress' AND a.expires_at>now() AND e.status='published' AND e.closed_at IS NULL AND e.ends_at>now())`, eid, uid).Scan(&resume)
+		if err != nil {
+			return err
+		}
+		if !resume {
+			return fiber.NewError(403, "agree to browser monitoring before entering this exam")
+		}
+	}
 	return nil
+}
+
+// Persisted consent belongs to this student and this active attempt, not a
+// browser-storage flag. Resuming never starts a new attempt or extends its time.
+func (h *Handler) MonitorAdmissionStatus(c *fiber.Ctx) error {
+	eid, role, enabled, _, err := h.monitorExam(c, false)
+	if err != nil {
+		return err
+	}
+	if role != "student" {
+		return failure(c, 403, "student only")
+	}
+	uid, err := identity(c)
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		return result(c, 200, fiber.Map{"admitted": false})
+	}
+	var attempt string
+	var expires time.Time
+	err = h.db.QueryRow(c.UserContext(), `SELECT a.id::text,LEAST(a.expires_at,e.ends_at)
+       FROM classroom_exam_attempts a JOIN classroom_exams e ON e.id=a.exam_id
+       JOIN classroom_exam_monitor_admissions m ON m.exam_id=a.exam_id AND m.student_id=a.student_id
+       WHERE a.exam_id=$1::uuid AND a.student_id=$2::uuid AND a.status='in_progress'
+       AND a.expires_at>now() AND e.ends_at>now() AND e.closed_at IS NULL AND e.status='published'`, eid, uid).Scan(&attempt, &expires)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return result(c, 200, fiber.Map{"admitted": false})
+	}
+	if err != nil {
+		return err
+	}
+	return result(c, 200, fiber.Map{"admitted": true, "attempt_id": attempt, "expires_at": expires})
 }

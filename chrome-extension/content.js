@@ -1,6 +1,8 @@
 // Only injected into EduNexus localhost origins, never into arbitrary websites.
 // Transport bridge: no JWT, passwords or exam answer content enters the extension.
-(() => {
+(async () => {
+  const allowed = (await chrome.storage.local.get('edunexus_allowed_origins')).edunexus_allowed_origins || [];
+  if (!['localhost','127.0.0.1'].includes(location.hostname) && !allowed.includes(location.origin)) return;
   if (window.__EDUNEXUS_MONITOR_BRIDGE_INSTALLED__) return;
   window.__EDUNEXUS_MONITOR_BRIDGE_INSTALLED__ = true;
   const WEB = 'EDUNEXUS_MONITOR_WEB_V1';
