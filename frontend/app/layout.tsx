@@ -47,6 +47,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        {/* Runs independently of React so stale cached chunks cannot prevent recovery. */}
+        <script src="/edunexus-recovery.js" async />
+      </head>
       <body className="flex min-h-full flex-col">
         <PreferencesProvider><AppThemeProvider>
           <QueryProvider>

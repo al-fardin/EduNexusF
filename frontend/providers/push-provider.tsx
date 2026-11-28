@@ -57,6 +57,7 @@ export function PushProvider() {
           "serviceWorker" in navigator && window.isSecureContext
             ? await navigator.serviceWorker.register("/edunexus-sw.js", {
                 scope: "/",
+                updateViaCache: "none",
               })
             : null;
         if (stopped) return;

@@ -24,3 +24,20 @@ test("service worker handles navigation once and never caches API responses",asy
  const pending=[];listeners.fetch[0]({request:{url:"https://edunexus.invalid/_next/static/chunk.js",method:"GET",mode:"cors"},respondWith:value=>{pending.push(value);handled++;}});await Promise.all(pending);
  assert.equal(handled,1);assert.equal(cached.length,1);
 });
+test("stale JavaScript cannot replace an online chunk; offline cached assets still work",async()=>{
+ const listeners={},cache={match:async()=>new Response('stale chunk'),put:async()=>{},keys:async()=>[]};let online=true;
+ vm.runInNewContext(fs.readFileSync('public/edunexus-sw.js','utf8'),{self:{location:{origin:'https://edunexus.invalid'},addEventListener:(name,fn)=>listeners[name]=fn},caches:{open:async()=>cache},URL,Response,fetch:async()=>{if(!online)throw Error('offline');return new Response('fresh chunk')}});
+ const request={url:'https://edunexus.invalid/_next/static/chunks/app/login/page.js',method:'GET',mode:'cors'};let response;
+ listeners.fetch({request,respondWith:p=>response=p});assert.equal(await (await response).text(),'fresh chunk');
+ online=false;listeners.fetch({request,respondWith:p=>response=p});assert.equal(await (await response).text(),'stale chunk');
+});
+test("worker activation removes obsolete build caches without removing unrelated storage",async()=>{
+ const listeners={},removed=[];
+ vm.runInNewContext(fs.readFileSync('public/edunexus-sw.js','utf8'),{self:{addEventListener:(name,fn)=>listeners[name]=fn,clients:{claim:async()=>{}}},caches:{keys:async()=>['edunexus-offline-assets-v1','edunexus-offline-shell-v1','edunexus-offline-assets-v2','other-app-cache'],delete:async name=>removed.push(name)}});
+ let pending;listeners.activate({waitUntil:p=>pending=p});await pending;assert.deepEqual(removed,['edunexus-offline-assets-v1','edunexus-offline-shell-v1']);
+});
+test("independent recovery updates a stale worker and reloads at most once",async()=>{
+ let changed,reloads=0,replaced='',updates=0,options;const values=new Map();
+ vm.runInNewContext(fs.readFileSync('public/edunexus-recovery.js','utf8'),{location:{pathname:'/login',href:'https://edunexus.invalid/login?password=fixture-only&code=123&next=%2Ftasks',reload:()=>reloads++},history:{state:null,replaceState:(_,__,url)=>replaced=url},URL,window:{isSecureContext:true},sessionStorage:{getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)},navigator:{serviceWorker:{controller:{},addEventListener:(_,fn)=>changed=fn,register:async(_,o)=>{options=o;return{update:async()=>updates++}}}}});
+ await new Promise(r=>setImmediate(r));assert.equal(options.updateViaCache,'none');assert.equal(updates,1);assert.equal(replaced,'/login?next=%2Ftasks');changed();changed();assert.equal(reloads,1);
+});

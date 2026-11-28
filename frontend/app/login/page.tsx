@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import {
   type FormEvent,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { authService } from "@/services/auth";
@@ -18,8 +19,10 @@ import { useAuthStore } from "@/store/auth-store";
 type ApiErrorResponse = {
   message?: string;
 };
+const subscribeReady = () => () => {};
 
 export default function LoginPage() {
+  const ready = useSyncExternalStore(subscribeReady, () => true, () => false);
   const router = useRouter();
 
   const setAccessToken = useAuthStore(
@@ -148,6 +151,7 @@ export default function LoginPage() {
         </div>
 
         <form
+          method="post"
           onSubmit={handleSubmit}
           className="mt-8 space-y-4"
         >
@@ -208,7 +212,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={!ready || loading || entering}
             className="w-full touch-manipulation rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading
