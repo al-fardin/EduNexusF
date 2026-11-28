@@ -1,0 +1,61 @@
+/* Orbital motion connects the workspace to the landing page. */
+.en-orbital-cover .en-cover-orbits{transform-origin:248px 109px;animation:en-cover-orbit var(--orbit-duration,28s) ease-in-out var(--orbit-delay,0s) infinite alternate;animation-play-state:paused}
+.en-orbital-cover .en-cover-satellite{transform-origin:248px 109px;animation:en-satellite var(--orbit-duration,28s) linear var(--orbit-delay,0s) infinite;animation-play-state:paused}
+.en-orbital-cover[data-visible=true] :is(.en-cover-orbits,.en-cover-satellite){animation-play-state:running}
+.en-cover-glow{transform-origin:255px 120px}
+html .en-workspace-class-card{position:relative;overflow:visible;transform-style:preserve-3d;transition:transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s,border-color .3s}
+html .en-workspace-class-card:after{content:"";position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;opacity:0;background:radial-gradient(220px circle at var(--light-x,50%) var(--light-y,30%),#c4a3ff22,transparent 75%);transition:opacity .3s}
+.en-workspace-class-link{animation:en-card-reveal .55s ease backwards}
+.en-workspace-class-card:nth-child(4n+2) .en-workspace-class-link{animation-delay:60ms}
+.en-workspace-class-card:nth-child(4n+3) .en-workspace-class-link{animation-delay:120ms}
+.en-workspace-class-card:nth-child(4n+4) .en-workspace-class-link{animation-delay:180ms}
+.en-class-monogram{transition:transform .4s cubic-bezier(.2,.7,.2,1),text-shadow .4s}
+.en-workspace-class-card:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 14%,transparent)}
+.en-workspace-class-card:focus-within .en-class-open{color:var(--primary);transform:translate(2px,-2px)}
+.en-quick-chip{position:relative;overflow:hidden;transition:transform .2s,background .2s,border-color .2s,box-shadow .2s}
+.en-quick-chip svg{transition:transform .3s}
+.en-quick-chip:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+.en-home-panel{position:relative;overflow:hidden;transition:border-color .25s,box-shadow .25s}
+.en-panel-heading:before{content:"";width:5px;height:17px;flex:none;border-radius:5px;background:linear-gradient(var(--primary),#b374ff);box-shadow:0 0 15px color-mix(in srgb,var(--primary) 20%,transparent)}
+.en-panel-heading{gap:9px}.en-panel-heading>h2{flex:1}
+.en-activity-list>a,.en-upcoming-item{transition:background .2s,transform .2s}
+.en-activity-icon{transition:transform .25s,background .25s,color .25s}
+.en-class-tabs button{position:relative;transition:background .2s,color .2s,box-shadow .2s}
+.en-class-tabs button:is([aria-selected=true],[aria-pressed=true]){box-shadow:inset 0 -2px color-mix(in srgb,var(--primary) 55%,transparent)}
+.en-motion-toggle[aria-pressed=true]{color:var(--primary);background:var(--accent)}
+.en-site-main :is(.en-stream-panel,.en-inner-paper,[data-slot=card]){transition:border-color .25s,box-shadow .25s}
+.en-site-main :is(.en-solid-button,.en-outline-button){transition:transform .2s,box-shadow .2s,background .2s}
+.en-app-ambient>i:after{content:"";position:absolute;inset:80px;border-radius:50%;border:1px solid color-mix(in srgb,var(--primary) 7%,transparent);transform:rotateX(25deg)}
+@keyframes en-cover-orbit{from{transform:translate(-5px,3px) rotate(var(--orbit-angle,0deg)) scale(.96)}to{transform:translate(7px,-3px) rotate(calc(var(--orbit-angle,0deg) + 16deg)) scale(1.04)}}
+@keyframes en-satellite{to{transform:rotate(360deg)}}
+@keyframes en-card-reveal{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(hover:hover) and (pointer:fine){
+  html .en-workspace-class-card:hover{transform:perspective(900px) translateY(-5px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));box-shadow:0 18px 40px #270a5415,0 0 0 1px color-mix(in srgb,var(--primary) 9%,transparent)}
+  .dark .en-workspace-class-card:hover{box-shadow:0 20px 45px #00000045,0 0 35px #4811bf14}
+  .en-workspace-class-card:hover:after{opacity:1}
+  .en-workspace-class-card:hover .en-class-monogram{transform:translate(2px,3px);text-shadow:0 0 28px #ffffff35}
+  .en-quick-chip:hover{transform:translateY(-3px);box-shadow:0 6px 20px #4811bf0d}.en-quick-chip:hover svg{transform:rotate(-9deg) scale(1.1)}
+  .en-home-panel:hover{border-color:color-mix(in srgb,var(--primary) 25%,var(--border))}
+  :is(.en-activity-list>a,.en-upcoming-item):hover{background:var(--accent);transform:translateX(3px)}
+  :is(.en-activity-list>a,.en-upcoming-item):hover .en-activity-icon{transform:rotate(-5deg);color:var(--primary)}
+  .en-site-main :is(.en-stream-panel,.en-inner-paper,[data-slot=card]):hover{box-shadow:0 8px 30px color-mix(in srgb,var(--primary) 6%,transparent)}
+  .en-site-main :is(.en-solid-button,.en-outline-button):not(:disabled,[aria-disabled=true]):hover{transform:translateY(-1px);box-shadow:0 5px 18px color-mix(in srgb,var(--primary) 14%,transparent)}
+}
+@media(hover:none){html .en-workspace-class-card:hover{transform:none}.en-workspace-class-link:active{background:var(--accent)}.en-quick-chip:active{background:var(--accent)}}
+@media(max-width:600px){.en-mobile-actions{gap:2px}.en-mobile-actions .en-motion-toggle{width:29px;height:32px}.en-orbital-cover svg{min-width:100%}}
+/* Pause affects decoration, never pending-action spinners or status indicators. */
+.en-app-shell[data-motion=paused] :is(.en-app-ambient *,.en-cover-orbits,.en-cover-satellite,.en-workspace-class-link){animation-play-state:paused!important}
+.en-app-shell[data-motion=paused] .en-workspace-class-link{animation:none!important}
+html .en-app-shell[data-motion=paused] .en-workspace-class-card{transform:none!important}
+.en-app-shell[data-motion=paused] :is(.en-workspace-class-card,.en-workspace-class-card:after,.en-workspace-class-link,.en-class-monogram,.en-class-open,.en-quick-chip,.en-quick-chip svg,.en-home-panel,.en-activity-list>a,.en-upcoming-item,.en-activity-icon,.en-violet-sidebar nav>a){transition:none!important}
+.en-app-shell[data-motion=paused] :is(.en-quick-chip:hover,.en-quick-chip:hover svg,.en-class-monogram,.en-class-open,.en-violet-sidebar nav>a:hover,.en-activity-list>a:hover,.en-upcoming-item:hover,.en-activity-icon){transform:none!important}
+.en-app-shell[data-motion=paused] .en-site-main :is(.en-solid-button,.en-outline-button){transform:none!important;transition:none!important}
+.en-app-shell[data-motion=paused] .en-course-cover svg{transform:none!important;transition:none!important}
+@media(prefers-reduced-motion:reduce){
+  .en-orbital-cover *,.en-workspace-class-link{animation:none!important}
+  html .en-workspace-class-card{transform:none!important}
+  .en-workspace-class-card,.en-workspace-class-card:after,.en-class-monogram,.en-class-open,.en-quick-chip,.en-quick-chip svg,.en-home-panel,.en-activity-list>a,.en-upcoming-item,.en-activity-icon{transition:none!important}
+  .en-quick-chip:hover,.en-quick-chip:hover svg,.en-workspace-class-card:hover .en-class-monogram,.en-workspace-class-card:focus-within .en-class-open,.en-activity-list>a:hover,.en-upcoming-item:hover,.en-activity-icon{transform:none!important}
+  .en-site-main :is(.en-solid-button,.en-outline-button){transform:none!important;transition:none!important}
+  .en-workspace-class-card:hover .en-class-open,.en-workspace-class-card:hover .en-course-cover svg{transform:none!important}
+}

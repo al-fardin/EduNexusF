@@ -1,5 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { BrandMark, BrandWordmark } from "@/components/layout/brand-mark";
 import {
@@ -15,6 +16,8 @@ import {
   Layers,
   MessageSquare,
   Plus,
+  Pause,
+  Play,
   Settings,
  School,
 } from "lucide-react";
@@ -77,6 +80,8 @@ function Logo() {
 }
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const {t}=usePreferences();
+  const [motion, setMotion] = useState(true);
+  const motionControl = <button type="button" className="en-icon-button en-motion-toggle" aria-label={motion ? "Pause interface animation" : "Play interface animation"} title={motion ? "Pause animation" : "Play animation"} aria-pressed={!motion} onClick={() => setMotion(value => !value)}>{motion ? <Pause size={17}/> : <Play size={17}/>}</button>;
   const path = usePathname() ?? "/";
   const hasSession = useHasSession();
   const user = useAuthStore((s) => s.user);
@@ -95,7 +100,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
     path,
   );
   return (
-    <div className={`en-app-shell${inClass ? " en-in-classroom" : ""}`}>
+    <div className={`en-app-shell${inClass ? " en-in-classroom" : ""}`} data-motion={motion ? "playing" : "paused"}>
       <div className="en-app-ambient" aria-hidden="true"><span/><span/><i/></div>
       <a className="en-skip-link" href="#main-content">{t("Skip to main content")}</a>
       <aside className="en-violet-sidebar">
@@ -153,6 +158,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             <Logo />
           </Link>
           <div className="en-mobile-actions"><Link href="/search" className="en-icon-button" aria-label={t("Search")}><Search size={20}/></Link>
+            {motionControl}
             <ThemeToggle />
             <NotificationBell />
             <MessagingLink />
@@ -176,6 +182,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
         })}
       </nav>
       <div className="en-desktop-actions">
+        {motionControl}
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger

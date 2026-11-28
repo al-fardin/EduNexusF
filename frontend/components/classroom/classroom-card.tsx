@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { CourseCover } from "@/components/classroom/course-cover";
+import { useCardLight } from "@/components/visual/use-card-light";
 import { classroomService } from "@/services/classroom";
 import { useState } from "react";
 import { type Classroom } from "@/services/classroom";
@@ -44,6 +45,7 @@ export function ClassroomCard({
   onLeave?: () => void;
 }) {
   const owner=useAuthStore(s=>s.user?.id)===classroom.owner_id;
+  const light = useCardLight();
   const teacher = useQuery({
     queryKey: ["classroom-details", classroom.id],
     queryFn: () => classroomService.details(classroom.id),
@@ -58,7 +60,7 @@ export function ClassroomCard({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   return (
-    <article className="en-workspace-class-card">
+    <article className="en-workspace-class-card" {...light}>
       <Link
         className="en-workspace-class-link"
         href={`/${kind === "teacher" ? "instructor" : "student"}/classrooms/${classroom.id}`}

@@ -45,6 +45,7 @@ function cardMarkup(actor, status = "active", kind = "teacher") {
     "lucide-react": new Proxy({}, { get: () => () => null }),
     "@tanstack/react-query": { useQuery: () => ({}) },
     "@/components/classroom/course-cover": { CourseCover: () => null },
+    "@/components/visual/use-card-light": loadComponent("components/visual/use-card-light.ts", {}),
     "@/services/classroom": { classroomService: {} },
     "@/lib/clipboard": { copyText: async () => {} },
     "@/components/classroom/classroom-header": { ClassroomDetailsDialog: () => null },
